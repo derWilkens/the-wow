@@ -1,0 +1,738 @@
+﻿import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import ReactFlow, {
+  Background,
+  Controls,
+  MarkerType,
+  applyNodeChanges,
+  type Connection,
+  type Edge,
+  type Node,
+  type NodeChange,
+  type OnConnectEnd,
+  type OnConnectStartParams,
+  type ReactFlowInstance,
+} from 'reactflow'
+import 'reactflow/dist/style.css'
+import { ActivityNode } from './ActivityNode'
+import { EndNode } from './EndNode'
+import { GatewayNode } from './GatewayNode'
+import { SourceNode } from './SourceNode'
+import { StartNode } from './StartNode'
+import { WorkflowEdge } from './WorkflowEdge'
+import type {
+  Activity,
+  ActivityNodeData,
+  CanvasGroupingMode,
+  CanvasEdge,
+  CanvasObject,
+  CanvasObjectNodeData,
+  EdgeDataObject,
+} from '../../types'
+
+const nodeTypes = {
+  activity: ActivityNode,
+  gatewayNode: GatewayNode,
+  startNode: StartNode,
+  endNode: EndNode,
+  sourceNode: SourceNode,
+}
+
+const edgeTypes = {
+  workflow: WorkflowEdge,
+}
+
+const baseEdgeStyle = {
+  stroke: 'rgba(139, 170, 197, 0.7)',
+  strokeWidth: 1.8,
+}
+
+const ROLE_LANE_HEIGHT = 200
+const ROLE_LANE_TOP_OFFSET = 72
+const ROLE_LANE_NODE_OFFSET = 54
+
+function buildRoleLaneMeta(activities: Activity[], activityRolesById: Record<string, string>) {
+  const roles = Array.from(
+    new Set(activities.map((activity) => activityRolesById[activity.id] ?? 'Nicht zugeordnet')),
+  )
+    .filter((role) => role !== 'Nicht zugeordnet')
+    .sort((left, right) => left.localeCompare(right, 'de'))
+
+  roles.push('Nicht zugeordnet')
+
+  return roles.map((role, index) => ({
+    role,
+    top: ROLE_LANE_TOP_OFFSET + index * ROLE_LANE_HEIGHT,
+  }))
+}
+
+function getLaneDisplayY(roleLanes: Array<{ role: string; top: number }>, activityId: string, activityRolesById: Record<string, string>) {
+  const role = activityRolesById[activityId] ?? 'Nicht zugeordnet'
+  const lane = roleLanes.find((entry) => entry.role === role)
+  return lane ? lane.top + ROLE_LANE_NODE_OFFSET : null
+}
+
+function getNodeConnectionCapabilities(nodeId: string, activities: Activity[], canvasObjects: CanvasObject[], canvasEdges: CanvasEdge[]) {
+  const activity = activities.find((item) => item.id === nodeId)
+  if (activity) {
+    const incomingCount = canvasEdges.filter((edge) => edge.to_node_type === 'activity' && edge.to_node_id === nodeId).length
+    const outgoingCount = canvasEdges.filter((edge) => edge.from_node_type === 'activity' && edge.from_node_id === nodeId).length
+
+    if (activity.node_type === 'start_event') {
+      return {
+        allowTarget: false,
+        allowSource: true,
+      }
+    }
+
+    if (activity.node_type === 'end_event') {
+      return {
+        allowTarget: true,
+        allowSource: false,
+      }
+    }
+
+    if (activity.node_type === 'gateway_decision') {
+      return {
+        allowTarget: incomingCount === 0,
+        allowSource: true,
+      }
+    }
+
+    if (activity.node_type === 'gateway_merge') {
+      return {
+        allowTarget: true,
+        allowSource: outgoingCount === 0,
+      }
+    }
+
+    return {
+      allowTarget: true,
+      allowSource: true,
+    }
+  }
+
+  const canvasObject = canvasObjects.find((item) => item.id === nodeId && item.object_type === 'quelle')
+  if (canvasObject) {
+    return {
+      allowTarget: true,
+      allowSource: true,
+    }
+  }
+
+  return {
+    allowTarget: false,
+    allowSource: false,
+  }
+}
+
+function getClosestTargetHandleId(nodeElement: Element, clientX: number, clientY: number) {
+  const rect = nodeElement.getBoundingClientRect()
+  const distances = [
+    { handleId: 'target-top', distance: Math.abs(clientY - rect.top) },
+    { handleId: 'target-right', distance: Math.abs(clientX - rect.right) },
+    { handleId: 'target-bottom', distance: Math.abs(clientY - rect.bottom) },
+    { handleId: 'target-left', distance: Math.abs(clientX - rect.left) },
+  ]
+
+  distances.sort((a, b) => a.distance - b.distance)
+  return distances[0]?.handleId ?? 'target-left'
+}
+
+interface WorkflowCanvasProps {
+  activities: Activity[]
+  canvasObjects: CanvasObject[]
+  canvasEdges: CanvasEdge[]
+  selectedNodeId: string | null
+  selectedEdgeId: string | null
+  selectedDataObjectId: string | null
+  groupingMode: CanvasGroupingMode
+  activityRolesById: Record<string, string>
+  activityAssigneesById: Record<string, string | null>
+  focusNodeId: string | null
+  onViewportCenterChange: (position: { x: number; y: number }) => void
+  onSelectionChange: (selection: { nodeId: string | null; edgeId: string | null; dataObjectId: string | null }) => void
+  onToolbarDrop: (input: { kind: 'start' | 'activity' | 'decision' | 'merge' | 'end' | 'quelle'; position: { x: number; y: number } }) => void
+  onSelectActivity: (activity: Activity) => void
+  onOpenDataObject: (object: EdgeDataObject | CanvasObject) => void
+  onOpenSubprocessMenu: (activity: Activity, position: { x: number; y: number }) => void
+  onOpenSubprocess: (activity: Activity) => void
+  onConnectEdge: (connection: Connection) => void
+  onCreateActivityFromConnectionDrop: (input: {
+    sourceNodeId: string
+    sourceHandleId: string | null
+    position: { x: number; y: number }
+  }) => void
+  onMoveNode: (nodeId: string, position: { x: number; y: number }) => void
+  onDeleteEdges: (edgeIds: string[]) => void
+  onDeleteDataObject: (id: string) => void
+  onDeleteSelection: (selection: { nodeIds: string[]; edgeIds: string[] }) => void
+  onCreateDataObjectOnEdge: (edgeId: string) => void
+  onAddExistingDataObjectToEdge: (edgeId: string, dataObjectId: string) => void
+}
+
+export function WorkflowCanvas({
+  activities,
+  canvasObjects,
+  canvasEdges,
+  selectedNodeId,
+  selectedEdgeId,
+  selectedDataObjectId,
+  groupingMode,
+  activityRolesById,
+  activityAssigneesById,
+  focusNodeId,
+  onViewportCenterChange,
+  onSelectionChange,
+  onToolbarDrop,
+  onSelectActivity,
+  onOpenDataObject,
+  onOpenSubprocessMenu,
+  onOpenSubprocess,
+  onConnectEdge,
+  onCreateActivityFromConnectionDrop,
+  onMoveNode,
+  onDeleteEdges,
+  onDeleteDataObject,
+  onDeleteSelection,
+  onCreateDataObjectOnEdge,
+  onAddExistingDataObjectToEdge,
+}: WorkflowCanvasProps) {
+  const reactFlowRef = useRef<ReactFlowInstance | null>(null)
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const pendingConnectionRef = useRef<{ nodeId: string; handleId: string | null; handleType: 'source' | 'target' | null } | null>(null)
+  const connectionSucceededRef = useRef(false)
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
+  const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([])
+  const [liveNodePositions, setLiveNodePositions] = useState<Record<string, { x: number; y: number }>>({})
+  const [openEdgePopoverId, setOpenEdgePopoverId] = useState<string | null>(null)
+
+  const sourceObjects = useMemo(
+    () => canvasObjects.filter((item): item is Extract<CanvasObject, { object_type: 'quelle' }> => item.object_type === 'quelle'),
+    [canvasObjects],
+  )
+
+  const edgeDataObjectsByEdge = useMemo(() => {
+    const grouped = new Map<string, EdgeDataObject[]>()
+    for (const canvasObject of canvasObjects) {
+      if (canvasObject.object_type !== 'datenobjekt') {
+        continue
+      }
+
+      const current = grouped.get(canvasObject.edge_id) ?? []
+      current.push(canvasObject)
+      current.sort((left, right) => left.edge_sort_order - right.edge_sort_order)
+      grouped.set(canvasObject.edge_id, current)
+    }
+    return grouped
+  }, [canvasObjects])
+  const roleLanes = useMemo(
+    () => (groupingMode === 'role_lanes' ? buildRoleLaneMeta(activities, activityRolesById) : []),
+    [activities, activityRolesById, groupingMode],
+  )
+
+  useEffect(() => {
+    setSelectedNodeIds(selectedNodeId ? [selectedNodeId] : [])
+  }, [selectedNodeId])
+
+  useEffect(() => {
+    setSelectedEdgeIds(selectedEdgeId ? [selectedEdgeId] : [])
+  }, [selectedEdgeId])
+
+  useEffect(() => {
+    if (!selectedEdgeId) {
+      setOpenEdgePopoverId(null)
+    }
+  }, [selectedEdgeId])
+
+  const publishViewportCenter = useMemo(
+    () => () => {
+      const instance = reactFlowRef.current
+      const wrapper = wrapperRef.current
+      if (!instance || !wrapper) {
+        return
+      }
+
+      const rect = wrapper.getBoundingClientRect()
+      const center = instance.screenToFlowPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      })
+      onViewportCenterChange(center)
+    },
+    [onViewportCenterChange],
+  )
+
+  const handleNodeDragStop = useMemo(
+    () => (_event: MouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
+      const activity = activities.find((item) => item.id === node.id)
+      if (groupingMode === 'role_lanes' && activity) {
+        onMoveNode(node.id, {
+          x: node.position.x,
+          y: activity.position_y,
+        })
+        return
+      }
+
+      onMoveNode(node.id, node.position)
+    },
+    [activities, groupingMode, onMoveNode],
+  )
+
+  const handleNodeDrag = useMemo(
+    () => (_event: MouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
+      const activity = activities.find((item) => item.id === node.id)
+      if (groupingMode === 'role_lanes' && activity) {
+        setLiveNodePositions((current) => ({
+          ...current,
+          [node.id]: {
+            x: node.position.x,
+            y: activity.position_y,
+          },
+        }))
+        return
+      }
+
+      setLiveNodePositions((current) => ({
+        ...current,
+        [node.id]: node.position,
+      }))
+    },
+    [activities, groupingMode],
+  )
+
+  useEffect(() => {
+    setLiveNodePositions((current) => {
+      const next = { ...current }
+      for (const [id, position] of Object.entries(current)) {
+        const activity = activities.find((item) => item.id === id)
+        const canvasObject = sourceObjects.find((item) => item.id === id)
+        if (!activity && !canvasObject) {
+          delete next[id]
+          continue
+        }
+
+        const persistedX = activity?.position_x ?? canvasObject?.position_x
+        const persistedY = activity?.position_y ?? canvasObject?.position_y
+        if (persistedX === position.x && persistedY === position.y) {
+          delete next[id]
+        }
+      }
+      return next
+    })
+  }, [activities, sourceObjects])
+
+  useEffect(() => {
+    publishViewportCenter()
+  }, [publishViewportCenter, activities.length, sourceObjects.length])
+
+  const handleConnectEnd: OnConnectEnd = (event) => {
+    const pendingConnection = pendingConnectionRef.current
+    pendingConnectionRef.current = null
+
+    if (!pendingConnection || pendingConnection.handleType !== 'source' || !pendingConnection.nodeId) {
+      return
+    }
+
+    const point = 'changedTouches' in event ? event.changedTouches[0] : event
+    const eventTarget = event.target instanceof Element ? event.target : null
+    const droppedOnPane = Boolean(eventTarget?.closest('.react-flow__pane'))
+    const droppedOnHandle = Boolean(eventTarget?.closest('.react-flow__handle'))
+    const droppedOnNodeElement = eventTarget?.closest('.react-flow__node') ?? null
+    const droppedOnNode = Boolean(droppedOnNodeElement)
+
+    if (droppedOnNode && droppedOnNodeElement) {
+      const targetNodeId = droppedOnNodeElement.getAttribute('data-id')
+      if (!targetNodeId || targetNodeId === pendingConnection.nodeId) {
+        return
+      }
+
+      const targetCapabilities = getNodeConnectionCapabilities(targetNodeId, activities, sourceObjects, canvasEdges)
+      if (!targetCapabilities.allowTarget) {
+        return
+      }
+
+      const targetHandleId = getClosestTargetHandleId(droppedOnNodeElement, point.clientX, point.clientY)
+
+      window.setTimeout(() => {
+        if (connectionSucceededRef.current) {
+          connectionSucceededRef.current = false
+          return
+        }
+
+        onConnectEdge({
+          source: pendingConnection.nodeId,
+          sourceHandle: pendingConnection.handleId,
+          target: targetNodeId,
+          targetHandle: targetHandleId,
+        })
+      }, 0)
+      return
+    }
+
+    if (!droppedOnPane || droppedOnHandle) {
+      return
+    }
+
+    const position = reactFlowRef.current?.screenToFlowPosition({
+      x: point.clientX,
+      y: point.clientY,
+    })
+
+    if (!position) {
+      return
+    }
+
+    window.setTimeout(() => {
+      if (connectionSucceededRef.current) {
+        connectionSucceededRef.current = false
+        return
+      }
+
+      onCreateActivityFromConnectionDrop({
+        sourceNodeId: pendingConnection.nodeId,
+        sourceHandleId: pendingConnection.handleId,
+        position,
+      })
+    }, 0)
+  }
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Backspace' && event.key !== 'Delete') {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      const isTyping = Boolean(target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable))
+      if (isTyping) {
+        return
+      }
+
+      if (selectedDataObjectId) {
+        event.preventDefault()
+        void onDeleteDataObject(selectedDataObjectId)
+        onSelectionChange({ nodeId: null, edgeId: null, dataObjectId: null })
+        return
+      }
+
+      if (selectedEdgeIds.length === 0) {
+        return
+      }
+
+      event.preventDefault()
+      void onDeleteEdges(selectedEdgeIds)
+      setSelectedEdgeIds([])
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onDeleteDataObject, onDeleteEdges, onSelectionChange, selectedDataObjectId, selectedEdgeIds])
+
+  const nodes = useMemo<Array<Node<ActivityNodeData | CanvasObjectNodeData>>>(() => {
+    const childrenByParent = new Set(activities.map((activity) => activity.parent_id).filter(Boolean))
+
+      const activityNodes = activities.map<Node<ActivityNodeData>>((activity) => {
+      const freePosition = liveNodePositions[activity.id] ?? { x: activity.position_x, y: activity.position_y }
+      const laneDisplayY = getLaneDisplayY(roleLanes, activity.id, activityRolesById)
+
+      return {
+        id: activity.id,
+        type:
+          activity.node_type === 'start_event'
+            ? 'startNode'
+            : activity.node_type === 'end_event'
+              ? 'endNode'
+              : activity.node_type === 'gateway_decision' || activity.node_type === 'gateway_merge'
+                ? 'gatewayNode'
+                : 'activity',
+        position:
+          groupingMode === 'role_lanes' && laneDisplayY !== null
+            ? { x: freePosition.x, y: laneDisplayY }
+            : freePosition,
+        selected: selectedNodeIds.includes(activity.id),
+        data: {
+          activity,
+          hasChildren: childrenByParent.has(activity.id),
+          roleLabel: activityRolesById[activity.id] ?? 'Nicht zugeordnet',
+          assigneeLabel: activityAssigneesById[activity.id] ?? null,
+          groupingMode,
+          onOpenDetail: (id) => {
+            const selected = activities.find((entry) => entry.id === id)
+            if (selected) {
+              onSelectActivity(selected)
+            }
+          },
+          onOpenSubprocessMenu: (id, position) => {
+            const selected = activities.find((entry) => entry.id === id)
+            if (selected) {
+              onOpenSubprocessMenu(selected, position)
+            }
+          },
+          onOpenSubprocess: (id) => {
+            const selected = activities.find((entry) => entry.id === id)
+            if (selected) {
+              onOpenSubprocess(selected)
+            }
+          },
+        },
+      }
+    })
+
+    const objectNodes = sourceObjects.map<Node<CanvasObjectNodeData>>((canvasObject) => ({
+      id: canvasObject.id,
+      type: 'sourceNode',
+      position: liveNodePositions[canvasObject.id] ?? { x: canvasObject.position_x, y: canvasObject.position_y },
+      selected: selectedNodeIds.includes(canvasObject.id),
+      data: {
+        canvasObject,
+        onOpenPopup: (id) => {
+          const selected = sourceObjects.find((entry) => entry.id === id)
+          if (selected) {
+            onOpenDataObject(selected)
+          }
+        },
+      },
+    }))
+
+    return [...activityNodes, ...objectNodes]
+  }, [activities, activityAssigneesById, activityRolesById, groupingMode, liveNodePositions, onOpenDataObject, onOpenSubprocess, onOpenSubprocessMenu, onSelectActivity, roleLanes, selectedNodeIds, sourceObjects])
+
+  const [renderNodes, setRenderNodes] = useState<Array<Node<ActivityNodeData | CanvasObjectNodeData>>>([])
+
+  useEffect(() => {
+    setRenderNodes((current) =>
+      nodes.map((node) => {
+        const existing = current.find((entry) => entry.id === node.id)
+        if (!existing) {
+          return node
+        }
+
+        const existingWithMeasured = existing as Node<ActivityNodeData | CanvasObjectNodeData> & {
+          measured?: { width?: number; height?: number }
+        }
+
+        return {
+          ...existing,
+          ...node,
+          width: existing.width,
+          height: existing.height,
+          ...(existingWithMeasured.measured ? { measured: existingWithMeasured.measured } : {}),
+        }
+      }),
+    )
+  }, [nodes])
+
+  useEffect(() => {
+    if (!focusNodeId) {
+      return
+    }
+
+    const instance = reactFlowRef.current
+    const targetNode = renderNodes.find((node) => node.id === focusNodeId)
+    if (!instance || !targetNode) {
+      return
+    }
+
+    const zoom = typeof instance.getZoom === 'function' ? instance.getZoom() : 0.8
+    void instance.setCenter(targetNode.position.x + 110, targetNode.position.y + 70, {
+      zoom: Math.max(zoom, 0.9),
+      duration: 400,
+    })
+  }, [focusNodeId, renderNodes])
+
+  const edges = useMemo<Array<Edge>>(
+    () =>
+      canvasEdges.map((edge) => ({
+        id: edge.id,
+        source: edge.from_node_id,
+        sourceHandle: edge.from_handle_id ?? undefined,
+        target: edge.to_node_id,
+        targetHandle: edge.to_handle_id ?? undefined,
+        selected: selectedEdgeIds.includes(edge.id),
+        type: 'workflow',
+        label: edge.label ?? undefined,
+        data: {
+          label: edge.label,
+          dataObjects: edgeDataObjectsByEdge.get(edge.id) ?? [],
+          reusableDataObjects: canvasObjects.filter(
+            (canvasObject): canvasObject is EdgeDataObject =>
+              canvasObject.object_type === 'datenobjekt' && canvasObject.edge_id !== edge.id,
+          ),
+          selectedDataObjectId,
+          isPopoverOpen: openEdgePopoverId === edge.id,
+          onSelectDataObject: (canvasObject: EdgeDataObject) => {
+            setSelectedNodeIds([])
+            setSelectedEdgeIds([edge.id])
+            setOpenEdgePopoverId(edge.id)
+            onSelectionChange({ nodeId: null, edgeId: edge.id, dataObjectId: canvasObject.id })
+          },
+          onOpenDataObject: (canvasObject: EdgeDataObject) => {
+            setSelectedNodeIds([])
+            setSelectedEdgeIds([])
+            setOpenEdgePopoverId(null)
+            onSelectionChange({ nodeId: null, edgeId: null, dataObjectId: canvasObject.id })
+            onOpenDataObject(canvasObject)
+          },
+          onCreateDataObject: () => onCreateDataObjectOnEdge(edge.id),
+          onAddExistingDataObject: (dataObjectId: string) => onAddExistingDataObjectToEdge(edge.id, dataObjectId),
+          onTogglePopover: () => {
+            setSelectedNodeIds([])
+            setSelectedEdgeIds([edge.id])
+            onSelectionChange({ nodeId: null, edgeId: edge.id, dataObjectId: null })
+            setOpenEdgePopoverId((current) => (current === edge.id ? null : edge.id))
+          },
+        },
+        animated: false,
+        style: {
+          ...baseEdgeStyle,
+          stroke: selectedEdgeIds.includes(edge.id) ? '#f8fafc' : baseEdgeStyle.stroke,
+          strokeWidth: selectedEdgeIds.includes(edge.id) ? 2.8 : baseEdgeStyle.strokeWidth,
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: selectedEdgeIds.includes(edge.id) ? '#f8fafc' : baseEdgeStyle.stroke,
+          width: 20,
+          height: 20,
+        },
+      })),
+    [
+      canvasEdges,
+      canvasObjects,
+      edgeDataObjectsByEdge,
+      onAddExistingDataObjectToEdge,
+      onCreateDataObjectOnEdge,
+      onOpenDataObject,
+      onSelectionChange,
+      openEdgePopoverId,
+      selectedDataObjectId,
+      selectedEdgeIds,
+    ],
+  )
+
+  return (
+    <div
+      ref={wrapperRef}
+      data-testid="workflow-canvas"
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes('application/x-wow-toolbar-item')) {
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'copy'
+        }
+      }}
+      onDrop={(event) => {
+        const kind = event.dataTransfer.getData('application/x-wow-toolbar-item') as 'start' | 'activity' | 'decision' | 'merge' | 'end' | 'quelle' | ''
+        if (!kind) {
+          return
+        }
+
+        event.preventDefault()
+        const position = reactFlowRef.current?.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        })
+        if (!position) {
+          return
+        }
+
+        onToolbarDrop({ kind, position })
+      }}
+      className="relative h-full min-h-0 w-full overflow-hidden bg-[radial-gradient(circle_at_top,rgba(58,127,163,0.14),transparent_35%),linear-gradient(180deg,#08121b_0%,#060d14_100%)]"
+    >
+      {groupingMode === 'role_lanes' ? (
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" data-testid="role-lane-overlay">
+          {roleLanes.map((lane) => (
+            <div
+              key={lane.role}
+              data-testid={`role-lane-${lane.role}`}
+              className="absolute left-0 right-0 border-y border-cyan-300/10 bg-cyan-400/[0.035]"
+              style={{
+                top: `${lane.top}px`,
+                height: `${ROLE_LANE_HEIGHT}px`,
+              }}
+            >
+              <div className="absolute left-6 top-4 rounded-full border border-cyan-300/15 bg-slate-950/75 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-cyan-100/80">
+                {lane.role}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <ReactFlow
+        nodes={renderNodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        nodeDragThreshold={0}
+        defaultEdgeOptions={{ animated: false }}
+        deleteKeyCode={['Backspace', 'Delete']}
+        onInit={(instance) => {
+          reactFlowRef.current = instance
+          publishViewportCenter()
+        }}
+        onConnectStart={(_, params: OnConnectStartParams) => {
+          connectionSucceededRef.current = false
+          pendingConnectionRef.current = {
+            nodeId: params.nodeId ?? '',
+            handleId: params.handleId ?? null,
+            handleType: params.handleType ?? null,
+          }
+        }}
+        onConnect={(connection) => {
+          connectionSucceededRef.current = true
+          onConnectEdge(connection)
+        }}
+        onMove={publishViewportCenter}
+        onConnectEnd={handleConnectEnd}
+        onNodesChange={(changes: NodeChange[]) => {
+          setRenderNodes((current) => applyNodeChanges(changes, current))
+        }}
+        onNodeDrag={handleNodeDrag}
+        onNodeDragStop={handleNodeDragStop}
+        onEdgeClick={(_, edge) => {
+          setSelectedNodeIds([])
+          setSelectedEdgeIds([edge.id])
+          setOpenEdgePopoverId(null)
+          onSelectionChange({ nodeId: null, edgeId: edge.id, dataObjectId: null })
+        }}
+        onNodeClick={(_, node) => {
+          setSelectedEdgeIds([])
+          setSelectedNodeIds([node.id])
+          setOpenEdgePopoverId(null)
+          onSelectionChange({ nodeId: node.id, edgeId: null, dataObjectId: null })
+        }}
+        onPaneClick={() => {
+          setSelectedNodeIds([])
+          setSelectedEdgeIds([])
+          setOpenEdgePopoverId(null)
+          onSelectionChange({ nodeId: null, edgeId: null, dataObjectId: null })
+        }}
+        onNodesDelete={(deletedNodes) => {
+          if (deletedNodes.length === 0) {
+            return
+          }
+
+          setSelectedNodeIds((current) => current.filter((id) => !deletedNodes.some((node) => node.id === id)))
+          onSelectionChange({ nodeId: null, edgeId: null, dataObjectId: null })
+          onDeleteSelection({
+            nodeIds: deletedNodes.map((node) => node.id),
+            edgeIds: [],
+          })
+        }}
+        onEdgesDelete={(deletedEdges) => {
+          if (deletedEdges.length === 0) {
+            return
+          }
+
+          setSelectedEdgeIds((current) => current.filter((id) => !deletedEdges.some((edge) => edge.id === id)))
+          setOpenEdgePopoverId((current) => (current && deletedEdges.some((edge) => edge.id === current) ? null : current))
+          onSelectionChange({ nodeId: null, edgeId: null, dataObjectId: null })
+          onDeleteEdges(deletedEdges.map((edge) => edge.id))
+        }}
+      >
+        <Background color="rgba(88, 115, 137, 0.22)" gap={28} size={1.2} />
+        <Controls position="bottom-left" />
+      </ReactFlow>
+    </div>
+  )
+}
