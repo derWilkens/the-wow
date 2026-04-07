@@ -3,13 +3,18 @@
 ## Zielbild
 
 - Frontend: statische Vite-App auf Vercel
-- Backend: eigener Managed Node Service auf Render
+- Backend: NestJS-API ebenfalls auf Vercel
 - Supabase: externer Dienst fuer Auth und Daten
 
 Empfohlene oeffentliche URLs:
 
 - `https://app.<deine-domain>`
 - `https://api.<deine-domain>`
+
+Die empfohlene V1 ist jetzt:
+
+- ein Vercel-Projekt fuer `frontend`
+- ein zweites Vercel-Projekt fuer `backend`
 
 ## Frontend Deployment
 
@@ -52,39 +57,37 @@ Arbeitsverzeichnis:
 
 - `backend`
 
-Build und Start:
+Vercel erkennt NestJS als Backend-Framework. Fuer das API-Projekt wird derselbe Vercel-Workflow genutzt wie fuer das Frontend, aber mit eigenem Root Directory.
+
+Empfohlene Vercel-Einstellungen:
+
+- Root Directory: `backend`
+- Install Command: `npm install`
+- Build Command: `npm run build`
+
+Lokaler Referenzlauf:
 
 ```bash
 npm install
 npm run build
-npm run start
 ```
-
-Empfohlene Render-Einstellungen:
-
-- Service Type: `Web Service`
-- Root Directory: `backend`
-- Build Command: `npm install && npm run build`
-- Start Command: `npm run start`
-- Health Check Path: `/health`
 
 Produktive Runtime-Variablen:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_JWT_SECRET`
-- `PORT`
 - `FRONTEND_URL=https://app.<deine-domain>`
 
 Beispiel:
 
 - `backend/.env.production.example`
-- `render.yaml`
 
 ## Produktionsrelevante Details
 
 - Das Backend bietet einen unauthentifizierten Healthcheck unter:
   - `/health`
+- Fuer Frontend und Backend werden zwei getrennte Vercel-Projekte empfohlen, damit Domains, Envs und Deploys sauber getrennt bleiben.
 - CORS ist fuer Public Deployment jetzt auf die in `FRONTEND_URL` konfigurierte Origin begrenzt.
 - In lokaler Nicht-Produktionsumgebung bleiben `localhost` und `127.0.0.1` fuer Entwicklung erlaubt.
 - Das Frontend verwendet fuer den Public Build keine fest im Code eingebetteten Fallback-URLs mehr.
