@@ -1,7 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { runtimeSecrets } from '../runtime-secrets'
 
 export type OrganizationRole = 'owner' | 'admin' | 'member'
 
@@ -32,11 +31,11 @@ export class DatabaseService {
   readonly supabase: SupabaseClient
 
   constructor(private readonly configService: ConfigService) {
-    const url = this.configService.get<string>('SUPABASE_URL') || runtimeSecrets.supabaseUrl
-    const serviceRoleKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY') || runtimeSecrets.supabaseServiceRoleKey
+    const url = this.configService.get<string>('SUPABASE_URL')
+    const serviceRoleKey = this.configService.get<string>('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!url || !serviceRoleKey) {
-      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in the environment')
     }
 
     this.supabase = createClient(url, serviceRoleKey, {
