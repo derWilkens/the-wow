@@ -1,7 +1,11 @@
 import { supabase } from './supabase'
 
 const runtimeConfig = window.__WOW_CONFIG__ ?? {}
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || runtimeConfig.apiBaseUrl || '').trim()
+const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL || runtimeConfig.apiBaseUrl || '')
+
+export function normalizeApiBaseUrl(value: string) {
+  return value.trim().replace(/\/+$/, '')
+}
 
 async function getAccessToken() {
   if (!supabase) {
