@@ -157,11 +157,33 @@ Important detail:
   - transport mode
   - notes
 - transport modes are now organization-specific settings:
-  - configured from a dedicated settings dialog in the canvas header
+  - configured from the central settings dialog in the canvas header
   - not managed on the workflow start page
   - owner/admin can add, edit, deactivate, and set defaults
   - members can use the configured modes in edge details
   - transport mode choice uses the shared custom choice list UI
+- the central settings dialog now groups three concerns in one place:
+  - `Firma`
+  - `UI`
+  - `Stammdaten`
+- company name changes are now handled in that settings dialog and should update visible organization context immediately
+- roles are now also managed centrally from that same settings dialog:
+  - create, edit, and delete from the company catalog
+  - deleting a linked role is intentionally blocked with a business error
+- activities now separate responsibility into two explicit concepts:
+  - `Ausfuehrende(r)` is free text
+  - `Rolle` is a company-wide catalog value
+  - swimlanes derive from the saved role instead of organization membership roles
+- IT tools are now also managed centrally from the same settings dialog:
+  - create, edit, and delete from the company catalog
+  - deleting a linked tool is intentionally blocked with a business error
+- current phase-1 UX cleanup now also includes:
+  - condensed activity nodes with type icon top-left and role top-right
+  - inline rename on the selected activity title
+  - connectors visible only on selected nodes
+  - login submit on `Enter`
+  - fully opaque edge dialog
+  - less transparent detailed-workflow dialog
 - IT tools are now modeled as reusable entities:
   - create new tools from activity details
   - link existing tools from the shared catalog
@@ -197,6 +219,9 @@ Important detail:
   - `frontend/e2e/activity-detail-from-edge-detail.spec.ts`
   - `frontend/e2e/edge-two-named-data-objects.spec.ts`
   - `frontend/e2e/activity-detail-check-sources.spec.ts`
+- a dedicated settings/master-data browser flow now exists:
+  - `frontend/e2e/settings-master-data.spec.ts`
+  - covers company rename, UI preference save, central IT-tool creation, central transport-mode creation, activity tool linking, and reload persistence
 - current rule for large browser failures:
   - isolate the concrete failing interaction in a dedicated repro spec first
   - get that smaller repro green
@@ -263,8 +288,12 @@ Avoid introducing a separate business entity called `subprocess`. A child workfl
   - `edge-two-named-data-objects.spec.ts`: `1 passed`
   - `activity-detail-check-sources.spec.ts`: `1 passed`
 - Latest unit verification is green with:
-  - frontend: `57 / 57`
-  - backend: `13 / 13`
+  - frontend: `68 / 68`
+  - backend: `22 / 22`
+- Latest settings/master-data verification is green with:
+  - `settings-master-data.spec.ts`: `1 passed`
+- Latest role/assignee model verification is green with:
+  - local save path remains functional through fallback behavior even when migration `013_activity_roles_and_assignments.sql` is not yet applied
 
 ## Specs Worth Reading Before Major Changes
 

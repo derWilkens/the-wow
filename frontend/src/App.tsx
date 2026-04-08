@@ -3,7 +3,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import type { Connection } from 'reactflow'
 import { toPng } from 'html-to-image'
 import { useActivities, useCreateSubprocess, useDeleteActivity, useLinkSubprocess, useUnlinkSubprocess, useUpsertActivity } from './api/activities'
-import { useAcceptOrganizationInvitation, useCreateOrganization, useOrganizationMembers, useOrganizations, usePendingOrganizationInvitations } from './api/organizations'
+import { useAcceptOrganizationInvitation, useCreateOrganization, useOrganizations, usePendingOrganizationInvitations } from './api/organizations'
+import { useOrganizationRoles } from './api/organizationRoles'
 import { useCanvasEdges, useDeleteCanvasEdge, useUpsertCanvasEdge } from './api/canvasEdges'
 import { useCanvasObjects, useDeleteCanvasObject, useUpsertCanvasObject } from './api/canvasObjects'
 import { useCreateTransportMode, useTransportModes } from './api/transportModes'
@@ -20,7 +21,7 @@ import { SubprocessWizard } from './components/canvas/SubprocessWizard'
 import { WorkflowCanvas } from './components/canvas/WorkflowCanvas'
 import { getReusableDataObjectsForEdge } from './components/canvas/canvasData'
 import { AppHeader, type CanvasSearchOption } from './components/layout/AppHeader'
-import { TransportModeSettingsDialog } from './components/settings/TransportModeSettingsDialog'
+import { SettingsDialog } from './components/settings/SettingsDialog'
 import { WorkspaceList } from './components/workspace/WorkspaceList'
 import { useAuthSession } from './hooks/useAuthSession'
 import { supabase } from './lib/supabase'
@@ -36,6 +37,23 @@ import type {
   UpsertCanvasObjectInput,
   Workspace,
 } from './types'
+
+const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
+
+function readDefaultGroupingMode(): CanvasGroupingMode {
+  if (typeof window === 'undefined') {
+    return 'free'
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(UI_PREFERENCES_STORAGE_KEY) ?? '{}') as {
+      default_grouping_mode?: CanvasGroupingMode
+    }
+    return parsed.default_grouping_mode === 'role_lanes' ? 'role_lanes' : 'free'
+  } catch {
+    return 'free'
+  }
+}
 
 interface CanvasSnapshot {
   activities: Activity[]
@@ -277,9 +295,11 @@ function WorkspaceCanvasApp({
     workspaceTrail,
     openSubprocessWorkspace,
     navigateToWorkspaceTrail,
+    organizationName,
+    updateOrganizationName,
   } = useCanvasStore()
   const { data: workspaces = [] } = useWorkspaces(organizationId)
-  const { data: organizationMembers = [] } = useOrganizationMembers(organizationId)
+  const { data: organizationRoles = [] } = useOrganizationRoles(organizationId)
   const { data: activities = [], isLoading: activitiesLoading } = useActivities(workspaceId, parentActivityId)
   const { data: canvasObjects = [], isLoading: objectsLoading } = useCanvasObjects(workspaceId, parentActivityId)
   const { data: canvasEdges = [] } = useCanvasEdges(workspaceId, parentActivityId)
@@ -321,9 +341,9 @@ function WorkspaceCanvasApp({
   const [wizardActivity, setWizardActivity] = useState<Activity | null>(null)
   const [linkActivity, setLinkActivity] = useState<Activity | null>(null)
   const [viewportCenter, setViewportCenter] = useState({ x: 360, y: 260 })
-  const [isTransportSettingsOpen, setIsTransportSettingsOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [dataObjectActionError, setDataObjectActionError] = useState<string | null>(null)
-  const [groupingMode, setGroupingMode] = useState<CanvasGroupingMode>('free')
+  const [groupingMode, setGroupingMode] = useState<CanvasGroupingMode>(() => readDefaultGroupingMode())
   const [focusedCanvasNodeId, setFocusedCanvasNodeId] = useState<string | null>(null)
 
   const currentSnapshot = useMemo<CanvasSnapshot>(
@@ -524,24 +544,20 @@ function WorkspaceCanvasApp({
       Object.fromEntries(
         visibleActivities.map((activity) => [
           activity.id,
-          organizationMembers.find((member) => member.user_id === activity.assignee_user_id)?.domain_role_label ??
-            organizationMembers.find((member) => member.user_id === activity.assignee_user_id)?.role ??
-            'Nicht zugeordnet',
+          organizationRoles.find((role) => role.id === activity.role_id)?.label ?? 'Nicht zugeordnet',
         ]),
       ),
-    [organizationMembers, visibleActivities],
+    [organizationRoles, visibleActivities],
   )
   const activityAssigneesById = useMemo(
     () =>
       Object.fromEntries(
         visibleActivities.map((activity) => [
           activity.id,
-          organizationMembers.find((member) => member.user_id === activity.assignee_user_id)?.display_name ??
-            organizationMembers.find((member) => member.user_id === activity.assignee_user_id)?.email ??
-            null,
+          activity.assignee_label?.trim() || null,
         ]),
       ),
-    [organizationMembers, visibleActivities],
+    [visibleActivities],
   )
   const canvasSearchOptions = useMemo<CanvasSearchOption[]>(
     () => [
@@ -569,8 +585,52 @@ function WorkspaceCanvasApp({
     [activityRolesById, visibleActivities, visibleSourceObjects],
   )
   const dataObjectToolbarHint = selectedEdge
-    ? 'Datenobjekt auf markierter Verbindung einfügen'
-    : 'Markiere zuerst die Verbindung, auf der das Objekt transportiert wird'
+      ? 'Datenobjekt auf markierter Verbindung einfügen'
+      : 'Markiere zuerst die Verbindung, auf der das Objekt transportiert wird'
+
+  async function renameActivityInline(activityId: string, nextLabel: string) {
+    const activity = visibleActivities.find((entry) => entry.id === activityId)
+    if (!activity || activity.label === nextLabel) {
+      return
+    }
+
+    rememberSnapshot()
+    setOptimisticActivities((current) => [
+      ...current.filter((entry) => entry.id !== activityId),
+      {
+        ...activity,
+        label: nextLabel,
+      },
+    ])
+
+    try {
+      await upsertActivity.mutateAsync({
+        id: activity.id,
+        parent_id: activity.parent_id,
+        node_type: activity.node_type,
+        label: nextLabel,
+        trigger_type: activity.trigger_type,
+        position_x: activity.position_x,
+        position_y: activity.position_y,
+        status: activity.status,
+        status_icon: activity.status_icon,
+        activity_type: activity.activity_type,
+        description: activity.description,
+        notes: activity.notes,
+        assignee_label: activity.assignee_label ?? null,
+        role_id: activity.role_id ?? null,
+        duration_minutes: activity.duration_minutes ?? null,
+        linked_workflow_id: activity.linked_workflow_id,
+        linked_workflow_mode: activity.linked_workflow_mode,
+        linked_workflow_purpose: activity.linked_workflow_purpose,
+        linked_workflow_inputs: activity.linked_workflow_inputs,
+        linked_workflow_outputs: activity.linked_workflow_outputs,
+      })
+    } catch (error) {
+      setOptimisticActivities((current) => current.filter((entry) => entry.id !== activityId))
+      throw error
+    }
+  }
 
   function canConnectActivityNodes(sourceId: string, targetId: string) {
     const sourceActivity = visibleActivities.find((activity) => activity.id === sourceId)
@@ -1734,9 +1794,9 @@ function WorkspaceCanvasApp({
           onSignOut={() => void signOut()}
           onExportPng={() => void exportAsPng()}
           onExportPdf={exportAsPdf}
-          onOpenTransportSettings={
+          onOpenSettings={
             organizationRole === 'owner' || organizationRole === 'admin'
-              ? () => setIsTransportSettingsOpen(true)
+              ? () => setIsSettingsOpen(true)
               : undefined
           }
           groupingMode={groupingMode}
@@ -1850,6 +1910,7 @@ function WorkspaceCanvasApp({
                 onOpenSubprocess={(activity) => {
                   openLinkedSubprocess(activity)
                 }}
+                onInlineRenameActivity={(activityId, nextLabel) => void renameActivityInline(activityId, nextLabel)}
                 onConnectEdge={(connection) => void connectCanvasNodes(connection)}
                 onCreateActivityFromConnectionDrop={(input) => void createActivityFromConnectionDrop(input)}
                 onMoveNode={(nodeId, position) => void persistNodePosition(nodeId, position)}
@@ -1922,11 +1983,14 @@ function WorkspaceCanvasApp({
                 onDeleteDataObject={(dataObjectId) => void removeDataObject(dataObjectId)}
               />
             ) : null}
-          <TransportModeSettingsDialog
+          <SettingsDialog
             organizationId={organizationId}
+            organizationName={organizationName ?? ''}
             organizationRole={organizationRole}
-            isOpen={isTransportSettingsOpen}
-            onClose={() => setIsTransportSettingsOpen(false)}
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            onOrganizationRenamed={updateOrganizationName}
+            onUiPreferencesChange={(preferences) => setGroupingMode(preferences.default_grouping_mode)}
           />
           {subprocessMenu ? (
               <SubprocessMenu

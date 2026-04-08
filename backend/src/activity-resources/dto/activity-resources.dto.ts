@@ -15,6 +15,16 @@ export class CreateITToolDto {
   description?: string | null
 }
 
+export class UpdateITToolDto {
+  @IsString()
+  @MinLength(1)
+  name!: string
+
+  @IsOptional()
+  @IsString()
+  description?: string | null
+}
+
 export class AddCheckSourceDto {
   @IsUUID()
   canvas_object_id!: string

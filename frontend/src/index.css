@@ -646,3 +646,67 @@ select {
 .wow-handle--end-target {
   border-color: rgba(253, 164, 175, 0.78);
 }
+
+.wow-activity-node__meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.wow-activity-node__type-icon {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(102, 227, 196, 0.18);
+  background: rgba(102, 227, 196, 0.12);
+  color: #d8fff0;
+}
+
+.wow-activity-node__role-top {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #9ad9d0;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.wow-activity-node__title {
+  max-width: 100%;
+}
+
+.wow-activity-node__title-button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: text;
+}
+
+.wow-activity-node__inline-input {
+  margin-top: 0.5rem;
+  width: 100%;
+  border: 1px solid rgba(132, 156, 177, 0.22);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+}
+
+.react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.react-flow__node.selected .react-flow__handle {
+  opacity: 1;
+  pointer-events: auto;
+}

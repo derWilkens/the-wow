@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { Position } from 'reactflow'
 import { ActivityNode } from './ActivityNode'
@@ -24,7 +24,8 @@ function createActivity(overrides: Partial<Activity> = {}): Activity {
     workspace_id: 'workspace-1',
     parent_id: null,
     owner_id: 'user-1',
-    assignee_user_id: 'user-2',
+    assignee_label: 'AG BIM-Koordinator',
+    role_id: 'role-1',
     node_type: 'activity',
     label: 'Rechnung pruefen',
     trigger_type: null,
@@ -47,7 +48,7 @@ function createActivity(overrides: Partial<Activity> = {}): Activity {
 }
 
 describe('ActivityNode', () => {
-  it('shows the derived role label on the activity card', () => {
+  it('shows role and assignee labels on the activity card', () => {
     render(
       <ActivityNode
         id="activity-1"
@@ -68,14 +69,16 @@ describe('ActivityNode', () => {
           onOpenDetail: vi.fn(),
           onOpenSubprocessMenu: vi.fn(),
           onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
         }}
         targetPosition={Position.Left}
         sourcePosition={Position.Right}
-      />
+      />,
     )
 
     expect(screen.getByTestId('activity-role-activity-1')).toHaveTextContent('Sachbearbeitung')
     expect(screen.getByTestId('activity-assignee-activity-1')).toHaveTextContent('Max Mustermann')
+    expect(screen.queryByText('Aktivität')).not.toBeInTheDocument()
   })
 
   it('hides role and assignee metadata in swimlane mode', () => {
@@ -99,27 +102,28 @@ describe('ActivityNode', () => {
           onOpenDetail: vi.fn(),
           onOpenSubprocessMenu: vi.fn(),
           onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
         }}
         targetPosition={Position.Left}
         sourcePosition={Position.Right}
-      />
+      />,
     )
 
     expect(screen.queryByTestId('activity-role-activity-1')).not.toBeInTheDocument()
     expect(screen.queryByTestId('activity-assignee-activity-1')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('activity-owner-activity-1')).not.toBeInTheDocument()
   })
 
-  it('opens detail on double click and subprocess menu on action click', () => {
+  it('opens detail on double click, supports inline rename and opens subprocess menu on action click', async () => {
     const onOpenDetail = vi.fn()
     const onOpenSubprocessMenu = vi.fn()
+    const onInlineRename = vi.fn().mockResolvedValue(undefined)
 
     render(
       <ActivityNode
         id="activity-1"
         type="activity"
         zIndex={1}
-        selected={false}
+        selected
         isConnectable
         xPos={100}
         yPos={100}
@@ -134,21 +138,33 @@ describe('ActivityNode', () => {
           onOpenDetail,
           onOpenSubprocessMenu,
           onOpenSubprocess: vi.fn(),
+          onInlineRename,
         }}
         targetPosition={Position.Left}
         sourcePosition={Position.Right}
-      />
+      />,
     )
 
     fireEvent.doubleClick(screen.getByTestId('activity-node-activity-1'))
     expect(onOpenDetail).toHaveBeenCalledWith('activity-1')
 
-    fireEvent.click(screen.getByTestId('subprocess-trigger-activity-1'))
-    expect(onOpenSubprocessMenu).toHaveBeenCalledWith('activity-1', expect.objectContaining({
-      x: expect.any(Number),
-      y: expect.any(Number),
-    }))
+    fireEvent.click(screen.getByTestId('activity-inline-label-activity-1'))
+    fireEvent.change(screen.getByTestId('activity-inline-input-activity-1'), { target: { value: 'Neue Bezeichnung' } })
+    fireEvent.keyDown(screen.getByTestId('activity-inline-input-activity-1'), { key: 'Enter' })
 
-    expect(screen.getByTestId('subprocess-badge-activity-1')).toHaveTextContent('Ablauf verknÃ¼pft')
+    await waitFor(() => {
+      expect(onInlineRename).toHaveBeenCalledWith('activity-1', 'Neue Bezeichnung')
+    })
+
+    fireEvent.click(screen.getByTestId('subprocess-trigger-activity-1'))
+    expect(onOpenSubprocessMenu).toHaveBeenCalledWith(
+      'activity-1',
+      expect.objectContaining({
+        x: expect.any(Number),
+        y: expect.any(Number),
+      }),
+    )
+
+    expect(screen.getByTestId('subprocess-badge-activity-1')).toHaveTextContent('Ablauf verknuepft')
   })
 })

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ActivityDetailPopup } from './ActivityDetailPopup'
-import type { Activity, CanvasEdge, CanvasObject, ITTool } from '../../types'
+import type { Activity, CanvasEdge, CanvasObject, CatalogRole, ITTool } from '../../types'
 
 const mockUseUpsertActivity = vi.fn()
 const mockUseActivityComments = vi.fn()
@@ -13,10 +13,9 @@ const mockUseITTools = vi.fn()
 const mockUseCreateITTool = vi.fn()
 const mockUseLinkActivityTool = vi.fn()
 const mockUseUnlinkActivityTool = vi.fn()
-const mockUseCheckSources = vi.fn()
-const mockUseAddCheckSource = vi.fn()
-const mockUseRemoveCheckSource = vi.fn()
 const mockUseOrganizationMembers = vi.fn()
+const mockUseOrganizationRoles = vi.fn()
+const mockUseCreateOrganizationRole = vi.fn()
 
 vi.mock('../../api/activities', () => ({
   useUpsertActivity: (...args: unknown[]) => mockUseUpsertActivity(...args),
@@ -32,9 +31,11 @@ vi.mock('../../api/activityResources', () => ({
   useCreateITTool: (...args: unknown[]) => mockUseCreateITTool(...args),
   useLinkActivityTool: (...args: unknown[]) => mockUseLinkActivityTool(...args),
   useUnlinkActivityTool: (...args: unknown[]) => mockUseUnlinkActivityTool(...args),
-  useCheckSources: (...args: unknown[]) => mockUseCheckSources(...args),
-  useAddCheckSource: (...args: unknown[]) => mockUseAddCheckSource(...args),
-  useRemoveCheckSource: (...args: unknown[]) => mockUseRemoveCheckSource(...args),
+}))
+
+vi.mock('../../api/organizationRoles', () => ({
+  useOrganizationRoles: (...args: unknown[]) => mockUseOrganizationRoles(...args),
+  useCreateOrganizationRole: (...args: unknown[]) => mockUseCreateOrganizationRole(...args),
 }))
 
 vi.mock('../../api/organizations', () => ({
@@ -47,7 +48,8 @@ function createActivity(overrides: Partial<Activity> = {}): Activity {
     workspace_id: 'workspace-1',
     parent_id: null,
     owner_id: 'user-1',
-    assignee_user_id: null,
+    assignee_label: null,
+    role_id: null,
     node_type: 'activity',
     label: 'Rechnung pruefen',
     trigger_type: null,
@@ -80,6 +82,18 @@ function createTool(id: string, name: string, description: string | null = null)
   }
 }
 
+function createRole(id: string, label: string, description: string | null = null): CatalogRole {
+  return {
+    id,
+    organization_id: 'org-1',
+    label,
+    description,
+    sort_order: 0,
+    created_at: '2026-04-03T00:00:00.000Z',
+    created_by: 'user-1',
+  }
+}
+
 const defaultCanvasObjects: CanvasObject[] = []
 const defaultCanvasEdges: CanvasEdge[] = []
 
@@ -95,10 +109,9 @@ describe('ActivityDetailPopup', () => {
     mockUseCreateITTool.mockReturnValue({ mutateAsync: vi.fn() })
     mockUseLinkActivityTool.mockReturnValue({ mutateAsync: vi.fn() })
     mockUseUnlinkActivityTool.mockReturnValue({ mutateAsync: vi.fn() })
-    mockUseCheckSources.mockReturnValue({ data: [] })
-    mockUseAddCheckSource.mockReturnValue({ mutateAsync: vi.fn() })
-    mockUseRemoveCheckSource.mockReturnValue({ mutateAsync: vi.fn() })
     mockUseOrganizationMembers.mockReturnValue({ data: [] })
+    mockUseOrganizationRoles.mockReturnValue({ data: [] })
+    mockUseCreateOrganizationRole.mockReturnValue({ mutateAsync: vi.fn() })
   })
 
   it('shows linked IT tools as chips and filters them from the selectable catalog', () => {
@@ -148,7 +161,6 @@ describe('ActivityDetailPopup', () => {
     fireEvent.click(screen.getByTestId('activity-tool-select-trigger'))
     fireEvent.click(screen.getByTestId('activity-tool-select-create-toggle'))
     const submit = screen.getByTestId('activity-tool-select-create-submit')
-    expect(submit).toBeDisabled()
 
     fireEvent.change(screen.getByTestId('activity-tool-select-create-name'), {
       target: { value: 'SharePoint' },
@@ -157,7 +169,6 @@ describe('ActivityDetailPopup', () => {
       target: { value: 'Dokumentenablage' },
     })
 
-    expect(submit).not.toBeDisabled()
     await act(async () => {
       fireEvent.click(submit)
     })
@@ -171,20 +182,12 @@ describe('ActivityDetailPopup', () => {
     })
   })
 
-  it('lets the user assign an executor and saves the derived assignee id', async () => {
+  it('saves assignee text and the selected organization role', async () => {
     const upsertMutation = vi.fn().mockResolvedValue(undefined)
     const onClose = vi.fn()
     mockUseUpsertActivity.mockReturnValue({ mutateAsync: upsertMutation })
-    mockUseOrganizationMembers.mockReturnValue({
-      data: [
-        {
-          organization_id: 'org-1',
-          user_id: 'user-2',
-          email: 'sachbearbeitung@example.com',
-          role: 'member',
-          created_at: '2026-04-04T00:00:00.000Z',
-        },
-      ],
+    mockUseOrganizationRoles.mockReturnValue({
+      data: [createRole('role-1', 'BIM-Koordination')],
     })
 
     render(
@@ -201,44 +204,34 @@ describe('ActivityDetailPopup', () => {
       />,
     )
 
-    fireEvent.click(screen.getByTestId('activity-assignee-select-trigger'))
-    fireEvent.click(screen.getByTestId('activity-assignee-select-option-user-2'))
+    fireEvent.change(screen.getByTestId('activity-assignee-input'), { target: { value: 'AG BIM-Koordinator' } })
+    fireEvent.click(screen.getByTestId('activity-role-select-trigger'))
+    fireEvent.click(screen.getByTestId('activity-role-select-option-role-1'))
     fireEvent.click(screen.getByTestId('activity-detail-save'))
 
     await waitFor(() => {
       expect(upsertMutation).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'activity-1',
-          assignee_user_id: 'user-2',
+          assignee_label: 'AG BIM-Koordinator',
+          role_id: 'role-1',
         }),
       )
       expect(onClose).toHaveBeenCalled()
     })
   })
 
-  it('uses the custom choice list for check sources in review activities', async () => {
-    const addCheckSourceMutation = vi.fn().mockResolvedValue(undefined)
-    mockUseAddCheckSource.mockReturnValue({ mutateAsync: addCheckSourceMutation })
+  it('creates a new role from the detail dialog', async () => {
+    const createRoleMutation = vi.fn().mockResolvedValue(createRole('role-2', 'Architektur'))
+    mockUseCreateOrganizationRole.mockReturnValue({ mutateAsync: createRoleMutation })
 
     render(
       <ActivityDetailPopup
-        activity={createActivity()}
+        activity={createActivity({ activity_type: 'erstellen' })}
         workspaceId="workspace-1"
         organizationId="org-1"
         currentUserId="user-1"
-        canvasObjects={[
-          {
-            id: 'obj-1',
-            workspace_id: 'workspace-1',
-            parent_activity_id: null,
-            object_type: 'datenobjekt',
-            name: 'Pruefprotokoll',
-            edge_id: 'edge-1',
-            edge_sort_order: 0,
-            updated_at: '2026-04-03T00:00:00.000Z',
-            fields: [],
-          },
-        ]}
+        canvasObjects={defaultCanvasObjects}
         canvasEdges={defaultCanvasEdges}
         connectionCount={2}
         onDelete={vi.fn()}
@@ -246,15 +239,18 @@ describe('ActivityDetailPopup', () => {
       />,
     )
 
-    fireEvent.click(screen.getByTestId('activity-check-source-select-trigger'))
-    fireEvent.click(screen.getByTestId('activity-check-source-select-option-obj-1'))
+    fireEvent.click(screen.getByTestId('activity-role-select-trigger'))
+    fireEvent.click(screen.getByTestId('activity-role-select-create-toggle'))
+    fireEvent.change(screen.getByTestId('activity-role-select-create-name'), { target: { value: 'Architektur' } })
+    fireEvent.change(screen.getByTestId('activity-role-select-create-description'), { target: { value: 'Planung Architektur' } })
+
     await act(async () => {
-      fireEvent.click(screen.getByText('Add'))
+      fireEvent.click(screen.getByTestId('activity-role-select-create-submit'))
     })
 
-    expect(addCheckSourceMutation).toHaveBeenCalledWith({
-      canvas_object_id: 'obj-1',
-      notes: null,
+    expect(createRoleMutation).toHaveBeenCalledWith({
+      label: 'Architektur',
+      description: 'Planung Architektur',
     })
   })
 

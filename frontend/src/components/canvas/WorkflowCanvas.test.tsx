@@ -81,7 +81,8 @@ function createActivity(overrides: Partial<Activity> = {}): Activity {
     workspace_id: 'workspace-1',
     parent_id: null,
     owner_id: 'user-1',
-    assignee_user_id: 'user-2',
+    assignee_label: 'AG BIM-Koordinator',
+    role_id: 'role-1',
     node_type: 'activity',
     label: 'Pruefen',
     trigger_type: null,
@@ -148,6 +149,7 @@ function renderCanvas({
         onOpenDataObject={vi.fn()}
         onOpenSubprocessMenu={vi.fn()}
         onOpenSubprocess={vi.fn()}
+        onInlineRenameActivity={vi.fn()}
         onConnectEdge={vi.fn()}
         onCreateActivityFromConnectionDrop={vi.fn()}
         onMoveNode={onMoveNode}
@@ -172,7 +174,7 @@ describe('WorkflowCanvas', () => {
       groupingMode: 'role_lanes',
       activities: [
         createActivity({ id: 'activity-1', label: 'Pruefen', position_x: 220, position_y: 100 }),
-        createActivity({ id: 'activity-2', label: 'Freigeben', position_x: 520, position_y: 260, assignee_user_id: null }),
+        createActivity({ id: 'activity-2', label: 'Freigeben', position_x: 520, position_y: 260, role_id: null, assignee_label: null }),
       ],
       canvasObjects: [createSourceObject()],
       activityRolesById: {
@@ -243,6 +245,7 @@ describe('WorkflowCanvas', () => {
           onOpenDataObject={vi.fn()}
           onOpenSubprocessMenu={vi.fn()}
           onOpenSubprocess={vi.fn()}
+          onInlineRenameActivity={vi.fn()}
           onConnectEdge={onConnectEdge}
           onCreateActivityFromConnectionDrop={vi.fn()}
           onMoveNode={vi.fn()}

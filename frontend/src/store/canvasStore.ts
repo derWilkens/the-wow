@@ -45,6 +45,7 @@ interface CanvasStore {
   breadcrumb: BreadcrumbItem[]
   workspaceTrail: WorkspaceTrailItem[]
   selectOrganization: (organizationId: string, organizationName: string, organizationRole: 'owner' | 'admin' | 'member') => void
+  updateOrganizationName: (organizationName: string) => void
   leaveOrganization: () => void
   openWorkspace: (workspaceId: string, workspaceName: string) => void
   openWorkspacePath: (trail: WorkspaceTrailItem[]) => void
@@ -84,6 +85,7 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
         workspaceTrail: [],
       }
     }),
+  updateOrganizationName: (organizationName) => set(() => ({ organizationName })),
   leaveOrganization: () =>
     set(() => {
       writeStoredOrganizationId(null)

@@ -61,20 +61,21 @@ test.describe('transport mode settings', () => {
       await expect(page.getByTestId('toolbar-activity')).toBeVisible({ timeout: 15_000 })
 
       await page.getByTestId('toolbar-settings').click()
-      await expect(page.getByRole('heading', { name: 'Transportmodi' })).toBeVisible()
+      await page.getByTestId('settings-nav-master-data').click()
+      await expect(page.getByRole('heading', { name: 'Firmenkataloge' })).toBeVisible()
       await expect(page.locator('input[value="Direkt"]').first()).toBeVisible()
-      await expect(page.locator('input[value="Mail"]').first()).toBeVisible()
 
-      await page.getByTestId('transport-mode-new-label').fill(transportModeLabel)
-      await page.getByTestId('transport-mode-new-description').fill('Hinweis ueber Teams')
-      await page.getByTestId('transport-mode-create').click()
+      await page.getByTestId('settings-transport-mode-new-label').fill(transportModeLabel)
+      await page.getByTestId('settings-transport-mode-new-description').fill('Hinweis ueber Teams')
+      await page.getByTestId('settings-transport-mode-create').click()
       await expect(page.locator(`input[value="${transportModeLabel}"]`).first()).toBeVisible({ timeout: 15_000 })
 
-      await page.getByTestId('transport-mode-settings-close').click()
-      await expect(page.getByRole('heading', { name: 'Transportmodi' })).toHaveCount(0)
+      await page.getByTestId('settings-dialog-close').click()
+      await expect(page.getByRole('heading', { name: 'Firmenkataloge' })).toHaveCount(0)
 
       await page.getByTestId('toolbar-settings').click()
-      await expect(page.getByRole('heading', { name: 'Transportmodi' })).toBeVisible()
+      await page.getByTestId('settings-nav-master-data').click()
+      await expect(page.getByRole('heading', { name: 'Firmenkataloge' })).toBeVisible()
       await expect(page.locator(`input[value="${transportModeLabel}"]`).first()).toBeVisible({ timeout: 15_000 })
     } finally {
       await cleanupWorkspaces(request, createdWorkspaceIds, null)
@@ -103,11 +104,12 @@ test.describe('transport mode settings', () => {
       await expect(page.getByTestId('toolbar-activity')).toBeVisible({ timeout: 15_000 })
 
       await page.getByTestId('toolbar-settings').click()
-      await page.getByTestId('transport-mode-new-label').fill(transportModeLabel)
-      await page.getByTestId('transport-mode-new-description').fill('Synchronisation ueber Teams')
-      await page.getByTestId('transport-mode-create').click()
+      await page.getByTestId('settings-nav-master-data').click()
+      await page.getByTestId('settings-transport-mode-new-label').fill(transportModeLabel)
+      await page.getByTestId('settings-transport-mode-new-description').fill('Synchronisation ueber Teams')
+      await page.getByTestId('settings-transport-mode-create').click()
       await expect(page.locator(`input[value="${transportModeLabel}"]`).first()).toBeVisible({ timeout: 15_000 })
-      await page.getByTestId('transport-mode-settings-close').click()
+      await page.getByTestId('settings-dialog-close').click()
 
       await selectFirstEdge(page)
       await page.getByTestId('edge-transport-mode-trigger').click()
@@ -115,11 +117,12 @@ test.describe('transport mode settings', () => {
       await page.getByTestId('edge-save').click()
 
       await page.getByTestId('toolbar-settings').click()
+      await page.getByTestId('settings-nav-master-data').click()
       const modeRow = page.locator(`input[value="${transportModeLabel}"]`).first()
       const modeCard = modeRow.locator('xpath=ancestor::div[contains(@class,"rounded-2xl")]').first()
       await modeCard.getByRole('button', { name: 'Deaktivieren' }).click()
       await expect(modeCard).toContainText('inaktiv', { timeout: 15_000 })
-      await page.getByTestId('transport-mode-settings-close').click()
+      await page.getByTestId('settings-dialog-close').click()
 
       await selectFirstEdge(page)
       await expect(page.getByTestId('edge-transport-mode-trigger')).toContainText(transportModeLabel)

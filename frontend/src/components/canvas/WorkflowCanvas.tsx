@@ -156,6 +156,7 @@ interface WorkflowCanvasProps {
   onOpenDataObject: (object: EdgeDataObject | CanvasObject) => void
   onOpenSubprocessMenu: (activity: Activity, position: { x: number; y: number }) => void
   onOpenSubprocess: (activity: Activity) => void
+  onInlineRenameActivity: (activityId: string, label: string) => Promise<void> | void
   onConnectEdge: (connection: Connection) => void
   onCreateActivityFromConnectionDrop: (input: {
     sourceNodeId: string
@@ -188,6 +189,7 @@ export function WorkflowCanvas({
   onOpenDataObject,
   onOpenSubprocessMenu,
   onOpenSubprocess,
+  onInlineRenameActivity,
   onConnectEdge,
   onCreateActivityFromConnectionDrop,
   onMoveNode,
@@ -474,6 +476,7 @@ export function WorkflowCanvas({
               onOpenSubprocess(selected)
             }
           },
+          onInlineRename: (id, nextLabel) => onInlineRenameActivity(id, nextLabel),
         },
       }
     })
@@ -495,7 +498,7 @@ export function WorkflowCanvas({
     }))
 
     return [...activityNodes, ...objectNodes]
-  }, [activities, activityAssigneesById, activityRolesById, groupingMode, liveNodePositions, onOpenDataObject, onOpenSubprocess, onOpenSubprocessMenu, onSelectActivity, roleLanes, selectedNodeIds, sourceObjects])
+  }, [activities, activityAssigneesById, activityRolesById, groupingMode, liveNodePositions, onInlineRenameActivity, onOpenDataObject, onOpenSubprocess, onOpenSubprocessMenu, onSelectActivity, roleLanes, selectedNodeIds, sourceObjects])
 
   const [renderNodes, setRenderNodes] = useState<Array<Node<ActivityNodeData | CanvasObjectNodeData>>>([])
 

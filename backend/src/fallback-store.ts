@@ -1,6 +1,7 @@
-type ActivityAssigneeRecord = {
+type ActivityAssignmentRecord = {
   activityId: string
-  assigneeUserId: string | null
+  assigneeLabel: string | null
+  roleId: string | null
 }
 
 type ActivityCommentRecord = {
@@ -26,6 +27,17 @@ type WorkflowTemplateRecord = {
   created_at: string
 }
 
-export const fallbackActivityAssignees = new Map<string, ActivityAssigneeRecord>()
+type OrganizationRoleRecord = {
+  id: string
+  organization_id: string
+  label: string
+  description: string | null
+  sort_order: number
+  created_at: string
+  created_by: string | null
+}
+
+export const fallbackActivityAssignments = new Map<string, ActivityAssignmentRecord>()
 export const fallbackActivityComments = new Map<string, ActivityCommentRecord>()
 export const fallbackWorkflowTemplates = new Map<string, WorkflowTemplateRecord>()
+export const fallbackOrganizationRoles = new Map<string, OrganizationRoleRecord>()

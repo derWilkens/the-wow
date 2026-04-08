@@ -50,10 +50,16 @@ Hinweis:
   - edits edge transport attributes after creation
   - adds new or existing data objects to the selected edge
   - uses the shared custom choice list for transport mode selection
+- `frontend/src/components/settings/SettingsDialog.tsx`
+  - central settings surface for company settings, UI preferences, and company master data
+  - manages organization rename, default grouping mode, transport modes, IT tools, and organization roles
 - `frontend/src/components/canvas/ActivityDetailPopup.tsx`
   - activity editing
-  - assignee selection, comments, IT tools
+  - free-text assignee, organization role selection, comments, and IT tools
   - uses the shared custom choice list for several selectors
+- `frontend/src/components/canvas/ActivityNode.tsx`
+  - condensed activity-node presentation
+  - type icon, role badge, inline title editing, and subprocess trigger
 - `frontend/src/components/canvas/DataObjectPopup.tsx`
   - source/data object editing
   - optimistic save/delete close behavior
@@ -89,6 +95,9 @@ Hinweis:
 - `frontend/e2e/helpers.ts`
   - shared browser-test helpers
   - includes `testSuffix()` for short, readable 3-digit entity suffixes in E2E test data
+- `frontend/e2e/settings-master-data.spec.ts`
+  - focused business E2E for the central settings dialog
+  - covers company rename, UI preference save, master-data creation, activity tool linking, and reload persistence
 
 ## Backend Important Files
 
@@ -108,6 +117,9 @@ Hinweis:
   - edge list/upsert/delete
 - `backend/src/activity-resources/*`
   - IT-tool catalog, activity-level tool links, and check sources
+- `backend/src/organizations/*`
+  - organization list/create/update
+  - member and invitation handling
 - `backend/src/transport-modes/*`
   - organization-scoped transport mode catalog and settings
 - `backend/src/workflow-templates/*`
@@ -132,6 +144,7 @@ Current important entities:
 - `organizations`
 - `organization_members`
 - `organization_invitations`
+- `organization_roles`
 - `transport_modes`
 - `workflow_templates`
 - `activity_comments`
@@ -194,6 +207,9 @@ Current edge fields:
   - adds `workflow_templates`
 - `012_gateway_node_types.sql`
   - extends allowed activity/node types with gateway variants
+- `013_activity_roles_and_assignments.sql`
+  - adds `organization_roles`
+  - adds `assignee_label` and `role_id` on `activities`
 
 ## Operational SQL Scripts
 
@@ -212,6 +228,11 @@ Stable:
 - backend build
 - frontend unit tests
 - backend unit tests
+- central settings dialog for company, UI, and master data
+- organization rename flow
+- organization-scoped role CRUD and delete protection for linked roles
+- organization-scoped IT-tool CRUD and delete protection for linked tools
+- free-text assignee plus role-based swimlane derivation
 - auth flow
 - workspace create flow
 - live data persistence
@@ -250,10 +271,10 @@ Latest known good local verification:
 
 - frontend build: green
 - frontend unit tests: green
-  - `57 / 57`
+  - `68 / 68`
 - backend build: green
 - backend unit tests: green
-  - `13 / 13`
+  - `22 / 22`
 - full browser E2E against local preview with credentials: green
   - `54 passed`
   - `1 skipped`
@@ -268,6 +289,9 @@ Latest known good local verification:
   - `activity-detail-check-sources.spec.ts`: `1 passed`
   - headed scenario with detail workflows, gateway decision labels, explicit merge gateway, transport modes, IT tools, and reload verification
   - screenshot capture for `10-bim-cyclic-coordination.png`: green
+- dedicated settings/master-data verification: green
+  - `settings-master-data.spec.ts`: `1 passed`
+- local fallback-safe role/assignee persistence without applied migration `013`: green
 
 Playwright note:
 

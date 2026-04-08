@@ -157,6 +157,8 @@ Aktuelle Beispiele:
   - sicherer Wechsel vom offenen Edge-Dialog in die Aktivitaetsdetails
 - `frontend/e2e/edge-two-named-data-objects.spec.ts`
   - zwei benannte Datenobjekte nacheinander im selben Edge-Dialog
+- `frontend/e2e/settings-master-data.spec.ts`
+  - geschaeftsnaher Settings-Flow fuer Firmenname, UI-Praeferenz, IT-Tool-Stammdaten und Transportmodus-Stammdaten
 
 Diese Specs sind absichtlich klein und diagnostisch stark.
 
@@ -209,6 +211,13 @@ Die Vollsuite ist sinnvoll:
 - vor groesseren Meilensteinen
 - nach mehreren verbundenen UI-/API-Aenderungen
 - wenn gezielte Feature- und Repro-Tests bereits gruen sind
+
+Bei zusammenhaengenden Verwaltungsfunktionen wie dem zentralen Settings-Dialog gilt zusaetzlich:
+
+1. erst Frontend-Komponenten testen
+2. dann Backend-Service-/Rechteverhalten testen
+3. dann einen gezielten geschaeftsnahen E2E-Pfad anlegen
+4. erst danach eine groessere Gesamtsuite erwägen
 
 Die Vollsuite ist **nicht** das beste erste Diagnosewerkzeug fuer einen frisch gefundenen Einzelbug.
 

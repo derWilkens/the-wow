@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { randomUUID } from 'crypto'
 import { DatabaseService } from '../database/database.service'
-import { fallbackActivityAssignees, fallbackActivityComments } from '../fallback-store'
+import { fallbackActivityAssignments, fallbackActivityComments, fallbackOrganizationRoles } from '../fallback-store'
 import { CreateSubprocessDto } from './dto/create-subprocess.dto'
 import { LinkSubprocessDto } from './dto/link-subprocess.dto'
 import { UpsertActivityDto } from './dto/upsert-activity.dto'
@@ -10,13 +10,50 @@ import { UpsertActivityDto } from './dto/upsert-activity.dto'
 export class ActivitiesService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  private isMissingAssigneeSchema(error: unknown) {
+  private isMissingAssignmentSchema(error: unknown) {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code ?? '')
+        : ''
     const message =
       typeof error === 'object' && error !== null && 'message' in error
         ? String((error as { message?: unknown }).message ?? '')
         : ''
 
-    return message.includes('assignee_user_id')
+    return (
+      code === 'PGRST205' ||
+      message.includes('assignee_label') ||
+      message.includes('role_id') ||
+      message.includes('organization_roles')
+    )
+  }
+
+  private async ensureRoleBelongsToOrganization(organizationId: string, roleId: string) {
+    try {
+      const { data, error } = await this.databaseService.supabase
+        .from('organization_roles')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('id', roleId)
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+
+      if (!data) {
+        throw new BadRequestException('Die ausgewaehlte Rolle gehoert nicht zu dieser Firma.')
+      }
+    } catch (error) {
+      if (!this.isMissingAssignmentSchema(error)) {
+        throw error
+      }
+
+      const fallbackRole = fallbackOrganizationRoles.get(roleId)
+      if (!fallbackRole || fallbackRole.organization_id !== organizationId) {
+        throw new BadRequestException('Die ausgewaehlte Rolle gehoert nicht zu dieser Firma.')
+      }
+    }
   }
 
   private isMissingCommentsSchema(error: unknown) {
@@ -67,22 +104,30 @@ export class ActivitiesService {
     }
     return (data ?? []).map((activity) => ({
       ...activity,
-      assignee_user_id: fallbackActivityAssignees.get(activity.id as string)?.assigneeUserId ?? (activity as { assignee_user_id?: string | null }).assignee_user_id ?? null,
+      assignee_label:
+        fallbackActivityAssignments.get(activity.id as string)?.assigneeLabel ??
+        (activity as { assignee_label?: string | null }).assignee_label ??
+        null,
+      role_id:
+        fallbackActivityAssignments.get(activity.id as string)?.roleId ??
+        (activity as { role_id?: string | null }).role_id ??
+        null,
     }))
   }
 
   async upsert(userId: string, workspaceId: string, dto: UpsertActivityDto) {
     const workspace = await this.databaseService.assertWorkspaceAccess(workspaceId, userId)
 
-    if (dto.assignee_user_id) {
-      await this.databaseService.assertOrganizationAccess(workspace.organization_id, dto.assignee_user_id)
+    if (dto.role_id) {
+      await this.ensureRoleBelongsToOrganization(workspace.organization_id, dto.role_id)
     }
 
     const payload = {
       id: dto.id ?? randomUUID(),
       workspace_id: workspaceId,
       owner_id: userId,
-      assignee_user_id: dto.assignee_user_id ?? null,
+      assignee_label: dto.assignee_label?.trim() ? dto.assignee_label.trim() : null,
+      role_id: dto.role_id ?? null,
       parent_id: dto.parent_id ?? null,
       node_type: dto.node_type,
       label: dto.label,
@@ -116,11 +161,11 @@ export class ActivitiesService {
 
       data = result.data
     } catch (error) {
-      if (!this.isMissingAssigneeSchema(error)) {
+      if (!this.isMissingAssignmentSchema(error)) {
         throw error
       }
 
-      const { assignee_user_id: assigneeUserId, ...fallbackPayload } = payload
+      const { assignee_label: assigneeLabel, role_id: roleId, ...fallbackPayload } = payload
       const result = await this.databaseService.supabase
         .from('activities')
         .upsert(fallbackPayload)
@@ -131,13 +176,15 @@ export class ActivitiesService {
         throw result.error
       }
 
-      fallbackActivityAssignees.set(String(result.data.id), {
+      fallbackActivityAssignments.set(String(result.data.id), {
         activityId: String(result.data.id),
-        assigneeUserId: (assigneeUserId as string | null) ?? null,
+        assigneeLabel: (assigneeLabel as string | null) ?? null,
+        roleId: (roleId as string | null) ?? null,
       })
       data = {
         ...result.data,
-        assignee_user_id: (assigneeUserId as string | null) ?? null,
+        assignee_label: (assigneeLabel as string | null) ?? null,
+        role_id: (roleId as string | null) ?? null,
       }
     }
 

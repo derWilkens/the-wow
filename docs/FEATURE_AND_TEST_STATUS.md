@@ -1,6 +1,6 @@
 # Feature And Test Status
 
-Stand: 2026-04-07
+Stand: 2026-04-08
 
 Diese Liste konsolidiert die Features aus den Specs in `specs/` und aus den Entscheidungsrunden im Chat. Status:
 
@@ -23,6 +23,8 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Anmeldung und Registrierung
 - [x] Self-Service-Onboarding fuer neue Firmen
 - [x] Multi-Tenant-Datenmodell mit `organizations` und `organization_members`
+- [x] Zentraler Einstellungsdialog fuer Firma, UI und Stammdaten
+- [x] Firmenweiter Rollenkatalog fuer fachliche Swimlanes
 - [x] Arbeitsablaeufe pro Firma isoliert
 - [x] IT-Tools pro Firma isoliert
 - [x] Arbeitsablaeufe als Karten auf der Uebersicht
@@ -106,7 +108,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Transportmodi nicht mehr hart im Edge-Panel verdrahtet
 - [x] Transportmodi als eigene mandantenweite Entitaet `transport_modes`
 - [x] Default-Transportmodi bei neuer Firma
-- [x] Transportmodus-Konfiguration in separatem Einstellungsdialog
+- [x] Transportmodus-Konfiguration im zentralen Einstellungsdialog
 - [x] Transportmodus-Konfiguration nicht auf der Arbeitsablauf-Startseite
 - [x] Nur `owner`/`admin` duerfen Transportmodi konfigurieren
 - [x] `member` kann Transportmodi verwenden
@@ -118,8 +120,8 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Aktivitaetsdetails bearbeiten
 - [x] Aktivitaetstyp
 - [x] Sollzustand fuer `pruefen_freigeben`
-- [x] Ausfuehrenden-/User-Picker in Aktivitaetsdetails
-- [x] Swimlane-Rolle aus dem gewaehlten User ableiten
+- [x] Ausfuehrenden-Freitext in Aktivitaetsdetails
+- [x] Swimlane-Rolle aus der an der Aktivitaet gesetzten Rolle ableiten
 - [x] Kommentare an Aktivitaeten
 - [x] Rollen-Chip direkt auf Aktivitaetsknoten
 - [x] IT-Tools als wiederverwendbarer Katalog
@@ -129,6 +131,27 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Verknuepfung eines Tools von Aktivitaet loesen
 - [x] Dasselbe IT-Tool in mehreren Aktivitaeten und Arbeitsablaeufen wiederverwenden
 - [x] Einheitliche Custom-Choice-Liste mit Inline-Beschreibungen fuer IT-Tools, Assignee und Sollzustand
+- [x] Firmenweite IT-Tool-Stammdatenverwaltung im zentralen Einstellungsdialog
+
+### Firma, UI und Stammdaten
+- [x] Firmenname im Einstellungsdialog bearbeiten
+- [x] Firmenname wird nach Save sofort im UI aktualisiert
+- [x] UI-Praeferenzstruktur fuer Canvas-Gruppierung vorbereitet
+- [x] Default-Gruppierung im Einstellungsdialog speicherbar
+- [x] Transportmodi im zentralen Stammdatenbereich verwaltbar
+- [x] IT-Tools im zentralen Stammdatenbereich anlegen, bearbeiten und loeschen
+- [x] Loeschen verknuepfter IT-Tools wird fachlich blockiert
+- [x] Rollen im zentralen Stammdatenbereich anlegen, bearbeiten und loeschen
+- [x] Loeschen verknuepfter Rollen wird fachlich blockiert
+
+### UI/UX-Backlog Phase 1
+- [x] Activity Node verdichtet: Typ-Icon links oben, Rolle rechts oben, kein `Aktivitaet`-Praefix
+- [x] `+`-Button an Aktivitaeten mit Tooltip `Detailablauf anlegen`
+- [x] Inline-Umbenennung des Aktivitaetsnamens auf markiertem Knoten
+- [x] Connectoren nur an markierten Elementen sichtbar
+- [x] Login per `Enter`, wenn das Formular gueltig ist
+- [x] Verbindungsdialog voll opak
+- [x] Detailablauf-Dialog weniger transparent
 
 ### Arbeitsablauf-Vorlagen
 - [x] Typische Standardvorlagen pro Firma
@@ -147,7 +170,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 ### Spec-Abweichungen / bewusst ueberholt
 - [x] Datenobjekte nicht mehr als freie Canvas-Nodes, sondern bewusst nur noch kantengebunden
 - [x] Transportmodus nicht mehr als einfacher Freitext/Enum an der Kante, sondern als konfigurierbare mandantenweite Entitaet
-- [x] Swimlanes nicht frei manuell gepflegt, sondern in v1 aus dem gewaehlten User und dessen Rolle abgeleitet
+- [x] Swimlanes nicht frei manuell gepflegt, sondern in v1 aus der an der Aktivitaet gesetzten fachlichen Rolle abgeleitet
 - [x] Kommentare in v1 als einfache Aktivitaets-Kommentare ohne `resolved`-Thread-Modell
 
 ### Doku-Screenshots
@@ -171,12 +194,12 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 
 ### Aus dem Vollstaendigkeits-Backlog noch offen
 - [x] Gateways / Entscheidungsknoten
-- [x] Swimlanes / Rollenbahnen, umschaltbar/toggle -> Lane ergibt sich aus User
+- [x] Swimlanes / Rollenbahnen, umschaltbar/toggle -> Lane ergibt sich aus fachlicher Rolle
 - [x] Kommentare
 - [ ] Versionsverwaltung fuer Arbeitsablaeufe
 - [x] Suche innerhalb des Canvas
 - [ ] Mehrfachauswahl-UX weiter ausbauen
-- [x] Ausfuehrenden-/User-Picker -> Ist gleichzusetzen mit Rolle fuer die Swimlanes
+- [x] Ausfuehrenden-Freitext plus firmenweite Rolle fuer die Swimlanes
 - [ ] Metriken / Uebersichten
 
 ## Testfaelle
@@ -193,7 +216,9 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `src/components/canvas/GatewayNode.test.tsx`
 - [x] `src/components/canvas/FloatingCanvasToolbar.test.tsx`
 - [x] `src/components/canvas/WorkflowCanvas.test.tsx`
+- [x] `src/components/auth/AuthScreen.test.tsx`
 - [x] `src/components/settings/TransportModeSettingsDialog.test.tsx`
+- [x] `src/components/settings/SettingsDialog.test.tsx`
 - [x] `src/components/layout/AppHeader.test.tsx`
 - [x] `src/components/organization/OrganizationAccessScreen.test.tsx`
 - [x] `src/components/ui/CustomChoiceList.test.tsx`
@@ -201,11 +226,13 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 
 ### Backend Unit
 - [x] `backend/src/activities/activities.service.spec.ts`
+- [x] `backend/src/organization-roles/organization-roles.service.spec.ts`
 - [x] `backend/src/transport-modes/transport-modes.service.spec.ts`
 - [x] `backend/src/activity-resources/activity-resources.service.spec.ts`
 - [x] `backend/src/workspaces/workspaces.service.spec.ts`
 - [x] `backend/src/workflow-templates/workflow-templates.service.spec.ts`
 - [x] `backend/src/auth/auth.guard.spec.ts`
+- [x] `backend/src/organizations/organizations.service.spec.ts`
 
 ### E2E mit vorhandenem Login-User
 - [x] `e2e/activity-detail-check-sources.spec.ts`
@@ -229,6 +256,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `e2e/workflow-hierarchy.spec.ts`
 - [x] `e2e/workspace-navigation.spec.ts`
 - [x] `e2e/template-regressions.spec.ts`
+- [x] `e2e/settings-master-data.spec.ts`
 
 Hinweis: Die Login-gebundene Suite laeuft mit `E2E_EMAIL`/`E2E_PASSWORD` gegen die lokale Preview. `playwright.config.ts` zeigt standardmaessig auf `http://127.0.0.1:4174`; die aktuellen verifizierten Browserlaeufe wurden gegen `http://127.0.0.1:4175` ausgefuehrt. Der letzte komplette Vollsuiten-Stand in dieser Session ist jetzt `54 passed / 1 skipped`.
 Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordination` vorhanden, inklusive Detailablaeufen, IT-Tools, Datenobjekten, Transportmodi, Gateway-Labels und expliziter Merge-Variante. Zwei kleine Repro-Specs haerten jetzt die zuletzt gefundenen Problemstellen vor dem Gesamtszenario:
@@ -250,15 +278,18 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
 
 - [x] Frontend Build
 - [x] Frontend Unit-Tests
-  - `57 / 57` gruen
+  - `68 / 68` gruen
 - [x] Backend Build
 - [x] Backend Tests
-  - `13 / 13` gruen
+  - `22 / 22` gruen
 - [x] Admin-Reset-SQL fuer komplettes Leeren der Fachdaten und erneutes Seeden von Default-Templates
 - [x] Mock-/Fallback-Services fuer `assignee`, `activity_comments` und `workflow_templates`
 - [x] Self-Service-/SaaS-E2E ohne Mail-Einladung
 - [x] Canvas-View-E2E gegen lokale Preview
 - [x] Transportmodus-E2E fuer Settings-Flow
+- [x] Zentraler Settings-/Stammdaten-E2E
+  - `e2e/settings-master-data.spec.ts`: `1 passed`
+- [x] Rollen-/Ausfuehrenden-Modell lokal auch ohne eingespielte Migration `013` per Fallback verifiziert
 - [x] Vorlagen-Regressionen gegen echten lokalen Stack
 - [x] Lokaler Screenshot-Capture fuer `01` bis `10`
 - [x] Credential-gebundene E2E-Gesamtsuite in dieser Session komplett durchgelaufen

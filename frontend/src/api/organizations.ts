@@ -24,6 +24,20 @@ export function useCreateOrganization() {
   })
 }
 
+export function useUpdateOrganization() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { organizationId: string; name: string }) =>
+      apiRequest<Organization>(`/organizations/${input.organizationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: input.name }),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['organizations'] })
+    },
+  })
+}
+
 export function useOrganizationMembers(organizationId: string | null) {
   return useQuery({
     queryKey: ['organizationMembers', organizationId],

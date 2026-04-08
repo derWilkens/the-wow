@@ -29,6 +29,58 @@ export function useCreateITTool(workspaceId: string | null) {
   })
 }
 
+export function useOrganizationITTools(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['organizationItTools', organizationId],
+    enabled: Boolean(organizationId),
+    queryFn: () => apiRequest<ITTool[]>(`/organizations/${organizationId}/it-tools`),
+  })
+}
+
+export function useCreateOrganizationITTool(organizationId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { name: string; description?: string | null }) =>
+      apiRequest<ITTool>(`/organizations/${organizationId}/it-tools`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['organizationItTools', organizationId] })
+      void queryClient.invalidateQueries({ queryKey: ['itTools'] })
+    },
+  })
+}
+
+export function useUpdateOrganizationITTool(organizationId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { id: string; name: string; description?: string | null }) =>
+      apiRequest<ITTool>(`/organizations/${organizationId}/it-tools/${input.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: input.name, description: input.description }),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['organizationItTools', organizationId] })
+      void queryClient.invalidateQueries({ queryKey: ['itTools'] })
+    },
+  })
+}
+
+export function useDeleteOrganizationITTool(organizationId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (toolId: string) =>
+      apiRequest<{ success: true }>(`/organizations/${organizationId}/it-tools/${toolId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['organizationItTools', organizationId] })
+      void queryClient.invalidateQueries({ queryKey: ['itTools'] })
+    },
+  })
+}
+
 export function useLinkActivityTool(workspaceId: string | null, activityId: string | null) {
   const queryClient = useQueryClient()
   return useMutation({

@@ -12,7 +12,7 @@ function renderHeader(overrides: Partial<Parameters<typeof AppHeader>[0]> = {}) 
     onSignOut: vi.fn(),
     onExportPng: vi.fn(),
     onExportPdf: vi.fn(),
-    onOpenTransportSettings: vi.fn(),
+    onOpenSettings: vi.fn(),
     groupingMode: 'free',
     onToggleGroupingMode: vi.fn(),
     canvasSearchOptions: [],

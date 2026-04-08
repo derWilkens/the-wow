@@ -12,6 +12,16 @@ export type EdgeNodeType = 'activity' | 'canvas_object'
 export type FieldType = 'text' | 'integer' | 'decimal' | 'date' | 'boolean'
 export type OrganizationRole = 'owner' | 'admin' | 'member'
 
+export interface CatalogRole {
+  id: string
+  organization_id: string
+  label: string
+  description: string | null
+  sort_order: number
+  created_at: string
+  created_by: string | null
+}
+
 export interface TransportModeOption {
   id: string
   organization_id: string
@@ -31,6 +41,10 @@ export interface Organization {
   created_by: string | null
   created_at: string
   membership_role: OrganizationRole
+}
+
+export interface UiPreferences {
+  default_grouping_mode: CanvasGroupingMode
 }
 
 export interface OrganizationMember {
@@ -102,7 +116,8 @@ export interface Activity {
   workspace_id: string
   parent_id: string | null
   owner_id: string
-  assignee_user_id?: string | null
+  assignee_label?: string | null
+  role_id?: string | null
   node_type: NodeType
   label: string
   trigger_type: TriggerType | null
@@ -203,7 +218,8 @@ export interface UpsertActivityInput {
   activity_type?: ActivityType | null
   description?: string | null
   notes?: string | null
-  assignee_user_id?: string | null
+  assignee_label?: string | null
+  role_id?: string | null
   duration_minutes?: number | null
   linked_workflow_id?: string | null
   linked_workflow_mode?: 'detail' | 'reference' | null
@@ -284,6 +300,7 @@ export interface ActivityNodeData {
   assigneeLabel?: string | null
   groupingMode?: CanvasGroupingMode
   onOpenDetail: (id: string) => void
+  onInlineRename?: (id: string, label: string) => Promise<void> | void
   onOpenSubprocessMenu: (activityId: string, position: { x: number; y: number }) => void
   onOpenSubprocess: (activityId: string) => void
 }

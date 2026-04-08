@@ -1,22 +1,43 @@
 import { Test } from '@nestjs/testing'
-import { fallbackActivityAssignees, fallbackActivityComments } from '../fallback-store'
+import { fallbackActivityAssignments, fallbackActivityComments, fallbackOrganizationRoles } from '../fallback-store'
 import { DatabaseService } from '../database/database.service'
 import { ActivitiesService } from './activities.service'
 
 describe('ActivitiesService', () => {
   beforeEach(() => {
-    fallbackActivityAssignees.clear()
+    fallbackActivityAssignments.clear()
     fallbackActivityComments.clear()
+    fallbackOrganizationRoles.clear()
   })
 
-  it('stores the assignee in the fallback store when the schema is not available yet', async () => {
-    const upsertWithAssignee = {
+  it('stores assignment details in the fallback store when the schema is not available yet', async () => {
+    fallbackOrganizationRoles.set('role-2', {
+      id: 'role-2',
+      organization_id: 'org-1',
+      label: 'BIM-Koordination',
+      description: null,
+      sort_order: 1,
+      created_at: new Date().toISOString(),
+      created_by: 'user-1',
+    })
+    const roleLookup = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: null,
+        error: {
+          code: 'PGRST205',
+          message: "Could not find the table 'public.organization_roles' in the schema cache",
+        },
+      }),
+    }
+    const upsertWithAssignment = {
       upsert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
-      single: jest.fn().mockRejectedValue(new Error('column "assignee_user_id" does not exist')),
+      single: jest.fn().mockRejectedValue(new Error('column "assignee_label" does not exist')),
     }
 
-    const upsertWithoutAssignee = {
+    const upsertWithoutAssignment = {
       upsert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       single: jest.fn().mockResolvedValue({
@@ -30,8 +51,9 @@ describe('ActivitiesService', () => {
 
     const from = jest
       .fn()
-      .mockReturnValueOnce(upsertWithAssignee)
-      .mockReturnValueOnce(upsertWithoutAssignee)
+      .mockReturnValueOnce(roleLookup)
+      .mockReturnValueOnce(upsertWithAssignment)
+      .mockReturnValueOnce(upsertWithoutAssignment)
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -42,9 +64,6 @@ describe('ActivitiesService', () => {
             assertWorkspaceAccess: jest.fn().mockResolvedValue({
               id: 'workspace-1',
               organization_id: 'org-1',
-            }),
-            assertOrganizationAccess: jest.fn().mockResolvedValue({
-              id: 'org-1',
             }),
             supabase: { from },
           },
@@ -66,19 +85,22 @@ describe('ActivitiesService', () => {
       activity_type: null,
       description: null,
       notes: null,
-      assignee_user_id: 'user-2',
+      assignee_label: 'Marie Mustermann',
+      role_id: 'role-2',
       duration_minutes: null,
     })
 
     expect(activity).toEqual(
       expect.objectContaining({
         id: 'activity-1',
-        assignee_user_id: 'user-2',
+        assignee_label: 'Marie Mustermann',
+        role_id: 'role-2',
       }),
     )
-    expect(fallbackActivityAssignees.get('activity-1')).toEqual({
+    expect(fallbackActivityAssignments.get('activity-1')).toEqual({
       activityId: 'activity-1',
-      assigneeUserId: 'user-2',
+      assigneeLabel: 'Marie Mustermann',
+      roleId: 'role-2',
     })
   })
 

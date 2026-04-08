@@ -46,8 +46,12 @@ export class UpsertActivityDto {
   notes?: string | null
 
   @IsOptional()
+  @IsString()
+  assignee_label?: string | null
+
+  @IsOptional()
   @IsUUID()
-  assignee_user_id?: string | null
+  role_id?: string | null
 
   @IsOptional()
   @IsNumber()

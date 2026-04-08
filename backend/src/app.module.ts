@@ -7,6 +7,7 @@ import { CanvasEdgesModule } from './canvas-edges/canvas-edges.module'
 import { CanvasObjectsModule } from './canvas-objects/canvas-objects.module'
 import { DatabaseModule } from './database/database.module'
 import { OrganizationsModule } from './organizations/organizations.module'
+import { OrganizationRolesModule } from './organization-roles/organization-roles.module'
 import { TransportModesModule } from './transport-modes/transport-modes.module'
 import { WorkflowTemplatesModule } from './workflow-templates/workflow-templates.module'
 import { WorkspacesModule } from './workspaces/workspaces.module'
@@ -18,6 +19,7 @@ import { HealthController } from './health.controller'
     DatabaseModule,
     AuthModule,
     OrganizationsModule,
+    OrganizationRolesModule,
     TransportModesModule,
     WorkflowTemplatesModule,
     WorkspacesModule,

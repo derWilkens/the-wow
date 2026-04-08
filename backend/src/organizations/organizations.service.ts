@@ -52,6 +52,28 @@ export class OrganizationsService {
     }
   }
 
+  async update(userId: string, organizationId: string, name: string) {
+    const organization = await this.databaseService.assertOrganizationRole(organizationId, userId, ['owner', 'admin'])
+
+    const { data, error } = await this.databaseService.supabase
+      .from('organizations')
+      .update({
+        name: name.trim(),
+      })
+      .eq('id', organizationId)
+      .select('*')
+      .single()
+
+    if (error) {
+      throw error
+    }
+
+    return {
+      ...data,
+      membership_role: organization.membership_role,
+    }
+  }
+
   async listMembers(userId: string, organizationId: string) {
     await this.databaseService.assertOrganizationAccess(organizationId, userId)
 
