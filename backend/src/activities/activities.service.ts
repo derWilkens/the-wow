@@ -136,7 +136,7 @@ export class ActivitiesService {
       position_y: dto.position_y,
       status: dto.status ?? 'draft',
       status_icon: dto.status_icon ?? null,
-      activity_type: dto.activity_type ?? null,
+      activity_type: dto.activity_type ?? 'unbestimmt',
       description: dto.description ?? null,
       notes: dto.notes ?? null,
       duration_minutes: dto.duration_minutes ?? null,
@@ -183,6 +183,9 @@ export class ActivitiesService {
       })
       data = {
         ...result.data,
+        activity_type:
+          ((result.data as { activity_type?: UpsertActivityDto['activity_type'] }).activity_type ?? payload.activity_type) ??
+          'unbestimmt',
         assignee_label: (assigneeLabel as string | null) ?? null,
         role_id: (roleId as string | null) ?? null,
       }

@@ -63,6 +63,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Swimlane-Hintergruende fuer Rollenansicht
 - [x] Canvas-Suche fuer Aktivitaeten, Gateways und Datenspeicher
 - [x] Status-Icon an Aktivitaeten
+- [x] Ruecksprung von SIPOC in den Zeichenmodus fokussiert die Aktivitaet und ist durch Klick/Pan/Drag abbrechbar
 
 ### Verbindungen und Kanten
 - [x] Verbindung zwischen bestehenden Aktivitaeten
@@ -119,6 +120,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 ### Aktivitaetsdetails und Ressourcen
 - [x] Aktivitaetsdetails bearbeiten
 - [x] Aktivitaetstyp
+- [x] Default-Aktivitaetstyp `Unbestimmt` mit Fragezeichen-Icon
 - [x] Sollzustand fuer `pruefen_freigeben`
 - [x] Ausfuehrenden-Freitext in Aktivitaetsdetails
 - [x] Swimlane-Rolle aus der an der Aktivitaet gesetzten Rolle ableiten
@@ -130,7 +132,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Bereits verlinkte Tools nicht erneut anbieten
 - [x] Verknuepfung eines Tools von Aktivitaet loesen
 - [x] Dasselbe IT-Tool in mehreren Aktivitaeten und Arbeitsablaeufen wiederverwenden
-- [x] Einheitliche Custom-Choice-Liste mit Inline-Beschreibungen fuer IT-Tools, Assignee und Sollzustand
+- [x] Einheitliche Custom-Choice-Liste mit Inline-Beschreibungen fuer IT-Tools, Rollen und Sollzustand
 - [x] Firmenweite IT-Tool-Stammdatenverwaltung im zentralen Einstellungsdialog
 
 ### Firma, UI und Stammdaten
@@ -152,6 +154,14 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Login per `Enter`, wenn das Formular gueltig ist
 - [x] Verbindungsdialog voll opak
 - [x] Detailablauf-Dialog weniger transparent
+
+### Zusätzliche Workflow-Views
+- [x] Umschaltung zwischen Zeichenmodus und tabellarischer SIPOC-View
+- [x] SIPOC-View als read-only Zweitansicht
+- [x] SIPOC zeigt je Aktivitaet Supplier, Input, Prozess, Prozessrolle, Output und Consumer
+- [x] Supplier/Consumer werden aus vor- und nachgelagerten Rollen abgeleitet
+- [x] Input/Output werden aus kantengebundenen Datenobjekten inklusive Transportmodus abgeleitet
+- [x] Prozesszelle fuehrt zur Aktivitaet im Zeichenmodus zurueck
 
 ### Arbeitsablauf-Vorlagen
 - [x] Typische Standardvorlagen pro Firma
@@ -216,6 +226,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `src/components/canvas/GatewayNode.test.tsx`
 - [x] `src/components/canvas/FloatingCanvasToolbar.test.tsx`
 - [x] `src/components/canvas/WorkflowCanvas.test.tsx`
+- [x] `src/components/canvas/WorkflowSipocTable.test.tsx`
 - [x] `src/components/auth/AuthScreen.test.tsx`
 - [x] `src/components/settings/TransportModeSettingsDialog.test.tsx`
 - [x] `src/components/settings/SettingsDialog.test.tsx`
@@ -257,6 +268,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `e2e/workspace-navigation.spec.ts`
 - [x] `e2e/template-regressions.spec.ts`
 - [x] `e2e/settings-master-data.spec.ts`
+- [x] `e2e/sipoc-view.spec.ts`
 
 Hinweis: Die Login-gebundene Suite laeuft mit `E2E_EMAIL`/`E2E_PASSWORD` gegen die lokale Preview. `playwright.config.ts` zeigt standardmaessig auf `http://127.0.0.1:4174`; die aktuellen verifizierten Browserlaeufe wurden gegen `http://127.0.0.1:4175` ausgefuehrt. Der letzte komplette Vollsuiten-Stand in dieser Session ist jetzt `54 passed / 1 skipped`.
 Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordination` vorhanden, inklusive Detailablaeufen, IT-Tools, Datenobjekten, Transportmodi, Gateway-Labels und expliziter Merge-Variante. Zwei kleine Repro-Specs haerten jetzt die zuletzt gefundenen Problemstellen vor dem Gesamtszenario:

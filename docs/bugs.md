@@ -19,3 +19,5 @@
 
 - [ ] #10 Edge-Dialog: Beim schnellen zweiten Anlegen eines benannten Datenobjekts auf derselben Kante bleibt der erste Inline-Rename zu lange offen. Dadurch kann der zweite Name in die erste Zeile geschrieben werden. Repro: `frontend/e2e/edge-two-named-data-objects.spec.ts`.
 
+- [x] #11 E2E-Landing: `ensurePostLoginLanding()` war auf dem Organisations-Auswahlbildschirm bei Mehrfirmen-Nutzern nicht robust genug und fiel trotz sichtbarer Firmenkarten in den finalen Workflow-Expect. Behoben durch API-gestuetztes Setzen der aktiven Firma plus erneuten UI-Fallback.
+

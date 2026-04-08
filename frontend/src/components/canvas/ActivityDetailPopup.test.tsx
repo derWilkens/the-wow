@@ -57,7 +57,7 @@ function createActivity(overrides: Partial<Activity> = {}): Activity {
     position_y: 100,
     status: 'draft',
     status_icon: null,
-    activity_type: 'pruefen_freigeben',
+    activity_type: 'unbestimmt',
     description: 'Beschreibung',
     notes: null,
     duration_minutes: 10,
@@ -215,6 +215,40 @@ describe('ActivityDetailPopup', () => {
           id: 'activity-1',
           assignee_label: 'AG BIM-Koordinator',
           role_id: 'role-1',
+        }),
+      )
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+
+  it('defaults the activity type to unbestimmt when none is set yet', async () => {
+    const upsertMutation = vi.fn().mockResolvedValue(undefined)
+    const onClose = vi.fn()
+    mockUseUpsertActivity.mockReturnValue({ mutateAsync: upsertMutation })
+
+    render(
+      <ActivityDetailPopup
+        activity={createActivity({ activity_type: null })}
+        workspaceId="workspace-1"
+        organizationId="org-1"
+        currentUserId="user-1"
+        canvasObjects={defaultCanvasObjects}
+        canvasEdges={defaultCanvasEdges}
+        connectionCount={2}
+        onDelete={vi.fn()}
+        onClose={onClose}
+      />,
+    )
+
+    expect(screen.getByTestId('activity-type-unbestimmt')).toBeChecked()
+
+    fireEvent.click(screen.getByTestId('activity-detail-save'))
+
+    await waitFor(() => {
+      expect(upsertMutation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'activity-1',
+          activity_type: 'unbestimmt',
         }),
       )
       expect(onClose).toHaveBeenCalled()

@@ -48,7 +48,7 @@ function createActivity(overrides: Partial<Activity> = {}): Activity {
 }
 
 describe('ActivityNode', () => {
-  it('shows role and assignee labels on the activity card', () => {
+  it('shows role and assignee labels on the activity card, but not the description text', () => {
     render(
       <ActivityNode
         id="activity-1"
@@ -76,9 +76,13 @@ describe('ActivityNode', () => {
       />,
     )
 
+    const title = screen.getByTestId('activity-inline-label-activity-1')
     expect(screen.getByTestId('activity-role-activity-1')).toHaveTextContent('Sachbearbeitung')
     expect(screen.getByTestId('activity-assignee-activity-1')).toHaveTextContent('Max Mustermann')
-    expect(screen.queryByText('Aktivität')).not.toBeInTheDocument()
+    expect(screen.queryByText('AktivitÃ¤t')).not.toBeInTheDocument()
+    expect(screen.queryByText('Beschreibung')).not.toBeInTheDocument()
+    expect(title).toHaveClass('wow-activity-node__title--default')
+    expect(title).toHaveStyle({ textAlign: 'center' })
   })
 
   it('hides role and assignee metadata in swimlane mode', () => {
@@ -113,7 +117,144 @@ describe('ActivityNode', () => {
     expect(screen.queryByTestId('activity-assignee-activity-1')).not.toBeInTheDocument()
   })
 
-  it('opens detail on double click, supports inline rename and opens subprocess menu on action click', async () => {
+  it('adds preview classes when handles should be shown for a connection target', () => {
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity(),
+          hasChildren: false,
+          roleLabel: 'Sachbearbeitung',
+          assigneeLabel: 'Max Mustermann',
+          groupingMode: 'free',
+          showHandles: true,
+          isConnectionPreviewTarget: true,
+          onOpenDetail: vi.fn(),
+          onOpenSubprocessMenu: vi.fn(),
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    expect(screen.getByTestId('activity-node-activity-1')).toHaveClass('wow-node--handles-visible')
+    expect(screen.getByTestId('activity-node-activity-1')).toHaveClass('wow-node--connection-preview-target')
+  })
+
+  it('shows a custom description tooltip only on hover or focus of the name', () => {
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity({ description: 'Tooltip Beschreibung' }),
+          hasChildren: false,
+          roleLabel: 'Sachbearbeitung',
+          assigneeLabel: 'Max Mustermann',
+          groupingMode: 'free',
+          onOpenDetail: vi.fn(),
+          onOpenSubprocessMenu: vi.fn(),
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    expect(screen.queryByTestId('activity-description-tooltip-activity-1')).not.toBeInTheDocument()
+    fireEvent.mouseEnter(screen.getByTestId('activity-inline-label-activity-1'))
+    expect(screen.getByTestId('activity-description-tooltip-activity-1')).toHaveTextContent('Tooltip Beschreibung')
+    fireEvent.mouseLeave(screen.getByTestId('activity-inline-label-activity-1'))
+    expect(screen.queryByTestId('activity-description-tooltip-activity-1')).not.toBeInTheDocument()
+    fireEvent.focus(screen.getByTestId('activity-inline-label-activity-1'))
+    expect(screen.getByTestId('activity-description-tooltip-activity-1')).toBeVisible()
+  })
+
+  it('does not show a tooltip when no description exists', () => {
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity({ description: null }),
+          hasChildren: false,
+          roleLabel: 'Sachbearbeitung',
+          assigneeLabel: 'Max Mustermann',
+          groupingMode: 'free',
+          onOpenDetail: vi.fn(),
+          onOpenSubprocessMenu: vi.fn(),
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    fireEvent.mouseEnter(screen.getByTestId('activity-inline-label-activity-1'))
+    expect(screen.queryByTestId('activity-description-tooltip-activity-1')).not.toBeInTheDocument()
+  })
+
+  it('uses a stronger compact title style for long names', () => {
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity({
+            label: 'Sehr langer Aktivitaetsname fuer einen stabilen Umbruch auf zwei Zeilen im festen Knoten',
+          }),
+          hasChildren: false,
+          roleLabel: 'Sachbearbeitung',
+          assigneeLabel: 'Max Mustermann',
+          groupingMode: 'free',
+          onOpenDetail: vi.fn(),
+          onOpenSubprocessMenu: vi.fn(),
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    expect(screen.getByTestId('activity-inline-label-activity-1')).toHaveClass('wow-activity-node__title--compact-strong')
+    expect(screen.getByTestId('activity-inline-label-activity-1')).toHaveAttribute('data-title-density', 'compact-strong')
+  })
+
+  it('opens detail on double click, supports inline rename and uses the centered subprocess marker', async () => {
     const onOpenDetail = vi.fn()
     const onOpenSubprocessMenu = vi.fn()
     const onInlineRename = vi.fn().mockResolvedValue(undefined)
@@ -165,6 +306,37 @@ describe('ActivityNode', () => {
       }),
     )
 
-    expect(screen.getByTestId('subprocess-badge-activity-1')).toHaveTextContent('Ablauf verknuepft')
+    expect(screen.getByTestId('subprocess-trigger-activity-1')).toHaveAttribute('data-subprocess-state', 'linked')
+  })
+
+  it('renders a ghost subprocess marker when no linked workflow exists', () => {
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity({ linked_workflow_id: null }),
+          hasChildren: false,
+          roleLabel: 'Sachbearbeitung',
+          assigneeLabel: 'Max Mustermann',
+          groupingMode: 'free',
+          onOpenDetail: vi.fn(),
+          onOpenSubprocessMenu: vi.fn(),
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    expect(screen.getByTestId('subprocess-trigger-activity-1')).toHaveAttribute('data-subprocess-state', 'empty')
   })
 })

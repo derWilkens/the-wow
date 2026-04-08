@@ -4,10 +4,13 @@ import {
   CheckCheck,
   CheckCircle2,
   CircleDashed,
+  CircleHelp,
   Clock3,
   FileCog,
   Forward,
+  Minus,
   PencilLine,
+  Plus,
   Shapes,
   ShieldAlert,
 } from 'lucide-react'
@@ -29,21 +32,41 @@ const statusClassMap: Record<Exclude<StatusIcon, null>, string> = {
 }
 
 const activityTypeIconMap = {
+  unbestimmt: CircleHelp,
   erstellen: FileCog,
   transformieren_aktualisieren: Shapes,
   pruefen_freigeben: CheckCircle2,
   weiterleiten_ablegen: Forward,
 } as const
 
+function getTitleDensityClass(label: string) {
+  const normalizedLength = label.trim().length
+  if (normalizedLength >= 72) {
+    return 'wow-activity-node__title--compact-strong'
+  }
+
+  if (normalizedLength >= 38) {
+    return 'wow-activity-node__title--compact'
+  }
+
+  return 'wow-activity-node__title--default'
+}
+
 export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeProps<ActivityNodeData>) {
   const { activity } = data
   const roleLabel = data.roleLabel ?? 'Nicht zugeordnet'
   const assigneeLabel = data.assigneeLabel ?? null
   const showResponsibilityMeta = data.groupingMode !== 'role_lanes'
+  const showHandles = Boolean(data.showHandles)
+  const isConnectionPreviewTarget = Boolean(data.isConnectionPreviewTarget)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [isTitleTooltipVisible, setIsTitleTooltipVisible] = useState(false)
   const [draftLabel, setDraftLabel] = useState(activity.label)
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const TypeIcon = activity.activity_type ? activityTypeIconMap[activity.activity_type] : PencilLine
+  const TypeIcon = activity.activity_type ? activityTypeIconMap[activity.activity_type] : CircleHelp
+  const hasSubprocess = Boolean(activity.linked_workflow_id)
+  const hasDescription = Boolean(activity.description?.trim())
+  const titleDensityClass = getTitleDensityClass(activity.label)
 
   useEffect(() => {
     setDraftLabel(activity.label)
@@ -85,7 +108,9 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
     <div
       data-testid={`activity-node-${activity.id}`}
       onDoubleClick={() => data.onOpenDetail(activity.id)}
-      className="wow-node wow-node--activity"
+      className={`wow-node wow-node--activity ${showHandles ? 'wow-node--handles-visible' : ''} ${
+        isConnectionPreviewTarget ? 'wow-node--connection-preview-target' : ''
+      }`}
     >
       <div className="wow-activity-node__meta-row">
         <span className="wow-activity-node__type-icon">
@@ -106,25 +131,47 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
           onChange={(event) => setDraftLabel(event.target.value)}
           onBlur={() => void saveInlineLabel()}
           onKeyDown={handleTitleKeyDown}
-          className="wow-activity-node__inline-input nodrag"
+          className={`wow-activity-node__inline-input ${titleDensityClass} nodrag`}
         />
       ) : (
-        <button
-          type="button"
-          data-testid={`activity-inline-label-${activity.id}`}
-          onClick={(event) => {
-            event.stopPropagation()
-            if (selected) {
-              setIsEditingTitle(true)
-            }
-          }}
-          className="wow-activity-node__title wow-activity-node__title-button"
-        >
-          {activity.label}
-        </button>
+        <div className="wow-activity-node__title-wrap">
+          <button
+            type="button"
+            data-testid={`activity-inline-label-${activity.id}`}
+            data-title-density={titleDensityClass.replace('wow-activity-node__title--', '')}
+            onClick={(event) => {
+              event.stopPropagation()
+              if (selected) {
+                setIsEditingTitle(true)
+              }
+            }}
+            onMouseEnter={() => {
+              if (hasDescription) {
+                setIsTitleTooltipVisible(true)
+              }
+            }}
+            onMouseLeave={() => setIsTitleTooltipVisible(false)}
+            onFocus={() => {
+              if (hasDescription) {
+                setIsTitleTooltipVisible(true)
+              }
+            }}
+            onBlur={() => setIsTitleTooltipVisible(false)}
+            className={`wow-activity-node__title wow-activity-node__title-button ${titleDensityClass}`}
+          >
+            {activity.label}
+          </button>
+          {hasDescription && isTitleTooltipVisible ? (
+            <div
+              role="tooltip"
+              data-testid={`activity-description-tooltip-${activity.id}`}
+              className="wow-activity-node__description-tooltip"
+            >
+              {activity.description}
+            </div>
+          ) : null}
+        </div>
       )}
-
-      <p className="wow-activity-node__description">{activity.description}</p>
       <div className="wow-activity-node__footer">
         <div className="flex flex-wrap items-center gap-2">
           {showResponsibilityMeta && assigneeLabel ? (
@@ -139,9 +186,13 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
         </div>
         <button
           type="button"
-          title="Detailablauf anlegen"
+          title={hasSubprocess ? 'Detailablauf verwalten' : 'Detailablauf anlegen'}
+          aria-label={hasSubprocess ? 'Detailablauf verwalten' : 'Detailablauf anlegen'}
           data-testid={`subprocess-trigger-${activity.id}`}
-          className="wow-activity-node__action nodrag nopan"
+          data-subprocess-state={hasSubprocess ? 'linked' : 'empty'}
+          className={`wow-activity-node__subprocess-marker wow-activity-node__subprocess-marker--${
+            hasSubprocess ? 'linked' : 'empty'
+          } nodrag nopan`}
           onMouseDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation()
@@ -151,23 +202,12 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
             })
           }}
         >
-          +
+          <span className="wow-activity-node__subprocess-icon" aria-hidden="true">
+            <Plus className="wow-activity-node__subprocess-plus" />
+            {!hasSubprocess ? <Minus className="wow-activity-node__subprocess-dash" /> : null}
+          </span>
         </button>
       </div>
-      {activity.linked_workflow_id ? (
-        <button
-          type="button"
-          data-testid={`subprocess-badge-${activity.id}`}
-          className="wow-activity-node__subprocess nodrag nopan"
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation()
-            data.onOpenSubprocess(activity.id)
-          }}
-        >
-          Ablauf verknuepft
-        </button>
-      ) : null}
       {activity.status_icon && <div className={statusClassMap[activity.status_icon]}>{statusIconMap[activity.status_icon]}</div>}
       <CanvasHandles
         targetClassName="wow-handle wow-handle--activity-target"

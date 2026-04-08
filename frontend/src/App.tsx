@@ -19,7 +19,8 @@ import { OrganizationAccessScreen } from './components/organization/Organization
 import { SubprocessMenu } from './components/canvas/SubprocessMenu'
 import { SubprocessWizard } from './components/canvas/SubprocessWizard'
 import { WorkflowCanvas } from './components/canvas/WorkflowCanvas'
-import { getReusableDataObjectsForEdge } from './components/canvas/canvasData'
+import { WorkflowSipocTable } from './components/canvas/WorkflowSipocTable'
+import { deriveWorkflowSipocRows, getReusableDataObjectsForEdge } from './components/canvas/canvasData'
 import { AppHeader, type CanvasSearchOption } from './components/layout/AppHeader'
 import { SettingsDialog } from './components/settings/SettingsDialog'
 import { WorkspaceList } from './components/workspace/WorkspaceList'
@@ -35,6 +36,7 @@ import type {
   ObjectField,
   TransportModeOption,
   UpsertCanvasObjectInput,
+  WorkflowViewMode,
   Workspace,
 } from './types'
 
@@ -343,6 +345,7 @@ function WorkspaceCanvasApp({
   const [viewportCenter, setViewportCenter] = useState({ x: 360, y: 260 })
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [dataObjectActionError, setDataObjectActionError] = useState<string | null>(null)
+  const [workflowViewMode, setWorkflowViewMode] = useState<WorkflowViewMode>('canvas')
   const [groupingMode, setGroupingMode] = useState<CanvasGroupingMode>(() => readDefaultGroupingMode())
   const [focusedCanvasNodeId, setFocusedCanvasNodeId] = useState<string | null>(null)
 
@@ -558,6 +561,10 @@ function WorkspaceCanvasApp({
         ]),
       ),
     [visibleActivities],
+  )
+  const sipocRows = useMemo(
+    () => deriveWorkflowSipocRows(visibleActivities, visibleCanvasEdges, visibleCanvasObjects, activityRolesById),
+    [activityRolesById, visibleActivities, visibleCanvasEdges, visibleCanvasObjects],
   )
   const canvasSearchOptions = useMemo<CanvasSearchOption[]>(
     () => [
@@ -987,7 +994,7 @@ function WorkspaceCanvasApp({
       position_y: position.y,
       status: 'draft',
       status_icon: null,
-      activity_type: null,
+      activity_type: 'unbestimmt',
       description: getDefaultActivityDescription(nodeType),
       notes: null,
       duration_minutes: null,
@@ -1336,7 +1343,7 @@ function WorkspaceCanvasApp({
       position_y: nodePosition.y,
       status: 'draft',
       status_icon: null,
-      activity_type: null,
+      activity_type: 'unbestimmt',
       description: 'Beschreibe den nächsten fachlichen Schritt in diesem Ablauf.',
       notes: null,
       duration_minutes: null,
@@ -1799,6 +1806,8 @@ function WorkspaceCanvasApp({
               ? () => setIsSettingsOpen(true)
               : undefined
           }
+          workflowViewMode={workflowViewMode}
+          onWorkflowViewModeChange={(mode) => setWorkflowViewMode(mode)}
           groupingMode={groupingMode}
           onToggleGroupingMode={() => setGroupingMode((current) => (current === 'free' ? 'role_lanes' : 'free'))}
           canvasSearchOptions={canvasSearchOptions}
@@ -1819,117 +1828,138 @@ function WorkspaceCanvasApp({
 
         <main className="grid min-h-0 flex-1 gap-4 p-4 print:block print:p-0">
           <section className="relative min-h-0 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,20,31,0.92),rgba(6,14,22,0.96))] print:rounded-none print:border-0 print:bg-white">
-            <FloatingCanvasToolbar
-              onInsertStart={() => void insertActivity('start_event')}
-              onInsertActivity={() => void insertActivity('activity')}
-              onInsertDecision={() => void insertActivity('gateway_decision')}
-              onInsertMerge={() => void insertActivity('gateway_merge')}
-              onInsertEnd={() => void insertActivity('end_event')}
-              onInsertQuelle={() => void insertCanvasObject('quelle')}
-              onInsertDatenobjekt={() => void insertCanvasObject('datenobjekt')}
-              onUndo={() => void undo()}
-              onRedo={() => void redo()}
-              canUndo={undoStack.length > 0}
-              canRedo={redoStack.length > 0}
-              hasStart={hasStart}
-              hasEnd={hasEnd}
-              onToolbarDragStart={() => {}}
-              dataObjectToolbarHint={dataObjectToolbarHint}
-            />
+            {workflowViewMode === 'canvas' ? (
+              <FloatingCanvasToolbar
+                onInsertStart={() => void insertActivity('start_event')}
+                onInsertActivity={() => void insertActivity('activity')}
+                onInsertDecision={() => void insertActivity('gateway_decision')}
+                onInsertMerge={() => void insertActivity('gateway_merge')}
+                onInsertEnd={() => void insertActivity('end_event')}
+                onInsertQuelle={() => void insertCanvasObject('quelle')}
+                onInsertDatenobjekt={() => void insertCanvasObject('datenobjekt')}
+                onUndo={() => void undo()}
+                onRedo={() => void redo()}
+                canUndo={undoStack.length > 0}
+                canRedo={redoStack.length > 0}
+                hasStart={hasStart}
+                hasEnd={hasEnd}
+                onToolbarDragStart={() => {}}
+                dataObjectToolbarHint={dataObjectToolbarHint}
+              />
+            ) : null}
             {dataObjectActionError ? (
               <div className="absolute left-4 right-4 top-4 z-30 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
                 {dataObjectActionError}
               </div>
             ) : null}
-            <div className="h-full pl-24 sm:pl-28">
-              <WorkflowCanvas
-                activities={visibleActivities}
-                canvasObjects={visibleCanvasObjects}
-                canvasEdges={visibleCanvasEdges}
-                selectedNodeId={selectedCanvasNodeId}
-                selectedEdgeId={selectedCanvasEdgeId}
-                selectedDataObjectId={selectedDataObjectId}
-                groupingMode={groupingMode}
-                activityRolesById={activityRolesById}
-                activityAssigneesById={activityAssigneesById}
-                focusNodeId={focusedCanvasNodeId}
-                onViewportCenterChange={setViewportCenter}
-                onSelectionChange={({ nodeId, edgeId, dataObjectId }) => {
-                  setSelectedCanvasNodeId(nodeId)
-                  setSelectedCanvasEdgeId(edgeId)
-                  setSelectedDataObjectId(dataObjectId)
-                  selectedCanvasNodeIdRef.current = nodeId
-                  selectedCanvasEdgeIdRef.current = edgeId
-                }}
-                onToolbarDrop={({ kind, position }) => {
-                  const centeredPosition =
-                    kind === 'start'
-                      ? getPositionForExplicitDrop('start_event', position)
-                      : kind === 'activity'
-                        ? getPositionForExplicitDrop('activity', position)
-                        : kind === 'decision'
-                          ? getPositionForExplicitDrop('gateway_decision', position)
-                          : kind === 'merge'
-                            ? getPositionForExplicitDrop('gateway_merge', position)
-                        : kind === 'end'
-                          ? getPositionForExplicitDrop('end_event', position)
-                          : getPositionForExplicitDrop('quelle', position)
+            {workflowViewMode === 'canvas' ? (
+              <div className="h-full pl-24 sm:pl-28">
+                <WorkflowCanvas
+                  activities={visibleActivities}
+                  canvasObjects={visibleCanvasObjects}
+                  canvasEdges={visibleCanvasEdges}
+                  selectedNodeId={selectedCanvasNodeId}
+                  selectedEdgeId={selectedCanvasEdgeId}
+                  selectedDataObjectId={selectedDataObjectId}
+                  groupingMode={groupingMode}
+                  activityRolesById={activityRolesById}
+                  activityAssigneesById={activityAssigneesById}
+                  focusNodeId={focusedCanvasNodeId}
+                  onInterruptFocusAnimation={() => setFocusedCanvasNodeId(null)}
+                  onViewportCenterChange={setViewportCenter}
+                  onSelectionChange={({ nodeId, edgeId, dataObjectId }) => {
+                    setSelectedCanvasNodeId(nodeId)
+                    setSelectedCanvasEdgeId(edgeId)
+                    setSelectedDataObjectId(dataObjectId)
+                    selectedCanvasNodeIdRef.current = nodeId
+                    selectedCanvasEdgeIdRef.current = edgeId
+                  }}
+                  onToolbarDrop={({ kind, position }) => {
+                    const centeredPosition =
+                      kind === 'start'
+                        ? getPositionForExplicitDrop('start_event', position)
+                        : kind === 'activity'
+                          ? getPositionForExplicitDrop('activity', position)
+                          : kind === 'decision'
+                            ? getPositionForExplicitDrop('gateway_decision', position)
+                            : kind === 'merge'
+                              ? getPositionForExplicitDrop('gateway_merge', position)
+                          : kind === 'end'
+                            ? getPositionForExplicitDrop('end_event', position)
+                            : getPositionForExplicitDrop('quelle', position)
 
-                  if (kind === 'start') {
-                    void insertActivity('start_event', { position: centeredPosition, allowSmartInsert: false })
-                    return
-                  }
+                    if (kind === 'start') {
+                      void insertActivity('start_event', { position: centeredPosition, allowSmartInsert: false })
+                      return
+                    }
 
-                  if (kind === 'activity') {
-                    void insertActivity('activity', { position: centeredPosition, allowSmartInsert: false })
-                    return
-                  }
+                    if (kind === 'activity') {
+                      void insertActivity('activity', { position: centeredPosition, allowSmartInsert: false })
+                      return
+                    }
 
-                  if (kind === 'decision') {
-                    void insertActivity('gateway_decision', { position: centeredPosition, allowSmartInsert: false })
-                    return
-                  }
+                    if (kind === 'decision') {
+                      void insertActivity('gateway_decision', { position: centeredPosition, allowSmartInsert: false })
+                      return
+                    }
 
-                  if (kind === 'merge') {
-                    void insertActivity('gateway_merge', { position: centeredPosition, allowSmartInsert: false })
-                    return
-                  }
+                    if (kind === 'merge') {
+                      void insertActivity('gateway_merge', { position: centeredPosition, allowSmartInsert: false })
+                      return
+                    }
 
-                  if (kind === 'end') {
-                    void insertActivity('end_event', { position: centeredPosition, allowSmartInsert: false })
-                    return
-                  }
+                    if (kind === 'end') {
+                      void insertActivity('end_event', { position: centeredPosition, allowSmartInsert: false })
+                      return
+                    }
 
-                  if (kind === 'quelle') {
-                    void insertCanvasObject('quelle', { position: centeredPosition })
-                  }
-                }}
-                onOpenSubprocessMenu={(activity, position) => {
-                  setSubprocessMenu({ activity, position })
-                }}
-                onOpenSubprocess={(activity) => {
-                  openLinkedSubprocess(activity)
-                }}
-                onInlineRenameActivity={(activityId, nextLabel) => void renameActivityInline(activityId, nextLabel)}
-                onConnectEdge={(connection) => void connectCanvasNodes(connection)}
-                onCreateActivityFromConnectionDrop={(input) => void createActivityFromConnectionDrop(input)}
-                onMoveNode={(nodeId, position) => void persistNodePosition(nodeId, position)}
-                onDeleteEdges={(edgeIds) => void removeEdges(edgeIds)}
-                onDeleteDataObject={(id) => void removeDataObject(id)}
-                onDeleteSelection={(selection) => void removeSelection(selection)}
-                onCreateDataObjectOnEdge={(edgeId) => void createEdgeDataObject(edgeId)}
-                onAddExistingDataObjectToEdge={(edgeId, dataObjectId) => void addExistingDataObjectToEdge(edgeId, dataObjectId)}
-                onSelectActivity={(activity) => {
-                  setSelectedActivityId(activity.id)
-                  setIsActivityPopupOpen(true)
-                }}
-                onOpenDataObject={(object) => {
-                  setDataObjectActionError(null)
-                  setSelectedDataObjectId(object.id)
-                  setIsDataObjectPopupOpen(true)
-                }}
-              />
-            </div>
+                    if (kind === 'quelle') {
+                      void insertCanvasObject('quelle', { position: centeredPosition })
+                    }
+                  }}
+                  onOpenSubprocessMenu={(activity, position) => {
+                    setSubprocessMenu({ activity, position })
+                  }}
+                  onOpenSubprocess={(activity) => {
+                    openLinkedSubprocess(activity)
+                  }}
+                  onInlineRenameActivity={(activityId, nextLabel) => void renameActivityInline(activityId, nextLabel)}
+                  onConnectEdge={(connection) => void connectCanvasNodes(connection)}
+                  onCreateActivityFromConnectionDrop={(input) => void createActivityFromConnectionDrop(input)}
+                  onMoveNode={(nodeId, position) => void persistNodePosition(nodeId, position)}
+                  onDeleteEdges={(edgeIds) => void removeEdges(edgeIds)}
+                  onDeleteDataObject={(id) => void removeDataObject(id)}
+                  onDeleteSelection={(selection) => void removeSelection(selection)}
+                  onCreateDataObjectOnEdge={(edgeId) => void createEdgeDataObject(edgeId)}
+                  onAddExistingDataObjectToEdge={(edgeId, dataObjectId) => void addExistingDataObjectToEdge(edgeId, dataObjectId)}
+                  onSelectActivity={(activity) => {
+                    setSelectedActivityId(activity.id)
+                    setIsActivityPopupOpen(true)
+                  }}
+                  onOpenDataObject={(object) => {
+                    setDataObjectActionError(null)
+                    setSelectedDataObjectId(object.id)
+                    setIsDataObjectPopupOpen(true)
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="h-full p-4">
+                <WorkflowSipocTable
+                  rows={sipocRows}
+                  onSelectActivity={(activityId) => {
+                    setWorkflowViewMode('canvas')
+                    setSelectedCanvasNodeId(activityId)
+                    setSelectedCanvasEdgeId(null)
+                    setSelectedDataObjectId(null)
+                    selectedCanvasNodeIdRef.current = activityId
+                    selectedCanvasEdgeIdRef.current = null
+                    setFocusedCanvasNodeId(null)
+                    window.setTimeout(() => setFocusedCanvasNodeId(activityId), 0)
+                  }}
+                />
+              </div>
+            )}
 
             {isActivityPopupOpen && selectedActivity ? (
               <ActivityDetailPopup

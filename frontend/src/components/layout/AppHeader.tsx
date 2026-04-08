@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Download, FolderKanban, LogOut, Search, Settings2, Users } from 'lucide-react'
-import type { CanvasGroupingMode } from '../../types'
+import type { CanvasGroupingMode, WorkflowViewMode } from '../../types'
 
 export interface CanvasSearchOption {
   id: string
@@ -24,6 +24,8 @@ interface AppHeaderProps {
   onExportPng: () => void
   onExportPdf: () => void
   onOpenSettings?: () => void
+  workflowViewMode: WorkflowViewMode
+  onWorkflowViewModeChange: (mode: WorkflowViewMode) => void
   groupingMode: CanvasGroupingMode
   onToggleGroupingMode: () => void
   canvasSearchOptions: CanvasSearchOption[]
@@ -44,6 +46,8 @@ export function AppHeader({
   onExportPng,
   onExportPdf,
   onOpenSettings,
+  workflowViewMode,
+  onWorkflowViewModeChange,
   groupingMode,
   onToggleGroupingMode,
   canvasSearchOptions,
@@ -163,18 +167,40 @@ export function AppHeader({
             </div>
           ) : null}
         </div>
-        <button
-          data-testid="toolbar-grouping-toggle"
-          onClick={onToggleGroupingMode}
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
-            groupingMode === 'role_lanes'
-              ? 'border-cyan-300/25 bg-cyan-400/10 text-cyan-100'
-              : 'border-white/10 bg-white/5 text-slate-200 hover:border-white/20 hover:bg-white/10'
-          }`}
-        >
-          <Users className="h-4 w-4" />
-          {groupingMode === 'role_lanes' ? 'Nach Rollen gruppieren' : 'Ohne Gruppierung'}
-        </button>
+        <div className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-1">
+          <button
+            data-testid="toolbar-view-canvas"
+            onClick={() => onWorkflowViewModeChange('canvas')}
+            className={`rounded-full px-3 py-1.5 text-xs transition ${
+              workflowViewMode === 'canvas' ? 'bg-cyan-400 text-slate-950' : 'text-slate-200 hover:bg-white/10'
+            }`}
+          >
+            Zeichenmodus
+          </button>
+          <button
+            data-testid="toolbar-view-sipoc"
+            onClick={() => onWorkflowViewModeChange('sipoc_table')}
+            className={`rounded-full px-3 py-1.5 text-xs transition ${
+              workflowViewMode === 'sipoc_table' ? 'bg-cyan-400 text-slate-950' : 'text-slate-200 hover:bg-white/10'
+            }`}
+          >
+            Tabellarische View
+          </button>
+        </div>
+        {workflowViewMode === 'canvas' ? (
+          <button
+            data-testid="toolbar-grouping-toggle"
+            onClick={onToggleGroupingMode}
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
+              groupingMode === 'role_lanes'
+                ? 'border-cyan-300/25 bg-cyan-400/10 text-cyan-100'
+                : 'border-white/10 bg-white/5 text-slate-200 hover:border-white/20 hover:bg-white/10'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            {groupingMode === 'role_lanes' ? 'Nach Rollen gruppieren' : 'Ohne Gruppierung'}
+          </button>
+        ) : null}
         {onOpenSettings ? (
           <button
             data-testid="toolbar-settings"

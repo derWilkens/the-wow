@@ -2,6 +2,7 @@
 import {
   cleanupWorkspaces,
   createWorkflow,
+  getActiveOrganizationId,
   getAccessToken,
   getActivityNodeIds,
   getStartNodeIds,
@@ -19,6 +20,7 @@ test.describe('workflow hierarchy', () => {
     test.setTimeout(180_000)
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
+    let activeOrganizationId: string | null = null
     const rootWorkflowName = `Arbeitsablauf ${testSuffix()}`
     const subprocessName = `Freigabe im Detail ${testSuffix()}`
     const subprocessGoal = 'Der Schritt soll alle Unterlagen pruefen und eine belastbare Freigabe zurueckgeben.'
@@ -59,7 +61,7 @@ test.describe('workflow hierarchy', () => {
 
       await page.getByTestId(`workspace-trail-${createdRootWorkflow.id}`).click({ force: true })
       await expect.poll(async () => (await getStartNodeIds(page)).length, { timeout: 15_000 }).toBe(1)
-      await expect(page.getByTestId(`subprocess-badge-${seededActivityId}`)).toBeVisible()
+      await expect(page.getByTestId(`subprocess-trigger-${seededActivityId}`)).toHaveAttribute('data-subprocess-state', 'linked')
 
       await page.getByRole('button', { name: workspacesButton }).click()
       await page.getByTestId(`workspace-open-${createdRootWorkflow.id}`).click()
@@ -90,6 +92,7 @@ test.describe('workflow hierarchy', () => {
     test.setTimeout(180_000)
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
+    let activeOrganizationId: string | null = null
     const rootWorkflowName = `Arbeitsablauf Reload ${testSuffix()}`
     const childWorkflowName = `Pruefung im Detail ${testSuffix()}`
     const childGoal = 'Der Detailablauf soll die Unterlagen pruefen und ein klares Ergebnis liefern.'
@@ -126,15 +129,37 @@ test.describe('workflow hierarchy', () => {
 
       await expect(page.getByTestId(`workspace-trail-${createSubprocessPayload.workspace.id}`)).toBeVisible({ timeout: 15_000 })
       await expect(page.getByText(childStepOne)).toBeVisible({ timeout: 15_000 })
+      activeOrganizationId = await getActiveOrganizationId(page)
 
       await page.reload()
-      await expect(page.getByText(workflowSelectionHeading)).toBeVisible()
-      await page.getByTestId(`workspace-open-${createdRootWorkflow.id}`).click()
+      if (await page.getByRole('heading', { name: /Firma ausw|Select organization/i }).isVisible({ timeout: 5_000 }).catch(() => false)) {
+        if (activeOrganizationId) {
+          await page.evaluate((organizationId) => {
+            window.localStorage.setItem('wow-active-organization-id', organizationId)
+          }, activeOrganizationId)
+          await page.reload()
+        }
+        if (await page.getByRole('heading', { name: /Firma ausw|Select organization/i }).isVisible({ timeout: 2_000 }).catch(() => false)) {
+          await page.locator('[data-testid^="organization-select-"]').first().click()
+        }
+      }
+      if (await page.getByText(workflowSelectionHeading).isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await page.getByTestId(`workspace-open-${createdRootWorkflow.id}`).click()
+      }
+      if (!(await page.getByTestId(`activity-node-${seededActivityId}`).isVisible({ timeout: 2_000 }).catch(() => false))) {
+        if (await page.getByTestId(`workspace-open-${createdRootWorkflow.id}`).isVisible({ timeout: 2_000 }).catch(() => false)) {
+          await page.getByTestId(`workspace-open-${createdRootWorkflow.id}`).click()
+        } else if (await page.getByTestId(`workspace-trail-${createdRootWorkflow.id}`).isVisible({ timeout: 2_000 }).catch(() => false)) {
+          await page.getByTestId(`workspace-trail-${createdRootWorkflow.id}`).click({ force: true })
+        }
+      }
 
       await expect(page.getByTestId(`activity-node-${seededActivityId}`)).toBeVisible({ timeout: 15_000 })
-      await expect(page.getByTestId(`subprocess-badge-${seededActivityId}`)).toBeVisible()
+      await expect(page.getByTestId(`subprocess-trigger-${seededActivityId}`)).toHaveAttribute('data-subprocess-state', 'linked')
 
-      await page.getByTestId(`subprocess-badge-${seededActivityId}`).click()
+      await page.getByTestId(`subprocess-trigger-${seededActivityId}`).click()
+      await expect(page.getByTestId('subprocess-menu-open')).toBeVisible({ timeout: 15_000 })
+      await page.getByTestId('subprocess-menu-open').click()
 
       await expect(page.getByTestId(`workspace-trail-${createdRootWorkflow.id}`)).toBeVisible({ timeout: 15_000 })
       await expect(page.getByTestId(`workspace-trail-${createSubprocessPayload.workspace.id}`)).toBeVisible({ timeout: 15_000 })
@@ -142,7 +167,7 @@ test.describe('workflow hierarchy', () => {
 
       await page.getByTestId(`workspace-trail-${createdRootWorkflow.id}`).click({ force: true })
       await expect(page.getByTestId(`activity-node-${seededActivityId}`)).toBeVisible({ timeout: 15_000 })
-      await expect(page.getByTestId(`subprocess-badge-${seededActivityId}`)).toBeVisible()
+      await expect(page.getByTestId(`subprocess-trigger-${seededActivityId}`)).toHaveAttribute('data-subprocess-state', 'linked')
     } finally {
       await cleanupWorkspaces(request, createdWorkspaceIds, accessToken)
     }

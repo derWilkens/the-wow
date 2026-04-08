@@ -49,6 +49,7 @@ const baseEdgeStyle = {
 const ROLE_LANE_HEIGHT = 200
 const ROLE_LANE_TOP_OFFSET = 72
 const ROLE_LANE_NODE_OFFSET = 54
+const CONNECTOR_PREVIEW_PROXIMITY_PX = 40
 
 function buildRoleLaneMeta(activities: Activity[], activityRolesById: Record<string, string>) {
   const roles = Array.from(
@@ -138,6 +139,13 @@ function getClosestTargetHandleId(nodeElement: Element, clientX: number, clientY
   return distances[0]?.handleId ?? 'target-left'
 }
 
+function getDistanceToNodeBox(nodeElement: Element, clientX: number, clientY: number) {
+  const rect = nodeElement.getBoundingClientRect()
+  const dx = Math.max(rect.left - clientX, 0, clientX - rect.right)
+  const dy = Math.max(rect.top - clientY, 0, clientY - rect.bottom)
+  return Math.hypot(dx, dy)
+}
+
 interface WorkflowCanvasProps {
   activities: Activity[]
   canvasObjects: CanvasObject[]
@@ -149,6 +157,7 @@ interface WorkflowCanvasProps {
   activityRolesById: Record<string, string>
   activityAssigneesById: Record<string, string | null>
   focusNodeId: string | null
+  onInterruptFocusAnimation?: () => void
   onViewportCenterChange: (position: { x: number; y: number }) => void
   onSelectionChange: (selection: { nodeId: string | null; edgeId: string | null; dataObjectId: string | null }) => void
   onToolbarDrop: (input: { kind: 'start' | 'activity' | 'decision' | 'merge' | 'end' | 'quelle'; position: { x: number; y: number } }) => void
@@ -182,6 +191,7 @@ export function WorkflowCanvas({
   activityRolesById,
   activityAssigneesById,
   focusNodeId,
+  onInterruptFocusAnimation,
   onViewportCenterChange,
   onSelectionChange,
   onToolbarDrop,
@@ -203,10 +213,43 @@ export function WorkflowCanvas({
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const pendingConnectionRef = useRef<{ nodeId: string; handleId: string | null; handleType: 'source' | 'target' | null } | null>(null)
   const connectionSucceededRef = useRef(false)
+  const [activeConnectionSource, setActiveConnectionSource] = useState<{
+    nodeId: string
+    handleId: string | null
+    handleType: 'source' | 'target' | null
+  } | null>(null)
+  const [hoveredConnectionTargetNodeId, setHoveredConnectionTargetNodeId] = useState<string | null>(null)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([])
   const [liveNodePositions, setLiveNodePositions] = useState<Record<string, { x: number; y: number }>>({})
   const [openEdgePopoverId, setOpenEdgePopoverId] = useState<string | null>(null)
+  const focusAnimationTimeoutRef = useRef<number | null>(null)
+  const isFocusAnimationActiveRef = useRef(false)
+
+  const interruptFocusAnimation = useMemo(
+    () => () => {
+      const hadActiveFocusAnimation = isFocusAnimationActiveRef.current
+
+      isFocusAnimationActiveRef.current = false
+      if (focusAnimationTimeoutRef.current) {
+        window.clearTimeout(focusAnimationTimeoutRef.current)
+        focusAnimationTimeoutRef.current = null
+      }
+
+      if (hadActiveFocusAnimation) {
+        const instance = reactFlowRef.current as (ReactFlowInstance & {
+          getViewport?: () => { x: number; y: number; zoom: number }
+        }) | null
+        const viewport = typeof instance?.getViewport === 'function' ? instance.getViewport() : null
+        if (instance && viewport && typeof instance.setViewport === 'function') {
+          void instance.setViewport(viewport, { duration: 0 })
+        }
+      }
+
+      onInterruptFocusAnimation?.()
+    },
+    [onInterruptFocusAnimation],
+  )
 
   const sourceObjects = useMemo(
     () => canvasObjects.filter((item): item is Extract<CanvasObject, { object_type: 'quelle' }> => item.object_type === 'quelle'),
@@ -246,6 +289,12 @@ export function WorkflowCanvas({
     }
   }, [selectedEdgeId])
 
+  useEffect(() => {
+    if (!activeConnectionSource) {
+      setHoveredConnectionTargetNodeId(null)
+    }
+  }, [activeConnectionSource])
+
   const publishViewportCenter = useMemo(
     () => () => {
       const instance = reactFlowRef.current
@@ -262,6 +311,44 @@ export function WorkflowCanvas({
       onViewportCenterChange(center)
     },
     [onViewportCenterChange],
+  )
+
+  const updateHoveredConnectionTarget = useMemo(
+    () => (clientX: number, clientY: number) => {
+      const pendingConnection = pendingConnectionRef.current
+      if (!pendingConnection || pendingConnection.handleType !== 'source') {
+        setHoveredConnectionTargetNodeId(null)
+        return
+      }
+
+      const candidates = Array.from(wrapperRef.current?.querySelectorAll<HTMLElement>('.react-flow__node[data-id]') ?? [])
+        .map((nodeElement) => {
+          const targetNodeId = nodeElement.getAttribute('data-id')
+          if (!targetNodeId || targetNodeId === pendingConnection.nodeId) {
+            return null
+          }
+
+          const capabilities = getNodeConnectionCapabilities(targetNodeId, activities, sourceObjects, canvasEdges)
+          if (!capabilities.allowTarget) {
+            return null
+          }
+
+          const distance = getDistanceToNodeBox(nodeElement, clientX, clientY)
+          if (distance > CONNECTOR_PREVIEW_PROXIMITY_PX) {
+            return null
+          }
+
+          return {
+            nodeId: targetNodeId,
+            distance,
+          }
+        })
+        .filter((candidate): candidate is { nodeId: string; distance: number } => Boolean(candidate))
+        .sort((left, right) => left.distance - right.distance)
+
+      setHoveredConnectionTargetNodeId(candidates[0]?.nodeId ?? null)
+    },
+    [activities, canvasEdges, sourceObjects],
   )
 
   const handleNodeDragStop = useMemo(
@@ -282,6 +369,7 @@ export function WorkflowCanvas({
 
   const handleNodeDrag = useMemo(
     () => (_event: MouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
+      interruptFocusAnimation()
       const activity = activities.find((item) => item.id === node.id)
       if (groupingMode === 'role_lanes' && activity) {
         setLiveNodePositions((current) => ({
@@ -299,7 +387,7 @@ export function WorkflowCanvas({
         [node.id]: node.position,
       }))
     },
-    [activities, groupingMode],
+    [activities, groupingMode, interruptFocusAnimation],
   )
 
   useEffect(() => {
@@ -330,6 +418,8 @@ export function WorkflowCanvas({
   const handleConnectEnd: OnConnectEnd = (event) => {
     const pendingConnection = pendingConnectionRef.current
     pendingConnectionRef.current = null
+    setActiveConnectionSource(null)
+    setHoveredConnectionTargetNodeId(null)
 
     if (!pendingConnection || pendingConnection.handleType !== 'source' || !pendingConnection.nodeId) {
       return
@@ -436,6 +526,8 @@ export function WorkflowCanvas({
       const activityNodes = activities.map<Node<ActivityNodeData>>((activity) => {
       const freePosition = liveNodePositions[activity.id] ?? { x: activity.position_x, y: activity.position_y }
       const laneDisplayY = getLaneDisplayY(roleLanes, activity.id, activityRolesById)
+      const isSelected = selectedNodeIds.includes(activity.id)
+      const isConnectionPreviewTarget = hoveredConnectionTargetNodeId === activity.id
 
       return {
         id: activity.id,
@@ -451,13 +543,15 @@ export function WorkflowCanvas({
           groupingMode === 'role_lanes' && laneDisplayY !== null
             ? { x: freePosition.x, y: laneDisplayY }
             : freePosition,
-        selected: selectedNodeIds.includes(activity.id),
+        selected: isSelected,
         data: {
           activity,
           hasChildren: childrenByParent.has(activity.id),
           roleLabel: activityRolesById[activity.id] ?? 'Nicht zugeordnet',
           assigneeLabel: activityAssigneesById[activity.id] ?? null,
           groupingMode,
+          showHandles: isSelected || isConnectionPreviewTarget,
+          isConnectionPreviewTarget,
           onOpenDetail: (id) => {
             const selected = activities.find((entry) => entry.id === id)
             if (selected) {
@@ -488,6 +582,9 @@ export function WorkflowCanvas({
       selected: selectedNodeIds.includes(canvasObject.id),
       data: {
         canvasObject,
+        showHandles:
+          selectedNodeIds.includes(canvasObject.id) || hoveredConnectionTargetNodeId === canvasObject.id,
+        isConnectionPreviewTarget: hoveredConnectionTargetNodeId === canvasObject.id,
         onOpenPopup: (id) => {
           const selected = sourceObjects.find((entry) => entry.id === id)
           if (selected) {
@@ -498,7 +595,7 @@ export function WorkflowCanvas({
     }))
 
     return [...activityNodes, ...objectNodes]
-  }, [activities, activityAssigneesById, activityRolesById, groupingMode, liveNodePositions, onInlineRenameActivity, onOpenDataObject, onOpenSubprocess, onOpenSubprocessMenu, onSelectActivity, roleLanes, selectedNodeIds, sourceObjects])
+  }, [activities, activityAssigneesById, activityRolesById, groupingMode, hoveredConnectionTargetNodeId, liveNodePositions, onInlineRenameActivity, onOpenDataObject, onOpenSubprocess, onOpenSubprocessMenu, onSelectActivity, roleLanes, selectedNodeIds, sourceObjects])
 
   const [renderNodes, setRenderNodes] = useState<Array<Node<ActivityNodeData | CanvasObjectNodeData>>>([])
 
@@ -527,6 +624,7 @@ export function WorkflowCanvas({
 
   useEffect(() => {
     if (!focusNodeId) {
+      isFocusAnimationActiveRef.current = false
       return
     }
 
@@ -537,11 +635,28 @@ export function WorkflowCanvas({
     }
 
     const zoom = typeof instance.getZoom === 'function' ? instance.getZoom() : 0.8
+    isFocusAnimationActiveRef.current = true
+    if (focusAnimationTimeoutRef.current) {
+      window.clearTimeout(focusAnimationTimeoutRef.current)
+    }
     void instance.setCenter(targetNode.position.x + 110, targetNode.position.y + 70, {
       zoom: Math.max(zoom, 0.9),
       duration: 400,
     })
+    focusAnimationTimeoutRef.current = window.setTimeout(() => {
+      isFocusAnimationActiveRef.current = false
+      focusAnimationTimeoutRef.current = null
+    }, 425)
   }, [focusNodeId, renderNodes])
+
+  useEffect(
+    () => () => {
+      if (focusAnimationTimeoutRef.current) {
+        window.clearTimeout(focusAnimationTimeoutRef.current)
+      }
+    },
+    [],
+  )
 
   const edges = useMemo<Array<Edge>>(
     () =>
@@ -616,6 +731,18 @@ export function WorkflowCanvas({
     <div
       ref={wrapperRef}
       data-testid="workflow-canvas"
+      onMouseMove={(event) => {
+        if (!activeConnectionSource) {
+          return
+        }
+
+        updateHoveredConnectionTarget(event.clientX, event.clientY)
+      }}
+      onMouseLeave={() => {
+        if (activeConnectionSource) {
+          setHoveredConnectionTargetNodeId(null)
+        }
+      }}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('application/x-wow-toolbar-item')) {
           event.preventDefault()
@@ -675,16 +802,22 @@ export function WorkflowCanvas({
         }}
         onConnectStart={(_, params: OnConnectStartParams) => {
           connectionSucceededRef.current = false
-          pendingConnectionRef.current = {
+          const nextConnection = {
             nodeId: params.nodeId ?? '',
             handleId: params.handleId ?? null,
             handleType: params.handleType ?? null,
           }
+          pendingConnectionRef.current = nextConnection
+          setActiveConnectionSource(nextConnection)
+          setHoveredConnectionTargetNodeId(null)
         }}
         onConnect={(connection) => {
           connectionSucceededRef.current = true
+          setActiveConnectionSource(null)
+          setHoveredConnectionTargetNodeId(null)
           onConnectEdge(connection)
         }}
+        onMoveStart={interruptFocusAnimation}
         onMove={publishViewportCenter}
         onConnectEnd={handleConnectEnd}
         onNodesChange={(changes: NodeChange[]) => {
@@ -705,6 +838,7 @@ export function WorkflowCanvas({
           onSelectionChange({ nodeId: node.id, edgeId: null, dataObjectId: null })
         }}
         onPaneClick={() => {
+          interruptFocusAnimation()
           setSelectedNodeIds([])
           setSelectedEdgeIds([])
           setOpenEdgePopoverId(null)

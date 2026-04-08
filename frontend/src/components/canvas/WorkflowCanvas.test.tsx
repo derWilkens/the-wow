@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { WorkflowCanvas } from './WorkflowCanvas'
@@ -18,20 +18,42 @@ vi.mock('reactflow', async () => {
       const onNodeDragStop = props.onNodeDragStop as undefined | ((event: unknown, node: { id: string; position: { x: number; y: number } }) => void)
       const onConnectStart = props.onConnectStart as undefined | ((event: unknown, params: { nodeId: string; handleId: string | null; handleType: 'source' | 'target' | null }) => void)
       const onConnectEnd = props.onConnectEnd as undefined | ((event: { target: Element; clientX: number; clientY: number }) => void)
+      const onMoveStart = props.onMoveStart as undefined | (() => void)
       const children = props.children as ReactNode
 
       return (
         <div data-testid="react-flow">
-          <div data-testid="rf-node-element-activity-2" className="react-flow__node" data-id="activity-2">
-            <div data-testid="rf-handle-activity-2" className="react-flow__handle" data-handleid="target-left" />
-          </div>
           {nodes.map((node) => (
             <div
               key={node.id}
+              ref={(element) => {
+                if (!element) {
+                  return
+                }
+
+                Object.defineProperty(element, 'getBoundingClientRect', {
+                  configurable: true,
+                  value: () => ({
+                    x: node.position.x,
+                    y: node.position.y,
+                    left: node.position.x,
+                    top: node.position.y,
+                    right: node.position.x + 220,
+                    bottom: node.position.y + 140,
+                    width: 220,
+                    height: 140,
+                    toJSON: () => ({}),
+                  }),
+                })
+              }}
               data-testid={`rf-node-${node.id}`}
+              className="react-flow__node"
+              data-id={node.id}
               data-x={String(node.position.x)}
               data-y={String(node.position.y)}
-            />
+            >
+              <div data-testid={`rf-handle-${node.id}`} className="react-flow__handle" data-handleid="target-left" />
+            </div>
           ))}
           <button
             type="button"
@@ -52,11 +74,14 @@ vi.mock('reactflow', async () => {
             data-testid="rf-connect-node-body"
             onClick={() => {
               onConnectStart?.({}, { nodeId: 'activity-1', handleId: 'source-right', handleType: 'source' })
-              const target = document.querySelector('[data-testid="rf-node-element-activity-2"]') as Element
+              const target = document.querySelector('[data-testid="rf-node-activity-2"]') as Element
               onConnectEnd?.({ target, clientX: 100, clientY: 100 })
             }}
           >
             connect-node-body
+          </button>
+          <button type="button" data-testid="rf-move-start" onClick={() => onMoveStart?.()}>
+            move-start
           </button>
           {children}
         </div>
@@ -142,6 +167,7 @@ function renderCanvas({
         activityRolesById={activityRolesById}
         activityAssigneesById={activityAssigneesById}
         focusNodeId={null}
+        onInterruptFocusAnimation={vi.fn()}
         onViewportCenterChange={vi.fn()}
         onSelectionChange={vi.fn()}
         onToolbarDrop={vi.fn()}
@@ -169,6 +195,10 @@ function renderCanvas({
 }
 
 describe('WorkflowCanvas', () => {
+  function getLatestReactFlowProps<T>() {
+    return reactFlowSpy.mock.calls[reactFlowSpy.mock.calls.length - 1]?.[0] as T
+  }
+
   it('renders role lanes and snaps activities into the matching lane when grouped by role', () => {
     renderCanvas({
       groupingMode: 'role_lanes',
@@ -238,6 +268,7 @@ describe('WorkflowCanvas', () => {
           activityRolesById={{}}
           activityAssigneesById={{}}
           focusNodeId={null}
+          onInterruptFocusAnimation={vi.fn()}
           onViewportCenterChange={vi.fn()}
           onSelectionChange={vi.fn()}
           onToolbarDrop={vi.fn()}
@@ -269,5 +300,116 @@ describe('WorkflowCanvas', () => {
         }),
       )
     })
+  })
+
+  it('shows handles only for the nearest target node while a connection is dragged nearby', async () => {
+    render(
+      <div style={{ width: 1200, height: 800 }}>
+        <WorkflowCanvas
+          activities={[
+            createActivity({ id: 'activity-1', position_x: 100, position_y: 120 }),
+            createActivity({ id: 'activity-2', position_x: 460, position_y: 120 }),
+            createActivity({ id: 'activity-3', position_x: 820, position_y: 120 }),
+          ]}
+          canvasObjects={[]}
+          canvasEdges={[]}
+          selectedNodeId="activity-1"
+          selectedEdgeId={null}
+          selectedDataObjectId={null}
+          groupingMode="free"
+          activityRolesById={{}}
+          activityAssigneesById={{}}
+          focusNodeId={null}
+          onInterruptFocusAnimation={vi.fn()}
+          onViewportCenterChange={vi.fn()}
+          onSelectionChange={vi.fn()}
+          onToolbarDrop={vi.fn()}
+          onSelectActivity={vi.fn()}
+          onOpenDataObject={vi.fn()}
+          onOpenSubprocessMenu={vi.fn()}
+          onOpenSubprocess={vi.fn()}
+          onInlineRenameActivity={vi.fn()}
+          onConnectEdge={vi.fn()}
+          onCreateActivityFromConnectionDrop={vi.fn()}
+          onMoveNode={vi.fn()}
+          onDeleteEdges={vi.fn()}
+          onDeleteDataObject={vi.fn()}
+          onDeleteSelection={vi.fn()}
+          onCreateDataObjectOnEdge={vi.fn()}
+          onAddExistingDataObjectToEdge={vi.fn()}
+        />
+      </div>,
+    )
+
+    const latestProps = getLatestReactFlowProps<Record<string, unknown>>()
+    const onConnectStart = latestProps.onConnectStart as (event: unknown, params: { nodeId: string; handleId: string | null; handleType: 'source' | 'target' | null }) => void
+
+    await act(async () => {
+      onConnectStart({}, { nodeId: 'activity-1', handleId: 'source-right', handleType: 'source' })
+    })
+    fireEvent.mouseMove(screen.getByTestId('workflow-canvas'), { clientX: 470, clientY: 150 })
+
+    await waitFor(() => {
+      const updatedProps = getLatestReactFlowProps<{ nodes: Array<{ id: string; data: { showHandles?: boolean; isConnectionPreviewTarget?: boolean } }> }>()
+      const sourceNode = updatedProps.nodes.find((node) => node.id === 'activity-1')
+      const previewNode = updatedProps.nodes.find((node) => node.id === 'activity-2')
+      const farNode = updatedProps.nodes.find((node) => node.id === 'activity-3')
+
+      expect(sourceNode?.data.showHandles).toBe(true)
+      expect(previewNode?.data.showHandles).toBe(true)
+      expect(previewNode?.data.isConnectionPreviewTarget).toBe(true)
+      expect(farNode?.data.showHandles).not.toBe(true)
+    })
+
+    fireEvent.mouseMove(screen.getByTestId('workflow-canvas'), { clientX: 40, clientY: 40 })
+
+    await waitFor(() => {
+      const updatedProps = getLatestReactFlowProps<{ nodes: Array<{ id: string; data: { showHandles?: boolean; isConnectionPreviewTarget?: boolean } }> }>()
+      const previewNode = updatedProps.nodes.find((node) => node.id === 'activity-2')
+      expect(previewNode?.data.isConnectionPreviewTarget).not.toBe(true)
+    })
+  })
+
+  it('interrupts a focus animation when the user pans or clicks the pane', () => {
+    const onInterruptFocusAnimation = vi.fn()
+
+    render(
+      <div style={{ width: 1200, height: 800 }}>
+        <WorkflowCanvas
+          activities={[createActivity({ id: 'activity-1', position_x: 200, position_y: 120 })]}
+          canvasObjects={[]}
+          canvasEdges={[]}
+          selectedNodeId={null}
+          selectedEdgeId={null}
+          selectedDataObjectId={null}
+          groupingMode="free"
+          activityRolesById={{}}
+          activityAssigneesById={{}}
+          focusNodeId="activity-1"
+          onInterruptFocusAnimation={onInterruptFocusAnimation}
+          onViewportCenterChange={vi.fn()}
+          onSelectionChange={vi.fn()}
+          onToolbarDrop={vi.fn()}
+          onSelectActivity={vi.fn()}
+          onOpenDataObject={vi.fn()}
+          onOpenSubprocessMenu={vi.fn()}
+          onOpenSubprocess={vi.fn()}
+          onInlineRenameActivity={vi.fn()}
+          onConnectEdge={vi.fn()}
+          onCreateActivityFromConnectionDrop={vi.fn()}
+          onMoveNode={vi.fn()}
+          onDeleteEdges={vi.fn()}
+          onDeleteDataObject={vi.fn()}
+          onDeleteSelection={vi.fn()}
+          onCreateDataObjectOnEdge={vi.fn()}
+          onAddExistingDataObjectToEdge={vi.fn()}
+        />
+      </div>,
+    )
+
+    fireEvent.click(screen.getByTestId('rf-move-start'))
+    fireEvent.click(screen.getByTestId('workflow-canvas'))
+
+    expect(onInterruptFocusAnimation).toHaveBeenCalled()
   })
 })

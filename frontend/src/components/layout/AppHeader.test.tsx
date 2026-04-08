@@ -13,6 +13,8 @@ function renderHeader(overrides: Partial<Parameters<typeof AppHeader>[0]> = {}) 
     onExportPng: vi.fn(),
     onExportPdf: vi.fn(),
     onOpenSettings: vi.fn(),
+    workflowViewMode: 'canvas',
+    onWorkflowViewModeChange: vi.fn(),
     groupingMode: 'free',
     onToggleGroupingMode: vi.fn(),
     canvasSearchOptions: [],
@@ -43,6 +45,19 @@ describe('AppHeader', () => {
 
     fireEvent.click(toggle)
     expect(onToggleGroupingMode).toHaveBeenCalled()
+  })
+
+  it('switches between canvas and sipoc view modes', () => {
+    const onWorkflowViewModeChange = vi.fn()
+
+    renderHeader({
+      workflowViewMode: 'sipoc_table',
+      onWorkflowViewModeChange,
+    })
+
+    fireEvent.click(screen.getByTestId('toolbar-view-canvas'))
+    expect(onWorkflowViewModeChange).toHaveBeenCalledWith('canvas')
+    expect(screen.queryByTestId('toolbar-grouping-toggle')).not.toBeInTheDocument()
   })
 
   it('opens the export menu and triggers PNG/PDF actions', () => {

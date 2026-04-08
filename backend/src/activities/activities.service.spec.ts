@@ -93,6 +93,7 @@ describe('ActivitiesService', () => {
     expect(activity).toEqual(
       expect.objectContaining({
         id: 'activity-1',
+        activity_type: 'unbestimmt',
         assignee_label: 'Marie Mustermann',
         role_id: 'role-2',
       }),

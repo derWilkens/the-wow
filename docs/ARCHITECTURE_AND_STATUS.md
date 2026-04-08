@@ -34,10 +34,15 @@ Hinweis:
   - mutations for activities, objects, edges
   - optimistic UI for create/connect/delete flows
   - workflow hierarchy navigation
+  - switching between canvas and SIPOC table view
 - `frontend/src/components/canvas/WorkflowCanvas.tsx`
   - React Flow integration
   - simplified canvas wrapper that stays close to native React Flow behavior
   - native connect flow plus add-node-on-edge-drop behavior
+  - interruptible focus animation when returning from SIPOC to canvas
+- `frontend/src/components/canvas/WorkflowSipocTable.tsx`
+  - read-only SIPOC view derived from the loaded workflow model
+  - one row per activity with aggregated supplier/input/process/process-role/output/consumer data
 - `frontend/src/components/canvas/FloatingCanvasToolbar.tsx`
   - left floating toolbar for canvas tools
   - compact icons with hover/focus expand-to-the-right labels
@@ -98,6 +103,9 @@ Hinweis:
 - `frontend/e2e/settings-master-data.spec.ts`
   - focused business E2E for the central settings dialog
   - covers company rename, UI preference save, master-data creation, activity tool linking, and reload persistence
+- `frontend/e2e/sipoc-view.spec.ts`
+  - focused business E2E for the second workflow view
+  - verifies SIPOC row derivation from roles, edge data objects, and transport modes
 
 ## Backend Important Files
 
@@ -253,6 +261,9 @@ Stable:
 - dedicated headed BIM reference scenario for multi-level workflow modeling
 - dedicated focused Playwright repro specs for BIM stabilization before rerunning the large reference scenario
 - local Playwright configuration pointed at local preview by default
+- second workflow view as a read-only SIPOC table
+- interruptible focus/zoom return from SIPOC view back to canvas
+- default activity type `Unbestimmt` with question-mark icon
 
 Recently simplified on purpose:
 

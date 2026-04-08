@@ -184,6 +184,20 @@ Important detail:
   - login submit on `Enter`
   - fully opaque edge dialog
   - less transparent detailed-workflow dialog
+- activity types now have a stable semantic default:
+  - `Unbestimmt`
+  - shown with a question-mark icon
+- the workflow now has two top-level views:
+  - `Zeichenmodus`
+  - `Tabellarische View`
+- the tabellarische view is currently a read-only SIPOC derivation:
+  - one row per activity
+  - supplier/consumer from adjacent activity roles
+  - input/output from edge-bound data objects
+  - transport mode shown per input/output item
+- when returning from SIPOC to canvas, the focus/zoom motion is intentional
+  - it must stop immediately on click, pan, or drag
+  - user interaction always wins over the automatic camera move
 - IT tools are now modeled as reusable entities:
   - create new tools from activity details
   - link existing tools from the shared catalog
@@ -222,6 +236,10 @@ Important detail:
 - a dedicated settings/master-data browser flow now exists:
   - `frontend/e2e/settings-master-data.spec.ts`
   - covers company rename, UI preference save, central IT-tool creation, central transport-mode creation, activity tool linking, and reload persistence
+- a dedicated SIPOC browser flow now exists:
+  - `frontend/e2e/sipoc-view.spec.ts`
+  - prepares a stable workflow model via API
+  - verifies the tabellarische SIPOC read model in the UI
 - current rule for large browser failures:
   - isolate the concrete failing interaction in a dedicated repro spec first
   - get that smaller repro green
@@ -292,6 +310,8 @@ Avoid introducing a separate business entity called `subprocess`. A child workfl
   - backend: `22 / 22`
 - Latest settings/master-data verification is green with:
   - `settings-master-data.spec.ts`: `1 passed`
+- Latest SIPOC view verification is green with:
+  - `sipoc-view.spec.ts`: `1 passed`
 - Latest role/assignee model verification is green with:
   - local save path remains functional through fallback behavior even when migration `013_activity_roles_and_assignments.sql` is not yet applied
 

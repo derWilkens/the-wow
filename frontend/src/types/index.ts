@@ -3,6 +3,7 @@ export type ActivityStatus = 'draft' | 'ready_for_review' | 'reviewed'
 export type NodeType = 'activity' | 'start_event' | 'end_event' | 'gateway_decision' | 'gateway_merge'
 export type StatusIcon = 'unclear' | 'ok' | 'in_progress' | 'blocked' | null
 export type ActivityType =
+  | 'unbestimmt'
   | 'erstellen'
   | 'transformieren_aktualisieren'
   | 'pruefen_freigeben'
@@ -184,6 +185,23 @@ export interface ActivityComment {
 }
 
 export type CanvasGroupingMode = 'free' | 'role_lanes'
+export type WorkflowViewMode = 'canvas' | 'sipoc_table'
+
+export interface WorkflowSipocItem {
+  edgeId: string
+  objectName: string
+  transportModeLabel: string
+}
+
+export interface WorkflowSipocRow {
+  activityId: string
+  processLabel: string
+  processRoleLabel: string
+  supplierRoleLabels: string[]
+  consumerRoleLabels: string[]
+  inputs: WorkflowSipocItem[]
+  outputs: WorkflowSipocItem[]
+}
 
 export interface WorkflowTemplate {
   id: string
@@ -299,6 +317,8 @@ export interface ActivityNodeData {
   roleLabel?: string
   assigneeLabel?: string | null
   groupingMode?: CanvasGroupingMode
+  showHandles?: boolean
+  isConnectionPreviewTarget?: boolean
   onOpenDetail: (id: string) => void
   onInlineRename?: (id: string, label: string) => Promise<void> | void
   onOpenSubprocessMenu: (activityId: string, position: { x: number; y: number }) => void
@@ -307,5 +327,7 @@ export interface ActivityNodeData {
 
 export interface CanvasObjectNodeData {
   canvasObject: SourceCanvasObject
+  showHandles?: boolean
+  isConnectionPreviewTarget?: boolean
   onOpenPopup: (id: string) => void
 }

@@ -1,4 +1,4 @@
-import { CheckCircle2, FileCog, Forward, MessageSquare, Pencil, Shapes, Trash2, UserRound, X } from 'lucide-react'
+import { CheckCircle2, CircleHelp, FileCog, Forward, MessageSquare, Pencil, Shapes, Trash2, UserRound, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   useActivityComments,
@@ -24,6 +24,12 @@ import { deriveActivityDataObjects } from './canvasData'
 import { CustomChoiceList } from '../ui/CustomChoiceList'
 
 const activityTypes: Array<{ label: string; value: ActivityType; description: string; icon: typeof FileCog }> = [
+  {
+    label: 'Unbestimmt',
+    value: 'unbestimmt',
+    description: 'Noch offen, welcher fachliche Aktivitaetstyp passend ist',
+    icon: CircleHelp,
+  },
   { label: 'Erstellen', value: 'erstellen', description: 'Neue Inhalte oder Ergebnisse erzeugen', icon: FileCog },
   {
     label: 'Transformieren / Aktualisieren',
@@ -66,7 +72,7 @@ export function ActivityDetailPopup({
   onClose: () => void
 }) {
   const [label, setLabel] = useState(activity.label)
-  const [activityType, setActivityType] = useState<ActivityType | null>(activity.activity_type)
+  const [activityType, setActivityType] = useState<ActivityType | null>(activity.activity_type ?? 'unbestimmt')
   const [description, setDescription] = useState(activity.description ?? '')
   const [notes, setNotes] = useState(activity.notes ?? '')
   const [assigneeLabel, setAssigneeLabel] = useState(activity.assignee_label ?? '')
@@ -144,7 +150,7 @@ export function ActivityDetailPopup({
       position_y: activity.position_y,
       status: activity.status,
       status_icon: activity.status_icon,
-      activity_type: activityType,
+      activity_type: activityType ?? 'unbestimmt',
       description,
       notes,
       assignee_label: assigneeLabel.trim() || null,

@@ -34,8 +34,8 @@ export class UpsertActivityDto {
   status_icon?: 'unclear' | 'ok' | 'in_progress' | 'blocked' | null
 
   @IsOptional()
-  @IsIn(['erstellen', 'transformieren_aktualisieren', 'pruefen_freigeben', 'weiterleiten_ablegen'])
-  activity_type?: 'erstellen' | 'transformieren_aktualisieren' | 'pruefen_freigeben' | 'weiterleiten_ablegen' | null
+  @IsIn(['unbestimmt', 'erstellen', 'transformieren_aktualisieren', 'pruefen_freigeben', 'weiterleiten_ablegen'])
+  activity_type?: 'unbestimmt' | 'erstellen' | 'transformieren_aktualisieren' | 'pruefen_freigeben' | 'weiterleiten_ablegen' | null
 
   @IsOptional()
   @IsString()

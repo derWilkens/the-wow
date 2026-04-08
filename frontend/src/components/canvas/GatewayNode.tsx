@@ -7,11 +7,15 @@ import { CanvasHandles } from './CanvasHandles'
 export const GatewayNode = memo(function GatewayNode({ data }: NodeProps<ActivityNodeData>) {
   const { activity } = data
   const isDecision = activity.node_type === 'gateway_decision'
+  const showHandles = Boolean(data.showHandles)
+  const isConnectionPreviewTarget = Boolean(data.isConnectionPreviewTarget)
 
   return (
     <div
       data-testid={`gateway-node-${activity.id}`}
-      className={`wow-node wow-node--gateway ${isDecision ? 'wow-node--gateway-decision' : 'wow-node--gateway-merge'}`}
+      className={`wow-node wow-node--gateway ${isDecision ? 'wow-node--gateway-decision' : 'wow-node--gateway-merge'} ${
+        showHandles ? 'wow-node--handles-visible' : ''
+      } ${isConnectionPreviewTarget ? 'wow-node--connection-preview-target' : ''}`}
     >
       <div className="wow-gateway-node__diamond">
         <div className="wow-gateway-node__inner">

@@ -1,6 +1,6 @@
 # Test Strategy
 
-Stand: 2026-04-07
+Stand: 2026-04-08
 
 ## Zielbild
 
@@ -28,6 +28,7 @@ Typische Ziele:
 - Choice-Listen
 - Swimlane-Darstellung
 - Activity-/Edge-/Data-Object-Komponenten
+- Auth- und Keyboard-Interaktionspfade
 
 Regel:
 - neue oder geaenderte UI-Funktion moeglichst mit eigenem Komponenten- oder Unit-Test absichern
@@ -42,6 +43,7 @@ Typische Ziele:
 - Activities
 - Workspaces
 - Templates
+- Organization Roles
 - Transportmodi
 - Activity-Resources
 - Auth Guard
@@ -59,6 +61,7 @@ Typische Ziele:
 - Canvas-Interaktion
 - Hierarchie / Detailablaeufe
 - Vorlagen
+- Settings- und Stammdatenfluesse
 - Transportmodi
 - IT-Tools
 - Export
@@ -158,7 +161,10 @@ Aktuelle Beispiele:
 - `frontend/e2e/edge-two-named-data-objects.spec.ts`
   - zwei benannte Datenobjekte nacheinander im selben Edge-Dialog
 - `frontend/e2e/settings-master-data.spec.ts`
-  - geschaeftsnaher Settings-Flow fuer Firmenname, UI-Praeferenz, IT-Tool-Stammdaten und Transportmodus-Stammdaten
+  - geschaeftsnaher Settings-Flow fuer Firmenname, UI-Praeferenz, Rollen, IT-Tool-Stammdaten und Transportmodus-Stammdaten
+- `frontend/e2e/sipoc-view.spec.ts`
+  - geschaeftsnaher View-Repro fuer die tabellarische SIPOC-Sicht
+  - nutzt API-Setup fuer ein stabiles, gezieltes Tabellen-Sollbild statt langer Canvas-Vormodellierung im Browser
 
 Diese Specs sind absichtlich klein und diagnostisch stark.
 
@@ -238,6 +244,8 @@ Die Vollsuite ist **nicht** das beste erste Diagnosewerkzeug fuer einen frisch g
 
 - erst kleine Repros, dann grosse Referenzszenarien
 - Assertions moeglichst auf den relevanten Dialog oder Bereich scopen
+- bei alternativen Ansichten wie SIPOC zuerst die reine Ableitungslogik per Unit-Test absichern und erst dann die View-Umschaltung im Browser pruefen
 - bei React-Flow-Hitbox-Problemen lieber gezielt robust machen als globale Workarounds bauen
 - Browsertests gegen den lokalen echten Stack ernst nehmen, nicht gegen zufaellige entfernte Deployments
 - Testdaten immer aktiv bereinigen
+

@@ -89,6 +89,30 @@ export async function ensurePostLoginLanding(page: Page, userEmail: string) {
     await expect(workflowHeading.or(toolbarActivity)).toBeVisible({ timeout: 15_000 })
   }
 
+  async function isWorkflowOverviewVisible() {
+    return workflowHeading.or(toolbarActivity).isVisible({ timeout: 1_500 }).catch(() => false)
+  }
+
+  async function setActiveOrganizationAndReload(organizationId: string) {
+    await page.evaluate((nextOrganizationId) => {
+      window.localStorage.setItem('wow-active-organization-id', nextOrganizationId)
+    }, organizationId)
+    await page.reload()
+    return workflowHeading.or(toolbarActivity).isVisible({ timeout: 8_000 }).catch(() => false)
+  }
+
+  async function activateOrganizationById(organizationId: string) {
+    const organizationCard = page.getByTestId(`organization-select-${organizationId}`)
+    if (await organizationCard.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await organizationCard.click()
+      if (await isWorkflowOverviewVisible()) {
+        return true
+      }
+    }
+
+    return setActiveOrganizationAndReload(organizationId)
+  }
+
   async function activateFirstOrganizationCard() {
     if ((await organizationCards.count()) === 0) {
       return false
@@ -99,10 +123,7 @@ export async function ensurePostLoginLanding(page: Page, userEmail: string) {
     const organizationIdFromCard = firstCardTestId?.replace('organization-select-', '') ?? null
 
     await firstCard.click()
-    const reachedWorkflowOverview = await workflowHeading
-      .or(toolbarActivity)
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false)
+    const reachedWorkflowOverview = await isWorkflowOverviewVisible()
 
     if (reachedWorkflowOverview) {
       return true
@@ -112,11 +133,7 @@ export async function ensurePostLoginLanding(page: Page, userEmail: string) {
       return false
     }
 
-    await page.evaluate((organizationId) => {
-      window.localStorage.setItem('wow-active-organization-id', organizationId)
-    }, organizationIdFromCard)
-    await page.reload()
-    return workflowHeading.or(toolbarActivity).isVisible({ timeout: 8_000 }).catch(() => false)
+    return activateOrganizationById(organizationIdFromCard)
   }
 
   async function createOrganizationViaApi(name: string) {
@@ -217,10 +234,10 @@ export async function ensurePostLoginLanding(page: Page, userEmail: string) {
     } else {
       const organizations = await listOrganizationsViaApi()
       if (organizations[0]?.id) {
-        await page.evaluate((organizationId) => {
-          window.localStorage.setItem('wow-active-organization-id', organizationId)
-        }, organizations[0].id)
-        await page.reload()
+        const reachedWorkflowOverview = await activateOrganizationById(organizations[0].id)
+        if (reachedWorkflowOverview) {
+          return
+        }
       }
 
       if (await workflowHeading.or(toolbarActivity).isVisible({ timeout: 8_000 }).catch(() => false)) {
@@ -234,6 +251,14 @@ export async function ensurePostLoginLanding(page: Page, userEmail: string) {
   }
 
   if (await organizationHeading.isVisible({ timeout: 1_000 }).catch(() => false)) {
+    const organizations = await listOrganizationsViaApi()
+    if (organizations[0]?.id) {
+      const reachedWorkflowOverview = await activateOrganizationById(organizations[0].id)
+      if (reachedWorkflowOverview) {
+        return
+      }
+    }
+
     if (await activateFirstOrganizationCard()) {
       return
     }

@@ -5,8 +5,16 @@ import type { ActivityNodeData } from '../../types'
 import { CanvasHandles } from './CanvasHandles'
 
 export const EndNode = memo(function EndNode({ data }: NodeProps<ActivityNodeData>) {
+  const showHandles = Boolean(data.showHandles)
+  const isConnectionPreviewTarget = Boolean(data.isConnectionPreviewTarget)
+
   return (
-    <div data-testid={`end-node-${data.activity.id}`} className="wow-node wow-node--end">
+    <div
+      data-testid={`end-node-${data.activity.id}`}
+      className={`wow-node wow-node--end ${showHandles ? 'wow-node--handles-visible' : ''} ${
+        isConnectionPreviewTarget ? 'wow-node--connection-preview-target' : ''
+      }`}
+    >
       <Disc3 className="wow-terminal-node__icon wow-terminal-node__icon--filled" />
       <CanvasHandles
         allowSource={false}
