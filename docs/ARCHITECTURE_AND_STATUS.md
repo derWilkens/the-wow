@@ -35,6 +35,11 @@ Hinweis:
   - optimistic UI for create/connect/delete flows
   - workflow hierarchy navigation
   - switching between canvas and SIPOC table view
+  - workflow-detail dialog wiring for the currently open workflow
+- `frontend/src/components/workspace/WorkflowDetailDialog.tsx`
+  - dedicated entry for the current workflow metadata from the header
+  - edits workflow `name`, `purpose`, `expected_inputs`, and `expected_outputs`
+  - deliberately follows the same product language and dialog rhythm as activity details
 - `frontend/src/components/canvas/WorkflowCanvas.tsx`
   - React Flow integration
   - simplified canvas wrapper that stays close to native React Flow behavior
@@ -78,9 +83,11 @@ Hinweis:
   - linking an existing workflow to an activity
 - `frontend/src/api/*`
   - TanStack Query hooks per resource
+  - includes workspace update for current-workflow details
 - `frontend/src/store/canvasStore.ts`
   - current organization/workspace state
   - breadcrumb/workflow trail state
+  - immediate visible workflow-name refresh after saving current-workflow details
 - `frontend/playwright.config.ts`
   - browser test configuration
   - default `baseURL` now points to `http://127.0.0.1:4174`
@@ -106,6 +113,9 @@ Hinweis:
 - `frontend/e2e/sipoc-view.spec.ts`
   - focused business E2E for the second workflow view
   - verifies SIPOC row derivation from roles, edge data objects, and transport modes
+- `frontend/e2e/workflow-details.spec.ts`
+  - focused business E2E for the new header entry into current-workflow details
+  - verifies save and reopen of workflow metadata
 
 ## Backend Important Files
 
@@ -116,7 +126,7 @@ Hinweis:
 - `backend/src/database/database.service.ts`
   - server-side Supabase access and workspace/organization access checks
 - `backend/src/workspaces/*`
-  - workspace list/create/delete
+  - workspace list/create/update/delete
 - `backend/src/activities/*`
   - activity list/upsert/delete
 - `backend/src/canvas-objects/*`
@@ -243,6 +253,8 @@ Stable:
 - free-text assignee plus role-based swimlane derivation
 - auth flow
 - workspace create flow
+- current-workflow details from dedicated header button
+- workspace update flow for name, purpose, expected inputs, and expected outputs
 - live data persistence
 - workflow hierarchy creation and linking
 - workflow template save/edit/create flows
@@ -302,6 +314,10 @@ Latest known good local verification:
   - screenshot capture for `10-bim-cyclic-coordination.png`: green
 - dedicated settings/master-data verification: green
   - `settings-master-data.spec.ts`: `1 passed`
+- dedicated workflow-details verification: green
+  - `workflow-details.spec.ts`: `1 passed`
+- focused workspace-update backend verification: green
+  - `backend/src/workspaces/workspaces.service.spec.ts`: `2 passed`
 - local fallback-safe role/assignee persistence without applied migration `013`: green
 
 Playwright note:

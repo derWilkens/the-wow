@@ -37,3 +37,28 @@ export function useDeleteWorkspace(organizationId: string | null) {
     },
   })
 }
+
+export function useUpdateWorkspace(organizationId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      workspaceId: string
+      name: string
+      purpose?: string | null
+      expected_inputs?: string[]
+      expected_outputs?: string[]
+    }) =>
+      apiRequest<Workspace>(`/workspaces/${input.workspaceId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: input.name,
+          purpose: input.purpose,
+          expected_inputs: input.expected_inputs,
+          expected_outputs: input.expected_outputs,
+        }),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['workspaces', organizationId] })
+    },
+  })
+}

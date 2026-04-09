@@ -152,7 +152,7 @@ describe('SettingsDialog', () => {
     expect(onOrganizationRenamed).toHaveBeenCalledWith('Neue Acme GmbH')
   })
 
-  it('saves the ui default grouping preference', () => {
+  it('saves ui preferences including snap to grid', () => {
     const onUiPreferencesChange = vi.fn()
 
     render(
@@ -169,10 +169,20 @@ describe('SettingsDialog', () => {
 
     fireEvent.click(screen.getByTestId('settings-nav-ui'))
     fireEvent.click(screen.getByTestId('settings-ui-grouping-lanes'))
+    fireEvent.click(screen.getByTestId('settings-ui-snap-off'))
     fireEvent.click(screen.getByTestId('settings-ui-save'))
 
-    expect(onUiPreferencesChange).toHaveBeenCalledWith({ default_grouping_mode: 'role_lanes' })
+    expect(onUiPreferencesChange).toHaveBeenCalledWith({ default_grouping_mode: 'role_lanes', snap_to_grid: false })
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('role_lanes')
+    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"snap_to_grid":false')
+  })
+
+  it('defaults snap to grid to enabled when no preference is stored', () => {
+    renderDialog()
+
+    fireEvent.click(screen.getByTestId('settings-nav-ui'))
+
+    expect(screen.getByTestId('settings-ui-snap-on')).toHaveClass('bg-cyan-400')
   })
 
   it('creates transport modes, roles and organization IT tools from the master-data section', async () => {

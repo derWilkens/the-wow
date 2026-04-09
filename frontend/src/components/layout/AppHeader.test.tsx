@@ -114,4 +114,15 @@ describe('AppHeader', () => {
     expect(screen.queryByTestId('toolbar-activity')).not.toBeInTheDocument()
     expect(screen.queryByTestId('toolbar-data-object')).not.toBeInTheDocument()
   })
+
+  it('opens the workflow detail dialog from the dedicated header button', () => {
+    const onOpenWorkflowDetails = vi.fn()
+
+    renderHeader({
+      onOpenWorkflowDetails,
+    })
+
+    fireEvent.click(screen.getByTestId('toolbar-workflow-details'))
+    expect(onOpenWorkflowDetails).toHaveBeenCalled()
+  })
 })

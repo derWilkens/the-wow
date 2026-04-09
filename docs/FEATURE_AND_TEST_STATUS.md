@@ -1,6 +1,6 @@
 # Feature And Test Status
 
-Stand: 2026-04-08
+Stand: 2026-04-09
 
 Diese Liste konsolidiert die Features aus den Specs in `specs/` und aus den Entscheidungsrunden im Chat. Status:
 
@@ -38,6 +38,9 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 ### Arbeitsablaeufe und Detailablaeufe
 - [x] Hauptarbeitsablauf anlegen
 - [x] Arbeitsablauf loeschen
+- [x] Separate Header-Schaltflaeche fuer Details des aktuellen Arbeitsablaufs
+- [x] Ablaufdetails des aktuellen Arbeitsablaufs bearbeitbar
+- [x] Name, Zweck, erwartete Eingaben und erwartete Ergebnisse des aktuellen Arbeitsablaufs speicherbar
 - [x] Detailablauf aus Aktivitaet heraus neu anlegen
 - [x] Bestehenden Arbeitsablauf an Aktivitaet verlinken
 - [x] Verlinkten Arbeitsablauf oeffnen
@@ -231,6 +234,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `src/components/settings/TransportModeSettingsDialog.test.tsx`
 - [x] `src/components/settings/SettingsDialog.test.tsx`
 - [x] `src/components/layout/AppHeader.test.tsx`
+- [x] `src/components/workspace/WorkflowDetailDialog.test.tsx`
 - [x] `src/components/organization/OrganizationAccessScreen.test.tsx`
 - [x] `src/components/ui/CustomChoiceList.test.tsx`
 - [x] `src/App.test.tsx`
@@ -269,6 +273,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `e2e/template-regressions.spec.ts`
 - [x] `e2e/settings-master-data.spec.ts`
 - [x] `e2e/sipoc-view.spec.ts`
+- [x] `e2e/workflow-details.spec.ts`
 
 Hinweis: Die Login-gebundene Suite laeuft mit `E2E_EMAIL`/`E2E_PASSWORD` gegen die lokale Preview. `playwright.config.ts` zeigt standardmaessig auf `http://127.0.0.1:4174`; die aktuellen verifizierten Browserlaeufe wurden gegen `http://127.0.0.1:4175` ausgefuehrt. Der letzte komplette Vollsuiten-Stand in dieser Session ist jetzt `54 passed / 1 skipped`.
 Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordination` vorhanden, inklusive Detailablaeufen, IT-Tools, Datenobjekten, Transportmodi, Gateway-Labels und expliziter Merge-Variante. Zwei kleine Repro-Specs haerten jetzt die zuletzt gefundenen Problemstellen vor dem Gesamtszenario:
@@ -301,6 +306,11 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
 - [x] Transportmodus-E2E fuer Settings-Flow
 - [x] Zentraler Settings-/Stammdaten-E2E
   - `e2e/settings-master-data.spec.ts`: `1 passed`
+- [x] Workflow-Details-Einstieg fuer aktuellen Arbeitsablauf verifiziert
+  - `frontend/src/components/layout/AppHeader.test.tsx`: gruen
+  - `frontend/src/components/workspace/WorkflowDetailDialog.test.tsx`: gruen
+  - `backend/src/workspaces/workspaces.service.spec.ts`: gruen
+  - `e2e/workflow-details.spec.ts`: `1 passed`
 - [x] Rollen-/Ausfuehrenden-Modell lokal auch ohne eingespielte Migration `013` per Fallback verifiziert
 - [x] Vorlagen-Regressionen gegen echten lokalen Stack
 - [x] Lokaler Screenshot-Capture fuer `01` bis `10`

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { DatabaseService } from '../database/database.service'
 import { CreateWorkspaceDto } from './dto/create-workspace.dto'
+import { UpdateWorkspaceDto } from './dto/update-workspace.dto'
 
 @Injectable()
 export class WorkspacesService {
@@ -41,6 +42,38 @@ export class WorkspacesService {
     const { data, error } = await this.databaseService.supabase
       .from('workspaces')
       .insert(payload)
+      .select('*')
+      .single()
+
+    if (error) {
+      throw error
+    }
+
+    return data
+  }
+
+  async update(userId: string, workspaceId: string, dto: UpdateWorkspaceDto) {
+    await this.databaseService.assertWorkspaceAccess(workspaceId, userId)
+
+    const payload: Record<string, unknown> = {}
+
+    if (dto.name !== undefined) {
+      payload.name = dto.name.trim()
+    }
+    if (dto.purpose !== undefined) {
+      payload.purpose = dto.purpose?.trim() || null
+    }
+    if (dto.expected_inputs !== undefined) {
+      payload.expected_inputs = dto.expected_inputs
+    }
+    if (dto.expected_outputs !== undefined) {
+      payload.expected_outputs = dto.expected_outputs
+    }
+
+    const { data, error } = await this.databaseService.supabase
+      .from('workspaces')
+      .update(payload)
+      .eq('id', workspaceId)
       .select('*')
       .single()
 

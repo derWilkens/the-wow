@@ -190,6 +190,11 @@ Important detail:
 - the workflow now has two top-level views:
   - `Zeichenmodus`
   - `Tabellarische View`
+- the current workflow now also has a dedicated header entry for its own metadata:
+  - `Ablaufdetails`
+  - edits the currently open workflow directly
+  - uses the same interaction pattern as other detail dialogs
+  - currently persists `name`, `purpose`, `expected_inputs`, and `expected_outputs`
 - the tabellarische view is currently a read-only SIPOC derivation:
   - one row per activity
   - supplier/consumer from adjacent activity roles
@@ -312,6 +317,11 @@ Avoid introducing a separate business entity called `subprocess`. A child workfl
   - `settings-master-data.spec.ts`: `1 passed`
 - Latest SIPOC view verification is green with:
   - `sipoc-view.spec.ts`: `1 passed`
+- Latest workflow-details verification is green with:
+  - `WorkflowDetailDialog.test.tsx`: `3 passed`
+  - `AppHeader.test.tsx`: workflow-detail entry covered
+  - `backend/src/workspaces/workspaces.service.spec.ts`: update path covered
+  - `workflow-details.spec.ts`: `1 passed`
 - Latest role/assignee model verification is green with:
   - local save path remains functional through fallback behavior even when migration `013_activity_roles_and_assignments.sql` is not yet applied
 

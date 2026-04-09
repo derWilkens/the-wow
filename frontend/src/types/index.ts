@@ -46,6 +46,7 @@ export interface Organization {
 
 export interface UiPreferences {
   default_grouping_mode: CanvasGroupingMode
+  snap_to_grid: boolean
 }
 
 export interface OrganizationMember {
@@ -188,17 +189,27 @@ export type CanvasGroupingMode = 'free' | 'role_lanes'
 export type WorkflowViewMode = 'canvas' | 'sipoc_table'
 
 export interface WorkflowSipocItem {
+  id: string
   edgeId: string
   objectName: string
+  transportModeId: string | null
   transportModeLabel: string
+}
+
+export interface WorkflowSipocRoleRef {
+  activityId: string
+  activityLabel: string
+  roleId: string | null
+  roleLabel: string
 }
 
 export interface WorkflowSipocRow {
   activityId: string
   processLabel: string
+  processRoleId: string | null
   processRoleLabel: string
-  supplierRoleLabels: string[]
-  consumerRoleLabels: string[]
+  supplierRoles: WorkflowSipocRoleRef[]
+  consumerRoles: WorkflowSipocRoleRef[]
   inputs: WorkflowSipocItem[]
   outputs: WorkflowSipocItem[]
 }

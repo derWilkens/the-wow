@@ -154,6 +154,7 @@ interface WorkflowCanvasProps {
   selectedEdgeId: string | null
   selectedDataObjectId: string | null
   groupingMode: CanvasGroupingMode
+  snapToGridEnabled?: boolean
   activityRolesById: Record<string, string>
   activityAssigneesById: Record<string, string | null>
   focusNodeId: string | null
@@ -188,6 +189,7 @@ export function WorkflowCanvas({
   selectedEdgeId,
   selectedDataObjectId,
   groupingMode,
+  snapToGridEnabled = true,
   activityRolesById,
   activityAssigneesById,
   focusNodeId,
@@ -793,6 +795,8 @@ export function WorkflowCanvas({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        snapToGrid={snapToGridEnabled}
+        snapGrid={[28, 28]}
         nodeDragThreshold={0}
         defaultEdgeOptions={{ animated: false }}
         deleteKeyCode={['Backspace', 'Delete']}

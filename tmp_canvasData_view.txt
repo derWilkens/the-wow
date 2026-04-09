@@ -1,4 +1,4 @@
-import type { Activity, CanvasEdge, CanvasObject, EdgeDataObject, WorkflowSipocRoleRef, WorkflowSipocRow } from '../../types'
+﻿import type { Activity, CanvasEdge, CanvasObject, EdgeDataObject, WorkflowSipocRow } from '../../types'
 
 export function getReusableDataObjectsForEdge(canvasObjects: CanvasObject[], edgeId: string) {
   return canvasObjects
@@ -28,21 +28,16 @@ export function deriveActivityDataObjects(activity: Activity, canvasEdges: Canva
   }
 }
 
+function dedupeLabels(labels: string[]) {
+  return Array.from(new Set(labels.filter(Boolean))).sort((left, right) => left.localeCompare(right, 'de'))
+}
+
 function getTransportModeLabel(edge: CanvasEdge) {
-  return edge.transport_mode?.label ?? '—'
+  return edge.transport_mode?.label ?? 'â€”'
 }
 
 function getRoleLabel(activityId: string, activityRolesById: Record<string, string>) {
   return activityRolesById[activityId] ?? 'Nicht zugeordnet'
-}
-
-function buildRoleRef(activity: Activity, activityRolesById: Record<string, string>): WorkflowSipocRoleRef {
-  return {
-    activityId: activity.id,
-    activityLabel: activity.label,
-    roleId: activity.role_id ?? null,
-    roleLabel: getRoleLabel(activity.id, activityRolesById),
-  }
 }
 
 export function deriveWorkflowSipocRows(
@@ -75,34 +70,30 @@ export function deriveWorkflowSipocRows(
       const incomingEdges = canvasEdges.filter((edge) => edge.to_node_type === 'activity' && edge.to_node_id === activity.id)
       const outgoingEdges = canvasEdges.filter((edge) => edge.from_node_type === 'activity' && edge.from_node_id === activity.id)
 
-      const supplierRoles = incomingEdges
-        .filter((edge) => edge.from_node_type === 'activity')
-        .map((edge) => activities.find((candidate) => candidate.id === edge.from_node_id) ?? null)
-        .filter((candidate): candidate is Activity => Boolean(candidate))
-        .map((candidate) => buildRoleRef(candidate, activityRolesById))
+      const supplierRoleLabels = dedupeLabels(
+        incomingEdges
+          .filter((edge) => edge.from_node_type === 'activity')
+          .map((edge) => getRoleLabel(edge.from_node_id, activityRolesById)),
+      )
 
-      const consumerRoles = outgoingEdges
-        .filter((edge) => edge.to_node_type === 'activity')
-        .map((edge) => activities.find((candidate) => candidate.id === edge.to_node_id) ?? null)
-        .filter((candidate): candidate is Activity => Boolean(candidate))
-        .map((candidate) => buildRoleRef(candidate, activityRolesById))
+      const consumerRoleLabels = dedupeLabels(
+        outgoingEdges
+          .filter((edge) => edge.to_node_type === 'activity')
+          .map((edge) => getRoleLabel(edge.to_node_id, activityRolesById)),
+      )
 
       const inputs = incomingEdges.flatMap((edge) =>
         (edgeDataObjectsByEdgeId.get(edge.id) ?? []).map((canvasObject) => ({
-          id: canvasObject.id,
           edgeId: edge.id,
           objectName: canvasObject.name,
-          transportModeId: edge.transport_mode_id ?? null,
           transportModeLabel: getTransportModeLabel(edge),
         })),
       )
 
       const outputs = outgoingEdges.flatMap((edge) =>
         (edgeDataObjectsByEdgeId.get(edge.id) ?? []).map((canvasObject) => ({
-          id: canvasObject.id,
           edgeId: edge.id,
           objectName: canvasObject.name,
-          transportModeId: edge.transport_mode_id ?? null,
           transportModeLabel: getTransportModeLabel(edge),
         })),
       )
@@ -110,10 +101,9 @@ export function deriveWorkflowSipocRows(
       return {
         activityId: activity.id,
         processLabel: activity.label,
-        processRoleId: activity.role_id ?? null,
         processRoleLabel: getRoleLabel(activity.id, activityRolesById),
-        supplierRoles,
-        consumerRoles,
+        supplierRoleLabels,
+        consumerRoleLabels,
         inputs,
         outputs,
       }

@@ -46,6 +46,7 @@ interface CanvasStore {
   workspaceTrail: WorkspaceTrailItem[]
   selectOrganization: (organizationId: string, organizationName: string, organizationRole: 'owner' | 'admin' | 'member') => void
   updateOrganizationName: (organizationName: string) => void
+  updateWorkspaceName: (workspaceName: string) => void
   leaveOrganization: () => void
   openWorkspace: (workspaceId: string, workspaceName: string) => void
   openWorkspacePath: (trail: WorkspaceTrailItem[]) => void
@@ -86,6 +87,21 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
       }
     }),
   updateOrganizationName: (organizationName) => set(() => ({ organizationName })),
+  updateWorkspaceName: (workspaceName) =>
+    set((state) => ({
+      workspaceName,
+      workspaceTrail:
+        state.workspaceTrail.length === 0
+          ? state.workspaceTrail
+          : state.workspaceTrail.map((item, index) =>
+              index === state.workspaceTrail.length - 1
+                ? {
+                    ...item,
+                    workspaceName,
+                  }
+                : item,
+            ),
+    })),
   leaveOrganization: () =>
     set(() => {
       writeStoredOrganizationId(null)

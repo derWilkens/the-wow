@@ -4,11 +4,11 @@ import type { Connection } from 'reactflow'
 import { toPng } from 'html-to-image'
 import { useActivities, useCreateSubprocess, useDeleteActivity, useLinkSubprocess, useUnlinkSubprocess, useUpsertActivity } from './api/activities'
 import { useAcceptOrganizationInvitation, useCreateOrganization, useOrganizations, usePendingOrganizationInvitations } from './api/organizations'
-import { useOrganizationRoles } from './api/organizationRoles'
+import { useCreateOrganizationRole, useOrganizationRoles } from './api/organizationRoles'
 import { useCanvasEdges, useDeleteCanvasEdge, useUpsertCanvasEdge } from './api/canvasEdges'
 import { useCanvasObjects, useDeleteCanvasObject, useUpsertCanvasObject } from './api/canvasObjects'
 import { useCreateTransportMode, useTransportModes } from './api/transportModes'
-import { useWorkspaces } from './api/workspaces'
+import { useUpdateWorkspace, useWorkspaces } from './api/workspaces'
 import { AuthScreen } from './components/auth/AuthScreen'
 import { ActivityDetailPopup } from './components/canvas/ActivityDetailPopup'
 import { DataObjectPopup } from './components/canvas/DataObjectPopup'
@@ -24,6 +24,7 @@ import { deriveWorkflowSipocRows, getReusableDataObjectsForEdge } from './compon
 import { AppHeader, type CanvasSearchOption } from './components/layout/AppHeader'
 import { SettingsDialog } from './components/settings/SettingsDialog'
 import { WorkspaceList } from './components/workspace/WorkspaceList'
+import { WorkflowDetailDialog } from './components/workspace/WorkflowDetailDialog'
 import { useAuthSession } from './hooks/useAuthSession'
 import { supabase } from './lib/supabase'
 import { useCanvasStore } from './store/canvasStore'
@@ -35,6 +36,7 @@ import type {
   EdgeDataObject,
   ObjectField,
   TransportModeOption,
+  UiPreferences,
   UpsertCanvasObjectInput,
   WorkflowViewMode,
   Workspace,
@@ -42,18 +44,19 @@ import type {
 
 const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
 
-function readDefaultGroupingMode(): CanvasGroupingMode {
+function readUiPreferences(): UiPreferences {
   if (typeof window === 'undefined') {
-    return 'free'
+    return { default_grouping_mode: 'free', snap_to_grid: true }
   }
 
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(UI_PREFERENCES_STORAGE_KEY) ?? '{}') as {
-      default_grouping_mode?: CanvasGroupingMode
+    const parsed = JSON.parse(window.localStorage.getItem(UI_PREFERENCES_STORAGE_KEY) ?? '{}') as Partial<UiPreferences>
+    return {
+      default_grouping_mode: parsed.default_grouping_mode === 'role_lanes' ? 'role_lanes' : 'free',
+      snap_to_grid: typeof parsed.snap_to_grid === 'boolean' ? parsed.snap_to_grid : true,
     }
-    return parsed.default_grouping_mode === 'role_lanes' ? 'role_lanes' : 'free'
   } catch {
-    return 'free'
+    return { default_grouping_mode: 'free', snap_to_grid: true }
   }
 }
 
@@ -299,14 +302,17 @@ function WorkspaceCanvasApp({
     navigateToWorkspaceTrail,
     organizationName,
     updateOrganizationName,
+    updateWorkspaceName,
   } = useCanvasStore()
   const { data: workspaces = [] } = useWorkspaces(organizationId)
+  const updateWorkspace = useUpdateWorkspace(organizationId)
   const { data: organizationRoles = [] } = useOrganizationRoles(organizationId)
   const { data: activities = [], isLoading: activitiesLoading } = useActivities(workspaceId, parentActivityId)
   const { data: canvasObjects = [], isLoading: objectsLoading } = useCanvasObjects(workspaceId, parentActivityId)
   const { data: canvasEdges = [] } = useCanvasEdges(workspaceId, parentActivityId)
   const { data: transportModes = [] } = useTransportModes(organizationId)
   const createTransportMode = useCreateTransportMode(organizationId)
+  const createOrganizationRole = useCreateOrganizationRole(organizationId)
   const upsertActivity = useUpsertActivity(workspaceId)
   const createSubprocess = useCreateSubprocess(workspaceId)
   const linkSubprocess = useLinkSubprocess(workspaceId)
@@ -344,10 +350,12 @@ function WorkspaceCanvasApp({
   const [linkActivity, setLinkActivity] = useState<Activity | null>(null)
   const [viewportCenter, setViewportCenter] = useState({ x: 360, y: 260 })
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isWorkflowDetailOpen, setIsWorkflowDetailOpen] = useState(false)
   const [dataObjectActionError, setDataObjectActionError] = useState<string | null>(null)
   const [workflowViewMode, setWorkflowViewMode] = useState<WorkflowViewMode>('canvas')
-  const [groupingMode, setGroupingMode] = useState<CanvasGroupingMode>(() => readDefaultGroupingMode())
+  const [uiPreferences, setUiPreferences] = useState<UiPreferences>(() => readUiPreferences())
   const [focusedCanvasNodeId, setFocusedCanvasNodeId] = useState<string | null>(null)
+  const [activeWorkspaceName, setActiveWorkspaceName] = useState(workspaceName)
 
   const currentSnapshot = useMemo<CanvasSnapshot>(
     () => cloneSnapshot({ activities, canvasObjects, canvasEdges }),
@@ -357,6 +365,10 @@ function WorkspaceCanvasApp({
   useEffect(() => {
     latestSnapshotRef.current = currentSnapshot
   }, [currentSnapshot])
+
+  useEffect(() => {
+    setActiveWorkspaceName(workspaceName)
+  }, [workspaceId, workspaceName])
 
   useEffect(() => {
     seedInFlightRef.current = false
@@ -475,6 +487,23 @@ function WorkspaceCanvasApp({
   )
 
   const workspacesById = useMemo(() => new Map(workspaces.map((workspace) => [workspace.id, workspace])), [workspaces])
+  const currentWorkspace = useMemo(
+    () =>
+      workspaces.find((workspace) => workspace.id === workspaceId) ?? {
+        id: workspaceId,
+        organization_id: organizationId,
+        name: activeWorkspaceName,
+        created_by: currentUserId,
+        created_at: new Date(0).toISOString(),
+        parent_workspace_id: null,
+        parent_activity_id: null,
+        workflow_scope: 'standalone' as const,
+        purpose: null,
+        expected_inputs: [],
+        expected_outputs: [],
+      },
+    [activeWorkspaceName, currentUserId, organizationId, workspaceId, workspaces],
+  )
 
   const visibleActivities = useMemo(
     () => uniqueById([...activities, ...optimisticActivities]).filter((activity) => !optimisticHiddenNodeIds.includes(activity.id)),
@@ -566,6 +595,13 @@ function WorkspaceCanvasApp({
     () => deriveWorkflowSipocRows(visibleActivities, visibleCanvasEdges, visibleCanvasObjects, activityRolesById),
     [activityRolesById, visibleActivities, visibleCanvasEdges, visibleCanvasObjects],
   )
+  const reusableSipocDataObjects = useMemo(
+    () =>
+      visibleDataObjects
+        .slice()
+        .sort((left, right) => left.name.localeCompare(right.name, 'de')),
+    [visibleDataObjects],
+  )
   const canvasSearchOptions = useMemo<CanvasSearchOption[]>(
     () => [
       ...visibleActivities.map((activity) => ({
@@ -594,6 +630,64 @@ function WorkspaceCanvasApp({
   const dataObjectToolbarHint = selectedEdge
       ? 'Datenobjekt auf markierter Verbindung einfügen'
       : 'Markiere zuerst die Verbindung, auf der das Objekt transportiert wird'
+
+  async function updateActivityFromSipoc(
+    activityId: string,
+    updates: Partial<Pick<Activity, 'label' | 'role_id'>>,
+  ) {
+    const activity = visibleActivities.find((entry) => entry.id === activityId)
+    if (!activity) {
+      return
+    }
+
+    const nextActivity: Activity = {
+      ...activity,
+      label: updates.label?.trim() || activity.label,
+      role_id: updates.role_id === undefined ? activity.role_id ?? null : updates.role_id,
+    }
+
+    if (nextActivity.label === activity.label && nextActivity.role_id === (activity.role_id ?? null)) {
+      return
+    }
+
+    rememberSnapshot()
+    setOptimisticActivities((current) => [...current.filter((entry) => entry.id !== activityId), nextActivity])
+
+    try {
+      await upsertActivity.mutateAsync({
+        id: activity.id,
+        parent_id: activity.parent_id,
+        node_type: activity.node_type,
+        label: nextActivity.label,
+        trigger_type: activity.trigger_type,
+        position_x: activity.position_x,
+        position_y: activity.position_y,
+        status: activity.status,
+        status_icon: activity.status_icon,
+        activity_type: activity.activity_type,
+        description: activity.description,
+        notes: activity.notes,
+        assignee_label: activity.assignee_label ?? null,
+        role_id: nextActivity.role_id ?? null,
+        duration_minutes: activity.duration_minutes ?? null,
+        linked_workflow_id: activity.linked_workflow_id,
+        linked_workflow_mode: activity.linked_workflow_mode,
+        linked_workflow_purpose: activity.linked_workflow_purpose,
+        linked_workflow_inputs: activity.linked_workflow_inputs,
+        linked_workflow_outputs: activity.linked_workflow_outputs,
+      })
+    } catch (error) {
+      setOptimisticActivities((current) => current.filter((entry) => entry.id !== activityId))
+      throw error
+    }
+  }
+
+  async function createSipocRole(input: { label: string; description: string }) {
+    return createOrganizationRole.mutateAsync({
+      label: input.label.trim(),
+      description: input.description.trim() || null,
+    })
+  }
 
   async function renameActivityInline(activityId: string, nextLabel: string) {
     const activity = visibleActivities.find((entry) => entry.id === activityId)
@@ -1110,7 +1204,10 @@ function WorkspaceCanvasApp({
     }
   }
 
-  async function createEdgeDataObject(edgeId: string, template?: EdgeDataObject) {
+  async function createEdgeDataObject(
+    edgeId: string,
+    template?: Pick<EdgeDataObject, 'name' | 'fields'>,
+  ): Promise<EdgeDataObject | undefined> {
     const targetEdge = visibleCanvasEdges.find((edge) => edge.id === edgeId)
     if (!targetEdge) {
       return undefined
@@ -1164,8 +1261,9 @@ function WorkspaceCanvasApp({
         })),
       })
 
-      setOptimisticCanvasObjects((current) => current.map((canvasObject) => (canvasObject.id === optimisticObjectId ? createdObject : canvasObject)))
-      return optimisticObject
+      const resolvedObject = createdObject as EdgeDataObject
+      setOptimisticCanvasObjects((current) => current.map((canvasObject) => (canvasObject.id === optimisticObjectId ? resolvedObject : canvasObject)))
+      return resolvedObject
     } catch (error) {
       setOptimisticCanvasObjects((current) => current.filter((canvasObject) => canvasObject.id !== optimisticObjectId))
       throw error
@@ -1780,7 +1878,7 @@ function WorkspaceCanvasApp({
     })
     const link = document.createElement('a')
     const fileDate = new Date().toISOString().slice(0, 10)
-    link.download = `${workspaceName}-${fileDate}.png`
+    link.download = `${activeWorkspaceName}-${fileDate}.png`
     link.href = dataUrl
     link.click()
   }
@@ -1789,11 +1887,29 @@ function WorkspaceCanvasApp({
     window.print()
   }
 
+  async function saveWorkflowDetails(input: {
+    name: string
+    purpose: string | null
+    expected_inputs: string[]
+    expected_outputs: string[]
+  }) {
+    await updateWorkspace.mutateAsync({
+      workspaceId,
+      name: input.name,
+      purpose: input.purpose,
+      expected_inputs: input.expected_inputs,
+      expected_outputs: input.expected_outputs,
+    })
+    setActiveWorkspaceName(input.name)
+    updateWorkspaceName(input.name)
+    setIsWorkflowDetailOpen(false)
+  }
+
   return (
     <div className="h-screen w-full overflow-hidden px-4 py-4 md:px-6 print:h-auto print:px-0 print:py-0">
       <div className="flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/70 shadow-[0_40px_120px_rgba(3,8,12,0.55)] backdrop-blur-xl print:min-h-0 print:max-w-none print:rounded-none print:border-0 print:bg-white print:shadow-none">
         <AppHeader
-          workspaceName={workspaceName}
+          workspaceName={activeWorkspaceName}
           workspaceTrail={workspaceTrail}
           onResetRoot={resetToRoot}
           onNavigateWorkspaceTrail={navigateToWorkspaceTrail}
@@ -1801,6 +1917,7 @@ function WorkspaceCanvasApp({
           onSignOut={() => void signOut()}
           onExportPng={() => void exportAsPng()}
           onExportPdf={exportAsPdf}
+          onOpenWorkflowDetails={() => setIsWorkflowDetailOpen(true)}
           onOpenSettings={
             organizationRole === 'owner' || organizationRole === 'admin'
               ? () => setIsSettingsOpen(true)
@@ -1808,8 +1925,13 @@ function WorkspaceCanvasApp({
           }
           workflowViewMode={workflowViewMode}
           onWorkflowViewModeChange={(mode) => setWorkflowViewMode(mode)}
-          groupingMode={groupingMode}
-          onToggleGroupingMode={() => setGroupingMode((current) => (current === 'free' ? 'role_lanes' : 'free'))}
+          groupingMode={uiPreferences.default_grouping_mode}
+          onToggleGroupingMode={() =>
+            setUiPreferences((current) => ({
+              ...current,
+              default_grouping_mode: current.default_grouping_mode === 'free' ? 'role_lanes' : 'free',
+            }))
+          }
           canvasSearchOptions={canvasSearchOptions}
           onSelectCanvasSearchResult={(nodeId) => {
             setFocusedCanvasNodeId(null)
@@ -1861,7 +1983,8 @@ function WorkspaceCanvasApp({
                   selectedNodeId={selectedCanvasNodeId}
                   selectedEdgeId={selectedCanvasEdgeId}
                   selectedDataObjectId={selectedDataObjectId}
-                  groupingMode={groupingMode}
+                  groupingMode={uiPreferences.default_grouping_mode}
+                  snapToGridEnabled={uiPreferences.snap_to_grid}
                   activityRolesById={activityRolesById}
                   activityAssigneesById={activityAssigneesById}
                   focusNodeId={focusedCanvasNodeId}
@@ -1947,6 +2070,9 @@ function WorkspaceCanvasApp({
               <div className="h-full p-4">
                 <WorkflowSipocTable
                   rows={sipocRows}
+                  roles={organizationRoles}
+                  transportModes={transportModes}
+                  reusableDataObjects={reusableSipocDataObjects}
                   onSelectActivity={(activityId) => {
                     setWorkflowViewMode('canvas')
                     setSelectedCanvasNodeId(activityId)
@@ -1957,6 +2083,18 @@ function WorkspaceCanvasApp({
                     setFocusedCanvasNodeId(null)
                     window.setTimeout(() => setFocusedCanvasNodeId(activityId), 0)
                   }}
+                  onRenameProcess={(activityId, label) => updateActivityFromSipoc(activityId, { label })}
+                  onUpdateProcessRole={(activityId, roleId) => updateActivityFromSipoc(activityId, { role_id: roleId })}
+                  onUpdateRelatedRole={(activityId, roleId) => updateActivityFromSipoc(activityId, { role_id: roleId })}
+                  onCreateRole={(input) => createSipocRole(input)}
+                  onUpdateEdgeTransportMode={(edgeId, transportModeId) => updateEdge(edgeId, { transport_mode_id: transportModeId })}
+                  onAddExistingDataObjectToEdge={(edgeId, dataObjectId) => addExistingDataObjectToEdge(edgeId, dataObjectId)}
+                  onCreateDataObjectOnEdge={(edgeId, name) =>
+                    createEdgeDataObject(edgeId, {
+                      name: name.trim() || 'Neues Datenobjekt',
+                      fields: [],
+                    })
+                  }
                 />
               </div>
             )}
@@ -2020,7 +2158,14 @@ function WorkspaceCanvasApp({
             isOpen={isSettingsOpen}
             onClose={() => setIsSettingsOpen(false)}
             onOrganizationRenamed={updateOrganizationName}
-            onUiPreferencesChange={(preferences) => setGroupingMode(preferences.default_grouping_mode)}
+            onUiPreferencesChange={(preferences) => setUiPreferences(preferences)}
+          />
+          <WorkflowDetailDialog
+            workspace={currentWorkspace}
+            isOpen={isWorkflowDetailOpen}
+            isSaving={updateWorkspace.isPending}
+            onClose={() => setIsWorkflowDetailOpen(false)}
+            onSave={saveWorkflowDetails}
           />
           {subprocessMenu ? (
               <SubprocessMenu

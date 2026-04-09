@@ -12,12 +12,12 @@ import {
 test.describe('sipoc view', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
-  test('renders a read-only sipoc table derived from workflow roles, data objects and transport modes', async ({
+  test('renders and edits sipoc data for roles, process name, data objects and transport modes', async ({
     page,
     request,
   }) => {
     test.setTimeout(120_000)
-    const workflowName = `SIPOC View ${testSuffix()}`
+    const workflowName = `SIPOC Edit ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
 
@@ -39,19 +39,25 @@ test.describe('sipoc view', () => {
       const roleResponses = await Promise.all([
         request.post(`http://127.0.0.1:3000/organizations/${organizationId}/roles`, {
           headers: authHeaders,
-          data: { label: `Fachplanung ${testSuffix(101)}` },
+          data: { label: `Supplier ${testSuffix(101)}` },
         }),
         request.post(`http://127.0.0.1:3000/organizations/${organizationId}/roles`, {
           headers: authHeaders,
-          data: { label: `BIM-Koordination ${testSuffix(202)}` },
+          data: { label: `Process ${testSuffix(202)}` },
         }),
         request.post(`http://127.0.0.1:3000/organizations/${organizationId}/roles`, {
           headers: authHeaders,
-          data: { label: `Projektleitung ${testSuffix(303)}` },
+          data: { label: `Consumer ${testSuffix(303)}` },
+        }),
+        request.post(`http://127.0.0.1:3000/organizations/${organizationId}/roles`, {
+          headers: authHeaders,
+          data: { label: `Updated ${testSuffix(404)}` },
         }),
       ])
 
-      const [supplierRole, processRole, consumerRole] = await Promise.all(roleResponses.map((response) => response.json()))
+      const [supplierRole, processRole, consumerRole, updatedRole] = await Promise.all(
+        roleResponses.map((response) => response.json()),
+      )
 
       const transportModesResponse = await request.get(
         `http://127.0.0.1:3000/organizations/${organizationId}/transport-modes`,
@@ -59,13 +65,11 @@ test.describe('sipoc view', () => {
       )
       expect(transportModesResponse.ok()).toBeTruthy()
       const transportModes = (await transportModesResponse.json()) as Array<{ id: string; label: string }>
-      const [inputMode, outputMode] = transportModes
-      expect(inputMode?.id).toBeTruthy()
-      expect(outputMode?.id).toBeTruthy()
+      const [defaultMode] = transportModes
+      expect(defaultMode?.id).toBeTruthy()
 
-      const supplierActivityResponse = await request.post(
-        `http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/activities/upsert`,
-        {
+      const supplierActivity = await (
+        await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/activities/upsert`, {
           headers: authHeaders,
           data: {
             parent_id: null,
@@ -81,14 +85,11 @@ test.describe('sipoc view', () => {
             notes: null,
             role_id: supplierRole.id,
           },
-        },
-      )
-      expect(supplierActivityResponse.ok()).toBeTruthy()
-      const supplierActivity = await supplierActivityResponse.json()
+        })
+      ).json()
 
-      const processActivityResponse = await request.post(
-        `http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/activities/upsert`,
-        {
+      const processActivity = await (
+        await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/activities/upsert`, {
           headers: authHeaders,
           data: {
             parent_id: null,
@@ -104,13 +105,11 @@ test.describe('sipoc view', () => {
             notes: null,
             role_id: processRole.id,
           },
-        },
-      )
-      const processActivity = await processActivityResponse.json()
+        })
+      ).json()
 
-      const consumerActivityResponse = await request.post(
-        `http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/activities/upsert`,
-        {
+      const consumerActivity = await (
+        await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/activities/upsert`, {
           headers: authHeaders,
           data: {
             parent_id: null,
@@ -126,13 +125,31 @@ test.describe('sipoc view', () => {
             notes: null,
             role_id: consumerRole.id,
           },
-        },
-      )
-      const consumerActivity = await consumerActivityResponse.json()
+        })
+      ).json()
 
-      const edgeInResponse = await request.post(
-        `http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-edges/upsert`,
-        {
+      const extraActivity = await (
+        await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/activities/upsert`, {
+          headers: authHeaders,
+          data: {
+            parent_id: null,
+            node_type: 'activity',
+            label: 'Archivieren',
+            trigger_type: null,
+            position_x: 1160,
+            position_y: 320,
+            status: 'draft',
+            status_icon: null,
+            activity_type: 'weiterleiten_ablegen',
+            description: 'Liefert wiederverwendbares Datenobjekt',
+            notes: null,
+            role_id: updatedRole.id,
+          },
+        })
+      ).json()
+
+      const edgeIn = await (
+        await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-edges/upsert`, {
           headers: authHeaders,
           data: {
             parent_activity_id: null,
@@ -143,17 +160,14 @@ test.describe('sipoc view', () => {
             to_node_id: processActivity.id,
             to_handle_id: 'target-left',
             label: null,
-            transport_mode_id: inputMode.id,
+            transport_mode_id: defaultMode.id,
             notes: null,
           },
-        },
-      )
-      expect(edgeInResponse.ok()).toBeTruthy()
-      const edgeIn = await edgeInResponse.json()
+        })
+      ).json()
 
-      const edgeOutResponse = await request.post(
-        `http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-edges/upsert`,
-        {
+      const edgeOut = await (
+        await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-edges/upsert`, {
           headers: authHeaders,
           data: {
             parent_activity_id: null,
@@ -164,15 +178,31 @@ test.describe('sipoc view', () => {
             to_node_id: consumerActivity.id,
             to_handle_id: 'target-left',
             label: null,
-            transport_mode_id: outputMode.id,
+            transport_mode_id: null,
             notes: null,
           },
-        },
-      )
-      expect(edgeOutResponse.ok()).toBeTruthy()
-      const edgeOut = await edgeOutResponse.json()
+        })
+      ).json()
 
-      const inputObjectResponse = await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-objects/upsert`, {
+      const edgeReusable = await (
+        await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-edges/upsert`, {
+          headers: authHeaders,
+          data: {
+            parent_activity_id: null,
+            from_node_type: 'activity',
+            from_node_id: consumerActivity.id,
+            from_handle_id: 'source-right',
+            to_node_type: 'activity',
+            to_node_id: extraActivity.id,
+            to_handle_id: 'target-left',
+            label: null,
+            transport_mode_id: defaultMode.id,
+            notes: null,
+          },
+        })
+      ).json()
+
+      await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-objects/upsert`, {
         headers: authHeaders,
         data: {
           parent_activity_id: null,
@@ -182,42 +212,73 @@ test.describe('sipoc view', () => {
           edge_sort_order: 0,
         },
       })
-      expect(inputObjectResponse.ok()).toBeTruthy()
 
-      const outputObjectResponse = await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-objects/upsert`, {
+      const reusableObject = await (
+        await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-objects/upsert`, {
+          headers: authHeaders,
+          data: {
+            parent_activity_id: null,
+            object_type: 'datenobjekt',
+            name: 'Freigabevermerk',
+            edge_id: edgeReusable.id,
+            edge_sort_order: 0,
+          },
+        })
+      ).json()
+
+      await request.post(`http://127.0.0.1:3000/workspaces/${createdWorkflow.id}/canvas-objects/upsert`, {
         headers: authHeaders,
         data: {
           parent_activity_id: null,
           object_type: 'datenobjekt',
-          name: 'Pruefbericht',
+          name: 'Zwischennotiz',
           edge_id: edgeOut.id,
           edge_sort_order: 0,
         },
       })
-      expect(outputObjectResponse.ok()).toBeTruthy()
 
       await login(page)
-      const workspaceOpenButton = page.getByTestId(`workspace-open-${createdWorkflow.id}`)
-      await expect(workspaceOpenButton).toBeVisible({ timeout: 10_000 })
-      await workspaceOpenButton.click()
-      await expect(page.getByTestId('toolbar-view-sipoc')).toBeVisible()
+      await page.getByTestId(`workspace-open-${createdWorkflow.id}`).click()
       await page.getByTestId('toolbar-view-sipoc').click()
 
-      await expect(page.getByTestId('workflow-sipoc-table')).toBeVisible()
-      await expect(page.getByTestId(`sipoc-row-${processActivity.id}`)).toBeVisible()
-
       const processRow = page.getByTestId(`sipoc-row-${processActivity.id}`)
-      await expect(processRow).toContainText(`Fachplanung ${testSuffix(101)}`)
+      await expect(processRow).toContainText(`Supplier ${testSuffix(101)}`)
       await expect(processRow).toContainText('Unterlagenpaket')
-      await expect(processRow).toContainText(inputMode.label)
-      await expect(processRow).toContainText('Unterlagen pruefen')
-      await expect(processRow).toContainText(`BIM-Koordination ${testSuffix(202)}`)
-      await expect(processRow).toContainText('Pruefbericht')
-      await expect(processRow).toContainText(outputMode.label)
-      await expect(processRow).toContainText(`Projektleitung ${testSuffix(303)}`)
+      await expect(page.getByTestId(`sipoc-process-input-${processActivity.id}`)).toHaveValue('Unterlagen pruefen')
+      await expect(processRow).toContainText(`Process ${testSuffix(202)}`)
+      await expect(processRow).toContainText(`Consumer ${testSuffix(303)}`)
 
-      await page.getByTestId('toolbar-view-canvas').click()
-      await expect(page.getByTestId('workflow-canvas')).toBeVisible()
+      const renameResponse = page.waitForResponse(
+        (response) =>
+          response.url().includes(`/workspaces/${createdWorkflow.id}/activities/upsert`) &&
+          response.request().method() === 'POST',
+      )
+      await page.getByTestId(`sipoc-process-input-${processActivity.id}`).fill('Unterlagen final pruefen')
+      await page.getByTestId(`sipoc-process-input-${processActivity.id}`).blur()
+      await renameResponse
+
+      await page.getByTestId(`sipoc-process-role-${processActivity.id}-trigger`).click()
+      await page.getByTestId(`sipoc-process-role-${processActivity.id}-option-${updatedRole.id}`).click()
+
+      await page.getByTestId(`sipoc-supplier-role-${supplierActivity.id}-trigger`).click()
+      await page.getByTestId(`sipoc-supplier-role-${supplierActivity.id}-option-${updatedRole.id}`).click()
+
+      await page.getByTestId(`sipoc-input-data-object-${edgeIn.id}-trigger`).click()
+      await page.getByTestId(`sipoc-input-data-object-${edgeIn.id}-option-${reusableObject.id}`).click()
+
+      await page.getByTestId(`sipoc-output-data-object-${edgeOut.id}-trigger`).click()
+      await page.getByTestId(`sipoc-output-data-object-${edgeOut.id}-create-toggle`).click()
+      await page.getByTestId(`sipoc-output-data-object-${edgeOut.id}-create-name`).fill('Pruefbericht')
+      await page.getByTestId(`sipoc-output-data-object-${edgeOut.id}-create-submit`).click()
+
+      await page.getByTestId(`sipoc-output-transport-${edgeOut.id}-trigger`).click()
+      await page.getByTestId(`sipoc-output-transport-${edgeOut.id}-option-${defaultMode.id}`).click()
+
+      await expect(page.getByTestId(`sipoc-process-input-${processActivity.id}`)).toHaveValue('Unterlagen final pruefen')
+      await expect(processRow).toContainText(`Updated ${testSuffix(404)}`)
+      await expect(processRow).toContainText('Freigabevermerk')
+      await expect(processRow).toContainText('Pruefbericht')
+      await expect(processRow).toContainText(defaultMode.label)
     } finally {
       await cleanupWorkspaces(request, createdWorkspaceIds, accessToken)
     }

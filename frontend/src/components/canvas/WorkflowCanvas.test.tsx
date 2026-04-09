@@ -150,6 +150,7 @@ function renderCanvas({
   canvasObjects = [] as CanvasObject[],
   canvasEdges = [] as CanvasEdge[],
   groupingMode = 'free' as CanvasGroupingMode,
+  snapToGridEnabled = true,
   activityRolesById = {} as Record<string, string>,
   activityAssigneesById = {} as Record<string, string | null>,
   onMoveNode = vi.fn(),
@@ -164,6 +165,7 @@ function renderCanvas({
         selectedEdgeId={null}
         selectedDataObjectId={null}
         groupingMode={groupingMode}
+        snapToGridEnabled={snapToGridEnabled}
         activityRolesById={activityRolesById}
         activityAssigneesById={activityAssigneesById}
         focusNodeId={null}
@@ -218,6 +220,14 @@ describe('WorkflowCanvas', () => {
     expect(screen.getByTestId('rf-node-activity-1')).toHaveAttribute('data-y', '126')
     expect(screen.getByTestId('rf-node-activity-2')).toHaveAttribute('data-y', '326')
     expect(screen.getByTestId('rf-node-source-1')).toHaveAttribute('data-y', '320')
+  })
+
+  it('passes snap to grid preferences through to React Flow', () => {
+    renderCanvas({ snapToGridEnabled: false })
+
+    const latestProps = getLatestReactFlowProps<{ snapToGrid?: boolean; snapGrid?: [number, number] }>()
+    expect(latestProps.snapToGrid).toBe(false)
+    expect(latestProps.snapGrid).toEqual([28, 28])
   })
 
   it('keeps the freeform y-position while dragging in lane mode and persists only the x-change', () => {

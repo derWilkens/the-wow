@@ -1,71 +1,178 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { WorkflowSipocTable } from './WorkflowSipocTable'
-import type { WorkflowSipocRow } from '../../types'
+import type { CatalogRole, EdgeDataObject, TransportModeOption, WorkflowSipocRow } from '../../types'
+
+const roles: CatalogRole[] = [
+  {
+    id: 'role-1',
+    organization_id: 'org-1',
+    label: 'BIM-Koordination',
+    description: 'koordiniert',
+    sort_order: 0,
+    created_at: new Date().toISOString(),
+    created_by: 'user-1',
+  },
+  {
+    id: 'role-2',
+    organization_id: 'org-1',
+    label: 'Fachplanung',
+    description: 'liefert zu',
+    sort_order: 1,
+    created_at: new Date().toISOString(),
+    created_by: 'user-1',
+  },
+]
+
+const transportModes: TransportModeOption[] = [
+  {
+    id: 'mode-1',
+    organization_id: 'org-1',
+    key: 'mail',
+    label: 'Per E-Mail',
+    description: null,
+    sort_order: 0,
+    is_active: true,
+    is_default: true,
+    created_at: new Date().toISOString(),
+    created_by: 'user-1',
+  },
+]
+
+const reusableDataObjects: EdgeDataObject[] = [
+  {
+    id: 'object-2',
+    workspace_id: 'workspace-1',
+    parent_activity_id: null,
+    object_type: 'datenobjekt',
+    name: 'Pruefnotiz',
+    edge_id: 'edge-x',
+    edge_sort_order: 0,
+    updated_at: new Date().toISOString(),
+  },
+]
 
 const rows: WorkflowSipocRow[] = [
   {
     activityId: 'activity-1',
     processLabel: 'Unterlagen pruefen',
+    processRoleId: 'role-1',
     processRoleLabel: 'BIM-Koordination',
-    supplierRoleLabels: ['Fachplanung'],
-    consumerRoleLabels: ['Projektleitung'],
+    supplierRoles: [
+      {
+        activityId: 'activity-supplier',
+        activityLabel: 'Unterlagen zusammenstellen',
+        roleId: 'role-2',
+        roleLabel: 'Fachplanung',
+      },
+    ],
+    consumerRoles: [
+      {
+        activityId: 'activity-consumer',
+        activityLabel: 'Unterlagen freigeben',
+        roleId: null,
+        roleLabel: 'Nicht zugeordnet',
+      },
+    ],
     inputs: [
       {
+        id: 'object-1',
         edgeId: 'edge-1',
         objectName: 'Unterlagenpaket',
+        transportModeId: 'mode-1',
         transportModeLabel: 'Per E-Mail',
       },
     ],
-    outputs: [
-      {
-        edgeId: 'edge-2',
-        objectName: 'Pruefbericht',
-        transportModeLabel: '—',
-      },
-    ],
-  },
-  {
-    activityId: 'activity-2',
-    processLabel: 'Freigeben',
-    processRoleLabel: 'Nicht zugeordnet',
-    supplierRoleLabels: [],
-    consumerRoleLabels: [],
-    inputs: [],
     outputs: [],
   },
 ]
 
 describe('WorkflowSipocTable', () => {
-  it('renders sipoc columns and aggregated content', () => {
-    render(<WorkflowSipocTable rows={rows} />)
+  function renderTable() {
+    return render(
+      <WorkflowSipocTable
+        rows={rows}
+        roles={roles}
+        transportModes={transportModes}
+        reusableDataObjects={reusableDataObjects}
+        onSelectActivity={vi.fn()}
+        onRenameProcess={vi.fn()}
+        onUpdateProcessRole={vi.fn()}
+        onUpdateRelatedRole={vi.fn()}
+        onCreateRole={vi.fn()}
+        onUpdateEdgeTransportMode={vi.fn()}
+        onAddExistingDataObjectToEdge={vi.fn()}
+        onCreateDataObjectOnEdge={vi.fn()}
+      />,
+    )
+  }
+
+  it('renders editable sipoc columns with process role below process', () => {
+    renderTable()
 
     expect(screen.getByTestId('workflow-sipoc-table')).toBeInTheDocument()
     expect(screen.getByText('Supplier')).toBeInTheDocument()
     expect(screen.getByText('Input')).toBeInTheDocument()
     expect(screen.getByText('Prozess')).toBeInTheDocument()
-    expect(screen.getByText('Prozessrolle')).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Prozessrolle' })).not.toBeInTheDocument()
     expect(screen.getByText('Output')).toBeInTheDocument()
     expect(screen.getByText('Consumer')).toBeInTheDocument()
-    expect(screen.getByTestId('sipoc-row-activity-1')).toBeInTheDocument()
+    expect(screen.getByTestId('sipoc-process-input-activity-1')).toHaveValue('Unterlagen pruefen')
+    expect(screen.getByTestId('sipoc-process-role-activity-1-trigger')).toBeInTheDocument()
     expect(screen.getByText('Unterlagenpaket')).toBeInTheDocument()
     expect(screen.getByText('Per E-Mail')).toBeInTheDocument()
-    expect(screen.getByText('Fachplanung')).toBeInTheDocument()
-    expect(screen.getByText('Projektleitung')).toBeInTheDocument()
   })
 
-  it('shows stable defaults for empty supplier consumer and io cells', () => {
-    render(<WorkflowSipocTable rows={rows.slice(1)} />)
+  it('commits inline process renames on blur', () => {
+    const onRenameProcess = vi.fn()
 
-    expect(screen.getAllByText('Nicht zugeordnet').length).toBeGreaterThanOrEqual(3)
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2)
+    render(
+      <WorkflowSipocTable
+        rows={rows}
+        roles={roles}
+        transportModes={transportModes}
+        reusableDataObjects={reusableDataObjects}
+        onSelectActivity={vi.fn()}
+        onRenameProcess={onRenameProcess}
+        onUpdateProcessRole={vi.fn()}
+        onUpdateRelatedRole={vi.fn()}
+        onCreateRole={vi.fn()}
+        onUpdateEdgeTransportMode={vi.fn()}
+        onAddExistingDataObjectToEdge={vi.fn()}
+        onCreateDataObjectOnEdge={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByTestId('sipoc-process-input-activity-1')
+    fireEvent.change(input, { target: { value: 'Unterlagen final pruefen' } })
+    fireEvent.blur(input)
+
+    expect(onRenameProcess).toHaveBeenCalledWith('activity-1', 'Unterlagen final pruefen')
   })
 
-  it('calls onSelectActivity when the process cell is clicked', () => {
-    const onSelectActivity = vi.fn()
-    render(<WorkflowSipocTable rows={rows} onSelectActivity={onSelectActivity} />)
+  it('updates edge transport mode through the input cell selector', () => {
+    const onUpdateEdgeTransportMode = vi.fn()
 
-    fireEvent.click(screen.getByTestId('sipoc-process-activity-1'))
-    expect(onSelectActivity).toHaveBeenCalledWith('activity-1')
+    render(
+      <WorkflowSipocTable
+        rows={rows}
+        roles={roles}
+        transportModes={transportModes}
+        reusableDataObjects={reusableDataObjects}
+        onSelectActivity={vi.fn()}
+        onRenameProcess={vi.fn()}
+        onUpdateProcessRole={vi.fn()}
+        onUpdateRelatedRole={vi.fn()}
+        onCreateRole={vi.fn()}
+        onUpdateEdgeTransportMode={onUpdateEdgeTransportMode}
+        onAddExistingDataObjectToEdge={vi.fn()}
+        onCreateDataObjectOnEdge={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('sipoc-input-transport-edge-1-trigger'))
+    fireEvent.click(screen.getByTestId('sipoc-input-transport-edge-1-clear'))
+
+    expect(onUpdateEdgeTransportMode).toHaveBeenCalledWith('edge-1', null)
   })
 })

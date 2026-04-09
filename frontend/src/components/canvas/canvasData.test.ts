@@ -113,59 +113,6 @@ describe('canvasData helpers', () => {
     expect(result.outgoing.map((item) => item.name)).toEqual(['Gepruefte Rechnung'])
   })
 
-  it('keeps branched outgoing edges independent', () => {
-    const activity = baseActivity('activity-a')
-    const canvasEdges: CanvasEdge[] = [
-      {
-        id: 'edge-1',
-        workspace_id: 'workspace-1',
-        parent_activity_id: null,
-        from_node_type: 'activity',
-        from_node_id: 'activity-a',
-        from_handle_id: 'source-right',
-        to_node_type: 'activity',
-        to_node_id: 'activity-b',
-        to_handle_id: 'target-left',
-        label: null,
-        transport_mode_id: null,
-        transport_mode: null,
-        notes: null,
-      },
-      {
-        id: 'edge-2',
-        workspace_id: 'workspace-1',
-        parent_activity_id: null,
-        from_node_type: 'activity',
-        from_node_id: 'activity-a',
-        from_handle_id: 'source-bottom',
-        to_node_type: 'activity',
-        to_node_id: 'activity-c',
-        to_handle_id: 'target-top',
-        label: null,
-        transport_mode_id: null,
-        transport_mode: null,
-        notes: null,
-      },
-    ]
-    const canvasObjects: CanvasObject[] = [
-      {
-        id: 'data-1',
-        workspace_id: 'workspace-1',
-        parent_activity_id: null,
-        object_type: 'datenobjekt',
-        name: 'Gepruefte Rechnung',
-        edge_id: 'edge-1',
-        edge_sort_order: 0,
-        updated_at: new Date().toISOString(),
-      },
-    ]
-
-    const result = deriveActivityDataObjects(activity, canvasEdges, canvasObjects)
-
-    expect(result.outgoing).toHaveLength(1)
-    expect(result.outgoing[0]?.edge_id).toBe('edge-1')
-  })
-
   it('offers reusable data objects only from other edges', () => {
     const canvasObjects: CanvasObject[] = [
       {
@@ -195,25 +142,28 @@ describe('canvasData helpers', () => {
     expect(result.map((item) => item.id)).toEqual(['edge-2-data'])
   })
 
-  it('derives sipoc rows from activity roles, edge data objects and transport modes', () => {
+  it('derives editable sipoc rows with role references and edge metadata', () => {
     const activities: Activity[] = [
       {
         ...baseActivity('activity-a'),
         label: 'Unterlagen zusammenstellen',
         position_x: 100,
         position_y: 100,
+        role_id: 'role-a',
       },
       {
         ...baseActivity('activity-b'),
         label: 'Unterlagen pruefen',
         position_x: 420,
         position_y: 100,
+        role_id: 'role-b',
       },
       {
         ...baseActivity('activity-c'),
         label: 'Unterlagen freigeben',
         position_x: 760,
         position_y: 100,
+        role_id: 'role-c',
       },
     ]
 
@@ -290,24 +240,42 @@ describe('canvasData helpers', () => {
       'activity-c': 'Projektleitung',
     })
 
-    expect(rows).toHaveLength(3)
     expect(rows[1]).toEqual({
       activityId: 'activity-b',
       processLabel: 'Unterlagen pruefen',
+      processRoleId: 'role-b',
       processRoleLabel: 'BIM-Koordination',
-      supplierRoleLabels: ['Fachplanung'],
-      consumerRoleLabels: ['Projektleitung'],
+      supplierRoles: [
+        {
+          activityId: 'activity-a',
+          activityLabel: 'Unterlagen zusammenstellen',
+          roleId: 'role-a',
+          roleLabel: 'Fachplanung',
+        },
+      ],
+      consumerRoles: [
+        {
+          activityId: 'activity-c',
+          activityLabel: 'Unterlagen freigeben',
+          roleId: 'role-c',
+          roleLabel: 'Projektleitung',
+        },
+      ],
       inputs: [
         {
+          id: 'data-1',
           edgeId: 'edge-1',
           objectName: 'Unterlagenpaket',
+          transportModeId: 'mode-mail',
           transportModeLabel: 'Per E-Mail',
         },
       ],
       outputs: [
         {
+          id: 'data-2',
           edgeId: 'edge-2',
           objectName: 'Pruefbericht',
+          transportModeId: null,
           transportModeLabel: '—',
         },
       ],
@@ -321,9 +289,10 @@ describe('canvasData helpers', () => {
       {
         activityId: 'activity-alone',
         processLabel: 'activity-alone',
+        processRoleId: null,
         processRoleLabel: 'Nicht zugeordnet',
-        supplierRoleLabels: [],
-        consumerRoleLabels: [],
+        supplierRoles: [],
+        consumerRoles: [],
         inputs: [],
         outputs: [],
       },

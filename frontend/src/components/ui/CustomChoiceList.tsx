@@ -32,7 +32,8 @@ export function CustomChoiceList({
   createSecondaryLabel = 'Beschreibung',
   createSecondaryPlaceholder = 'Optional: Beschreibung',
   createFlagLabel,
-  emptyState = 'Keine Einträge vorhanden.',
+  emptyState = 'Keine Eintraege vorhanden.',
+  autoSelectCreated = true,
   onSelect,
   onCreate,
 }: {
@@ -52,6 +53,7 @@ export function CustomChoiceList({
   createSecondaryPlaceholder?: string
   createFlagLabel?: string
   emptyState?: string
+  autoSelectCreated?: boolean
   onSelect: (id: string) => void
   onCreate?: (input: CustomChoiceCreateInput) => Promise<CustomChoiceOption | void> | CustomChoiceOption | void
 }) {
@@ -145,7 +147,7 @@ export function CustomChoiceList({
         description: createDescriptionValue.trim(),
         flag: createFlagValue,
       })
-      if (createdOption?.id) {
+      if (createdOption?.id && autoSelectCreated) {
         onSelect(createdOption.id)
       }
       setCreateLabelValue('')

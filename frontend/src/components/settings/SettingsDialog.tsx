@@ -27,7 +27,7 @@ const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
 
 function readUiPreferences(): UiPreferences {
   if (typeof window === 'undefined') {
-    return { default_grouping_mode: 'free' }
+    return { default_grouping_mode: 'free', snap_to_grid: true }
   }
 
   try {
@@ -37,9 +37,10 @@ function readUiPreferences(): UiPreferences {
         parsed.default_grouping_mode === 'role_lanes' || parsed.default_grouping_mode === 'free'
           ? parsed.default_grouping_mode
           : 'free',
+      snap_to_grid: typeof parsed.snap_to_grid === 'boolean' ? parsed.snap_to_grid : true,
     }
   } catch {
-    return { default_grouping_mode: 'free' }
+    return { default_grouping_mode: 'free', snap_to_grid: true }
   }
 }
 
@@ -454,7 +455,7 @@ export function SettingsDialog({
                     <button
                       type="button"
                       data-testid="settings-ui-grouping-free"
-                      onClick={() => setUiPreferences({ default_grouping_mode: 'free' })}
+                      onClick={() => setUiPreferences((current) => ({ ...current, default_grouping_mode: 'free' }))}
                       className={`rounded-full px-4 py-2 text-sm ${uiPreferences.default_grouping_mode === 'free' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
                     >
                       Ohne Gruppierung
@@ -462,11 +463,35 @@ export function SettingsDialog({
                     <button
                       type="button"
                       data-testid="settings-ui-grouping-lanes"
-                      onClick={() => setUiPreferences({ default_grouping_mode: 'role_lanes' })}
+                      onClick={() => setUiPreferences((current) => ({ ...current, default_grouping_mode: 'role_lanes' }))}
                       className={`rounded-full px-4 py-2 text-sm ${uiPreferences.default_grouping_mode === 'role_lanes' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
                     >
                       Nach Rollen gruppieren
                     </button>
+                  </div>
+                  <div className="mt-5">
+                    <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Snap to Grid</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Bestimmt, ob Knoten beim Verschieben standardmaessig auf dem Raster einrasten. Standard ist eingeschaltet.
+                    </p>
+                    <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+                      <button
+                        type="button"
+                        data-testid="settings-ui-snap-on"
+                        onClick={() => setUiPreferences((current) => ({ ...current, snap_to_grid: true }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.snap_to_grid ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Eingeschaltet
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="settings-ui-snap-off"
+                        onClick={() => setUiPreferences((current) => ({ ...current, snap_to_grid: false }))}
+                        className={`rounded-full px-4 py-2 text-sm ${!uiPreferences.snap_to_grid ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Ausgeschaltet
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-4 flex justify-end">
                     <button

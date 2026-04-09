@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { CurrentUser } from '../auth/current-user.decorator'
 import { AuthGuard, type AuthenticatedUser } from '../auth/auth.guard'
 import { CreateWorkspaceDto } from './dto/create-workspace.dto'
+import { UpdateWorkspaceDto } from './dto/update-workspace.dto'
 import { WorkspacesService } from './workspaces.service'
 
 @Controller('workspaces')
@@ -17,6 +18,11 @@ export class WorkspacesController {
   @Post()
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateWorkspaceDto) {
     return this.workspacesService.create(user.id, dto)
+  }
+
+  @Patch(':id')
+  update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: UpdateWorkspaceDto) {
+    return this.workspacesService.update(user.id, id, dto)
   }
 
   @Delete(':id')
