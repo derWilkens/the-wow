@@ -176,6 +176,8 @@ Important detail:
 - roles are now also managed centrally from that same settings dialog:
   - create, edit, and delete from the company catalog
   - deleting a linked role is intentionally blocked with a business error
+  - the quick-create role form is intentionally shared between activity details and the activity-node role badge
+  - role creation should not diverge visually or semantically between those two entry points
 - activities now separate responsibility into two explicit concepts:
   - `Ausfuehrende(r)` is free text
   - `Rolle` is a company-wide catalog value
@@ -190,9 +192,26 @@ Important detail:
   - login submit on `Enter`
   - fully opaque edge dialog
   - less transparent detailed-workflow dialog
+  - popup and dialog surfaces now intentionally use only very low transparency
+  - the activity-type popover should read as effectively opaque
+  - outer surfaces are now controlled centrally from `frontend/src/index.css` via:
+    - `.wow-surface-popover`
+    - `.wow-surface-dialog`
+    - `.wow-overlay-scrim`
 - activity types now have a stable semantic default:
   - `Unbestimmt`
   - shown with a question-mark icon
+- the activity type can now also be changed directly on the node:
+  - hover on the type icon shows `Typ aendern`
+  - click opens a small icon popover with the shared 5 activity types
+  - selecting a type saves immediately without opening activity details
+  - the node and the detail dialog intentionally share the same type metadata source
+- role quick-create now follows the same reuse rule:
+  - activity node and activity detail use the same `RoleCreateForm`
+  - if one role-create flow changes, both entry points should stay aligned
+- if popup/dialog translucency starts drifting again:
+  - change the shared surface variables in `frontend/src/index.css` first
+  - avoid reintroducing one-off `bg-slate-950/...` values on outer dialog/popover shells
 - the workflow now has two top-level views:
   - `Zeichenmodus`
   - `Tabellarische View`
@@ -348,6 +367,11 @@ Avoid introducing a separate business entity called `subprocess`. A child workfl
   - `view-preferences.spec.ts`: `1 passed`
 - Latest role/assignee model verification is green with:
   - local save path remains functional through fallback behavior even when migration `013_activity_roles_and_assignments.sql` is not yet applied
+- Latest shared role-create dialog verification is green with:
+  - `CustomChoiceList.test.tsx`: covered
+  - `ActivityNode.test.tsx`: covered
+  - `ActivityDetailPopup.test.tsx`: covered
+  - frontend build: green
 
 ## Specs Worth Reading Before Major Changes
 

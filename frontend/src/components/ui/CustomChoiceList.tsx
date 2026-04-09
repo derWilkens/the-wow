@@ -14,6 +14,7 @@ interface CustomChoiceCreateInput {
   label: string
   description: string
   flag: boolean
+  tertiary?: string
 }
 
 export function CustomChoiceList({
@@ -23,6 +24,7 @@ export function CustomChoiceList({
   placeholder,
   allowClear = false,
   clearLabel = 'Nicht festgelegt',
+  clearDescription = 'Es wird kein Katalogwert gesetzt.',
   searchable = false,
   searchPlaceholder = 'Suchen',
   creatable = false,
@@ -32,6 +34,7 @@ export function CustomChoiceList({
   createSecondaryLabel = 'Beschreibung',
   createSecondaryPlaceholder = 'Optional: Beschreibung',
   createFlagLabel,
+  renderCreateForm,
   emptyState = 'Keine Eintraege vorhanden.',
   autoSelectCreated = true,
   onSelect,
@@ -43,6 +46,7 @@ export function CustomChoiceList({
   placeholder: string
   allowClear?: boolean
   clearLabel?: string
+  clearDescription?: string
   searchable?: boolean
   searchPlaceholder?: string
   creatable?: boolean
@@ -52,6 +56,20 @@ export function CustomChoiceList({
   createSecondaryLabel?: string
   createSecondaryPlaceholder?: string
   createFlagLabel?: string
+  renderCreateForm?: (input: {
+    label: string
+    description: string
+    flag: boolean
+    tertiary: string
+    isCreating: boolean
+    setLabel: (value: string) => void
+    setDescription: (value: string) => void
+    setFlag: (value: boolean) => void
+    setTertiary: (value: string) => void
+    submit: () => void
+    cancel: () => void
+    testId: string
+  }) => React.ReactNode
   emptyState?: string
   autoSelectCreated?: boolean
   onSelect: (id: string) => void
@@ -67,6 +85,7 @@ export function CustomChoiceList({
   const [createLabelValue, setCreateLabelValue] = useState('')
   const [createDescriptionValue, setCreateDescriptionValue] = useState('')
   const [createFlagValue, setCreateFlagValue] = useState(false)
+  const [createTertiaryValue, setCreateTertiaryValue] = useState('')
   const [isCreating, setIsCreating] = useState(false)
 
   const selectedOption = options.find((option) => option.id === value) ?? null
@@ -146,6 +165,7 @@ export function CustomChoiceList({
         label: createLabelValue.trim(),
         description: createDescriptionValue.trim(),
         flag: createFlagValue,
+        tertiary: createTertiaryValue.trim(),
       })
       if (createdOption?.id && autoSelectCreated) {
         onSelect(createdOption.id)
@@ -153,6 +173,7 @@ export function CustomChoiceList({
       setCreateLabelValue('')
       setCreateDescriptionValue('')
       setCreateFlagValue(false)
+      setCreateTertiaryValue('')
       setIsOpen(false)
       setIsCreateOpen(false)
       setSearch('')
@@ -187,7 +208,7 @@ export function CustomChoiceList({
         <div
           id={panelId}
           data-testid={`${testId}-panel`}
-          className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-40 overflow-hidden rounded-[24px] border border-white/10 bg-slate-950/98 shadow-[0_28px_80px_rgba(2,8,12,0.58)] backdrop-blur-xl"
+          className="wow-surface-popover absolute left-0 right-0 top-[calc(100%+0.5rem)] z-40 overflow-hidden rounded-[24px] border border-white/10 shadow-[0_28px_80px_rgba(2,8,12,0.58)]"
         >
           <div className="space-y-3 p-3">
             {searchable ? (
@@ -218,7 +239,7 @@ export function CustomChoiceList({
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-medium">{clearLabel}</div>
-                    <div className="mt-1 text-xs text-slate-400">Es wird kein Katalogwert gesetzt.</div>
+                    <div className="mt-1 text-xs text-slate-400">{clearDescription}</div>
                   </div>
                   {value === '' ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" /> : null}
                 </button>
@@ -294,59 +315,85 @@ export function CustomChoiceList({
                           setCreateLabelValue('')
                           setCreateDescriptionValue('')
                           setCreateFlagValue(false)
+                          setCreateTertiaryValue('')
                         }}
                         className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-slate-300"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    <div className="grid gap-3">
-                      <label className="grid gap-1">
-                        <span className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{createPrimaryLabel}</span>
-                        <input
-                          ref={createInputRef}
-                          data-testid={`${testId}-create-name`}
-                          value={createLabelValue}
-                          onChange={(event) => setCreateLabelValue(event.target.value)}
-                          placeholder={createPrimaryPlaceholder}
-                          className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500"
-                        />
-                      </label>
-                      <label className="grid gap-1">
-                        <span className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{createSecondaryLabel}</span>
-                        <textarea
-                          data-testid={`${testId}-create-description`}
-                          value={createDescriptionValue}
-                          onChange={(event) => setCreateDescriptionValue(event.target.value)}
-                          rows={2}
-                          placeholder={createSecondaryPlaceholder}
-                          className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500"
-                        />
-                      </label>
-                      {createFlagLabel ? (
-                        <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-slate-200">
-                          <input
-                            data-testid={`${testId}-create-flag`}
-                            type="checkbox"
-                            checked={createFlagValue}
-                            onChange={(event) => setCreateFlagValue(event.target.checked)}
-                            className="h-4 w-4 rounded border-white/20 bg-slate-950/60"
-                          />
-                          <span>{createFlagLabel}</span>
-                        </label>
-                      ) : null}
-                    </div>
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        data-testid={`${testId}-create-submit`}
-                        disabled={!createLabelValue.trim() || isCreating}
-                        onClick={() => void handleCreate()}
-                        className="rounded-2xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 disabled:opacity-40"
-                      >
-                        {createLabel}
-                      </button>
-                    </div>
+                    {renderCreateForm ? (
+                      renderCreateForm({
+                        label: createLabelValue,
+                        description: createDescriptionValue,
+                        flag: createFlagValue,
+                        tertiary: createTertiaryValue,
+                        isCreating,
+                        setLabel: setCreateLabelValue,
+                        setDescription: setCreateDescriptionValue,
+                        setFlag: setCreateFlagValue,
+                        setTertiary: setCreateTertiaryValue,
+                        submit: () => void handleCreate(),
+                        cancel: () => {
+                          setIsCreateOpen(false)
+                          setCreateLabelValue('')
+                          setCreateDescriptionValue('')
+                          setCreateFlagValue(false)
+                          setCreateTertiaryValue('')
+                        },
+                        testId,
+                      })
+                    ) : (
+                      <>
+                        <div className="grid gap-3">
+                          <label className="grid gap-1">
+                            <span className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{createPrimaryLabel}</span>
+                            <input
+                              ref={createInputRef}
+                              data-testid={`${testId}-create-name`}
+                              value={createLabelValue}
+                              onChange={(event) => setCreateLabelValue(event.target.value)}
+                              placeholder={createPrimaryPlaceholder}
+                              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500"
+                            />
+                          </label>
+                          <label className="grid gap-1">
+                            <span className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{createSecondaryLabel}</span>
+                            <textarea
+                              data-testid={`${testId}-create-description`}
+                              value={createDescriptionValue}
+                              onChange={(event) => setCreateDescriptionValue(event.target.value)}
+                              rows={2}
+                              placeholder={createSecondaryPlaceholder}
+                              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500"
+                            />
+                          </label>
+                          {createFlagLabel ? (
+                            <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-slate-200">
+                              <input
+                                data-testid={`${testId}-create-flag`}
+                                type="checkbox"
+                                checked={createFlagValue}
+                                onChange={(event) => setCreateFlagValue(event.target.checked)}
+                                className="h-4 w-4 rounded border-white/20 bg-slate-950/60"
+                              />
+                              <span>{createFlagLabel}</span>
+                            </label>
+                          ) : null}
+                        </div>
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            data-testid={`${testId}-create-submit`}
+                            disabled={!createLabelValue.trim() || isCreating}
+                            onClick={() => void handleCreate()}
+                            className="rounded-2xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 disabled:opacity-40"
+                          >
+                            {createLabel}
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

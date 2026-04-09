@@ -8,5 +8,9 @@ export class UpdateOrganizationRoleDto {
 
   @IsOptional()
   @IsString()
+  acronym?: string | null
+
+  @IsOptional()
+  @IsString()
   description?: string | null
 }

@@ -31,7 +31,7 @@ export function SubprocessMenu({
       />
       <div
         data-testid="subprocess-menu"
-        className="fixed z-50 w-64 rounded-[24px] border border-white/10 bg-slate-950/96 p-2 shadow-[0_24px_80px_rgba(2,8,12,0.65)] backdrop-blur-xl"
+        className="wow-surface-popover fixed z-50 w-64 rounded-[24px] border border-white/10 p-2 shadow-[0_24px_80px_rgba(2,8,12,0.65)]"
         style={{ left: Math.min(position.x + 12, window.innerWidth - 280), top: Math.min(position.y + 12, window.innerHeight - 260) }}
       >
         <div className="px-3 py-2">

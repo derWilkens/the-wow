@@ -72,14 +72,26 @@ Hinweis:
   - activity editing
   - free-text assignee, organization role selection, comments, and IT tools
   - uses the shared custom choice list for several selectors
+  - shares the centralized activity-type metadata with the activity node
 - `frontend/src/components/canvas/ActivityNode.tsx`
   - condensed activity-node presentation
   - type icon, role badge, inline title editing, and subprocess trigger
+  - quick type change directly from the node icon with tooltip and popover
+- `frontend/src/components/roles/RoleCreateForm.tsx`
+  - shared role-create form
+  - reused by activity detail and activity-node role quick-create
+  - keeps role name, acronym, and description inputs aligned across entry points
+- `frontend/src/components/canvas/activityTypeOptions.tsx`
+  - shared source of truth for the 5 activity types
+  - reused by node quick-change and detail dialog rendering
 - `frontend/src/components/canvas/DataObjectPopup.tsx`
   - source/data object editing
   - optimistic save/delete close behavior
 - `frontend/src/components/ui/CustomChoiceList.tsx`
   - reusable product-styled picker with descriptions, badges, search, and optional inline create
+- `frontend/src/index.css`
+  - central visual surface definitions for popovers, dialogs, tooltips, and overlay scrims
+  - shared low-transparency classes now drive the main popup/dialog shells instead of ad-hoc per-component opacity values
 - `frontend/src/components/canvas/SubprocessMenu.tsx`
   - menu behind the `+` button on activities
 - `frontend/src/components/canvas/SubprocessWizard.tsx`
@@ -124,6 +136,22 @@ Hinweis:
 - `frontend/e2e/view-preferences.spec.ts`
   - focused business E2E for optional view visibility and header cleanup
   - verifies default-hidden view toggles, enable/disable behavior, and that search/export stay absent from the header
+- `frontend/e2e/activity-type-quick-change.spec.ts`
+  - focused business E2E for changing the activity type directly on the node
+  - verifies tooltip, icon popover, immediate save, and persistence after fresh login
+
+## UI Surface Status
+
+- Outer popup and dialog shells now follow shared CSS surfaces from `frontend/src/index.css`
+- `wow-surface-popover`
+  - for compact floating selectors and menus
+- `wow-surface-dialog`
+  - for primary modal/detail surfaces
+- `wow-overlay-scrim`
+  - for shared overlay dimming with only mild transparency
+- The product rule is now:
+  - popovers/dialogs should not feel see-through
+  - only the surrounding scrim may remain lightly transparent
 
 ## Backend Important Files
 
@@ -265,6 +293,7 @@ Stable:
 - workspace update flow for name, purpose, expected inputs, and expected outputs
 - optional header view toggles controlled through persisted UI preferences
 - hidden header search/export and header-free undo/redo layout
+- shared role-create dialog behavior between activity detail and node role badge
 - live data persistence
 - workflow hierarchy creation and linking
 - workflow template save/edit/create flows

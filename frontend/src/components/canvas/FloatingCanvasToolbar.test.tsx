@@ -38,12 +38,17 @@ describe('FloatingCanvasToolbar', () => {
     expect(screen.getByTestId('toolbar-data-object')).toBeInTheDocument()
   })
 
-  it('keeps the label hidden structurally until hover/focus styling expands the item', () => {
+  it('shows the tool name as a tooltip on hover instead of expanding the button', () => {
     renderToolbar()
 
-    const label = screen.getByTestId('toolbar-activity-label')
-    expect(label).toHaveClass('max-w-0')
-    expect(label).toHaveClass('opacity-0')
+    const activityButton = screen.getByTestId('toolbar-activity')
+    expect(screen.queryByTestId('toolbar-activity-tooltip')).not.toBeInTheDocument()
+
+    fireEvent.mouseEnter(activityButton)
+    expect(screen.getByTestId('toolbar-activity-tooltip')).toHaveTextContent('Aktivitaet')
+
+    fireEvent.mouseLeave(activityButton)
+    expect(screen.queryByTestId('toolbar-activity-tooltip')).not.toBeInTheDocument()
   })
 
   it('disables start and end when those nodes already exist', () => {

@@ -21,7 +21,9 @@ import { StartNode } from './StartNode'
 import { WorkflowEdge } from './WorkflowEdge'
 import type {
   Activity,
+  ActivityType,
   ActivityNodeData,
+  CatalogRole,
   CanvasGroupingMode,
   CanvasEdge,
   CanvasObject,
@@ -50,6 +52,31 @@ const ROLE_LANE_HEIGHT = 200
 const ROLE_LANE_TOP_OFFSET = 72
 const ROLE_LANE_NODE_OFFSET = 54
 const CONNECTOR_PREVIEW_PROXIMITY_PX = 40
+const NODE_COLLISION_GAP = 28
+const DEFAULT_NODE_DIMENSIONS = {
+  activity: { width: 220, height: 140 },
+  source: { width: 176, height: 64 },
+  start_event: { width: 56, height: 56 },
+  end_event: { width: 56, height: 56 },
+  gateway_decision: { width: 120, height: 120 },
+  gateway_merge: { width: 120, height: 120 },
+}
+
+function rectanglesOverlap(
+  left: { x: number; y: number; width: number; height: number },
+  right: { x: number; y: number; width: number; height: number },
+) {
+  return left.x < right.x + right.width && left.x + left.width > right.x && left.y < right.y + right.height && left.y + left.height > right.y
+}
+
+function getOverlapArea(
+  left: { x: number; y: number; width: number; height: number },
+  right: { x: number; y: number; width: number; height: number },
+) {
+  const overlapWidth = Math.max(0, Math.min(left.x + left.width, right.x + right.width) - Math.max(left.x, right.x))
+  const overlapHeight = Math.max(0, Math.min(left.y + left.height, right.y + right.height) - Math.max(left.y, right.y))
+  return overlapWidth * overlapHeight
+}
 
 function buildRoleLaneMeta(activities: Activity[], activityRolesById: Record<string, string>) {
   const roles = Array.from(
@@ -155,7 +182,10 @@ interface WorkflowCanvasProps {
   selectedDataObjectId: string | null
   groupingMode: CanvasGroupingMode
   snapToGridEnabled?: boolean
+  collisionAvoidanceEnabled?: boolean
   activityRolesById: Record<string, string>
+  activityRoleAcronymsById: Record<string, string | null>
+  organizationRoles: CatalogRole[]
   activityAssigneesById: Record<string, string | null>
   focusNodeId: string | null
   onInterruptFocusAnimation?: () => void
@@ -167,6 +197,9 @@ interface WorkflowCanvasProps {
   onOpenSubprocessMenu: (activity: Activity, position: { x: number; y: number }) => void
   onOpenSubprocess: (activity: Activity) => void
   onInlineRenameActivity: (activityId: string, label: string) => Promise<void> | void
+  onQuickChangeActivityType: (activityId: string, nextType: ActivityType) => Promise<void> | void
+  onQuickChangeActivityRole: (activityId: string, roleId: string | null) => Promise<void> | void
+  onCreateRole: (input: { label: string; acronym?: string | null; description: string }) => Promise<CatalogRole | void> | CatalogRole | void
   onConnectEdge: (connection: Connection) => void
   onCreateActivityFromConnectionDrop: (input: {
     sourceNodeId: string
@@ -190,7 +223,10 @@ export function WorkflowCanvas({
   selectedDataObjectId,
   groupingMode,
   snapToGridEnabled = true,
+  collisionAvoidanceEnabled = true,
   activityRolesById,
+  activityRoleAcronymsById,
+  organizationRoles,
   activityAssigneesById,
   focusNodeId,
   onInterruptFocusAnimation,
@@ -202,6 +238,9 @@ export function WorkflowCanvas({
   onOpenSubprocessMenu,
   onOpenSubprocess,
   onInlineRenameActivity,
+  onQuickChangeActivityType,
+  onQuickChangeActivityRole,
+  onCreateRole,
   onConnectEdge,
   onCreateActivityFromConnectionDrop,
   onMoveNode,
@@ -356,17 +395,114 @@ export function WorkflowCanvas({
   const handleNodeDragStop = useMemo(
     () => (_event: MouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
       const activity = activities.find((item) => item.id === node.id)
+      const persistedDraggedPosition =
+        groupingMode === 'role_lanes' && activity
+          ? {
+              x: node.position.x,
+              y: activity.position_y,
+            }
+          : node.position
+
+      if (collisionAvoidanceEnabled) {
+        const draggedWidth =
+          node.width ??
+          (activity ? DEFAULT_NODE_DIMENSIONS[activity.node_type].width : DEFAULT_NODE_DIMENSIONS.source.width)
+        const draggedHeight =
+          node.height ??
+          (activity ? DEFAULT_NODE_DIMENSIONS[activity.node_type].height : DEFAULT_NODE_DIMENSIONS.source.height)
+
+        const draggedRect = {
+          x: persistedDraggedPosition.x,
+          y: persistedDraggedPosition.y,
+          width: draggedWidth,
+          height: draggedHeight,
+        }
+
+        const candidates = [
+          ...activities.filter((item) => item.id !== node.id).map((item) => ({
+            id: item.id,
+            kind: 'activity' as const,
+            position: liveNodePositions[item.id] ?? { x: item.position_x, y: groupingMode === 'role_lanes' ? getLaneDisplayY(roleLanes, item.id, activityRolesById) ?? item.position_y : item.position_y },
+            width: DEFAULT_NODE_DIMENSIONS[item.node_type].width,
+            height: DEFAULT_NODE_DIMENSIONS[item.node_type].height,
+            nodeType: item.node_type,
+          })),
+          ...sourceObjects.filter((item) => item.id !== node.id).map((item) => ({
+            id: item.id,
+            kind: 'source' as const,
+            position: liveNodePositions[item.id] ?? { x: item.position_x, y: item.position_y },
+            width: DEFAULT_NODE_DIMENSIONS.source.width,
+            height: DEFAULT_NODE_DIMENSIONS.source.height,
+            nodeType: null,
+          })),
+        ]
+
+        const collidedCandidate = candidates
+          .filter((candidate) =>
+            rectanglesOverlap(draggedRect, {
+              x: candidate.position.x,
+              y: candidate.position.y,
+              width: candidate.width,
+              height: candidate.height,
+            }),
+          )
+          .map((candidate) => ({
+            ...candidate,
+            overlapArea: getOverlapArea(draggedRect, {
+              x: candidate.position.x,
+              y: candidate.position.y,
+              width: candidate.width,
+              height: candidate.height,
+            }),
+          }))
+          .sort((left, right) => right.overlapArea - left.overlapArea)[0]
+
+        if (collidedCandidate) {
+          const draggedCenterX = draggedRect.x + draggedRect.width / 2
+          const draggedCenterY = draggedRect.y + draggedRect.height / 2
+          const candidateCenterX = collidedCandidate.position.x + collidedCandidate.width / 2
+          const candidateCenterY = collidedCandidate.position.y + collidedCandidate.height / 2
+          const nextCollisionPosition =
+            groupingMode === 'role_lanes' && collidedCandidate.kind === 'activity'
+              ? {
+                  x:
+                    candidateCenterX >= draggedCenterX
+                      ? draggedRect.x + draggedRect.width + NODE_COLLISION_GAP
+                      : draggedRect.x - collidedCandidate.width - NODE_COLLISION_GAP,
+                  y: collidedCandidate.position.y,
+                }
+              : Math.abs(candidateCenterX - draggedCenterX) >= Math.abs(candidateCenterY - draggedCenterY)
+                ? {
+                    x:
+                      candidateCenterX >= draggedCenterX
+                        ? draggedRect.x + draggedRect.width + NODE_COLLISION_GAP
+                        : draggedRect.x - collidedCandidate.width - NODE_COLLISION_GAP,
+                    y: collidedCandidate.position.y,
+                  }
+                : {
+                    x: collidedCandidate.position.x,
+                    y:
+                      candidateCenterY >= draggedCenterY
+                        ? draggedRect.y + draggedRect.height + NODE_COLLISION_GAP
+                        : draggedRect.y - collidedCandidate.height - NODE_COLLISION_GAP,
+                  }
+
+          setLiveNodePositions((current) => ({
+            ...current,
+            [collidedCandidate.id]: nextCollisionPosition,
+          }))
+          onMoveNode(collidedCandidate.id, nextCollisionPosition)
+        }
+      }
+
       if (groupingMode === 'role_lanes' && activity) {
-        onMoveNode(node.id, {
-          x: node.position.x,
-          y: activity.position_y,
-        })
+        onMoveNode(node.id, persistedDraggedPosition)
         return
       }
 
-      onMoveNode(node.id, node.position)
+      onMoveNode(node.id, persistedDraggedPosition)
     },
-    [activities, groupingMode, onMoveNode],
+    [activities, activityRolesById, collisionAvoidanceEnabled, groupingMode, liveNodePositions, onMoveNode, roleLanes, sourceObjects],
   )
 
   const handleNodeDrag = useMemo(
@@ -546,14 +682,16 @@ export function WorkflowCanvas({
             ? { x: freePosition.x, y: laneDisplayY }
             : freePosition,
         selected: isSelected,
-        data: {
-          activity,
-          hasChildren: childrenByParent.has(activity.id),
-          roleLabel: activityRolesById[activity.id] ?? 'Nicht zugeordnet',
-          assigneeLabel: activityAssigneesById[activity.id] ?? null,
-          groupingMode,
-          showHandles: isSelected || isConnectionPreviewTarget,
-          isConnectionPreviewTarget,
+          data: {
+            activity,
+            hasChildren: childrenByParent.has(activity.id),
+            roleLabel: activityRolesById[activity.id] ?? 'Nicht zugeordnet',
+            roleAcronym: activityRoleAcronymsById[activity.id] ?? null,
+            availableRoles: organizationRoles,
+            assigneeLabel: activityAssigneesById[activity.id] ?? null,
+            groupingMode,
+            showHandles: isSelected || isConnectionPreviewTarget,
+            isConnectionPreviewTarget,
           onOpenDetail: (id) => {
             const selected = activities.find((entry) => entry.id === id)
             if (selected) {
@@ -571,9 +709,12 @@ export function WorkflowCanvas({
             if (selected) {
               onOpenSubprocess(selected)
             }
+            },
+            onInlineRename: (id, nextLabel) => onInlineRenameActivity(id, nextLabel),
+            onQuickChangeType: (id, nextType) => onQuickChangeActivityType(id, nextType),
+            onQuickChangeRole: (id, roleId) => onQuickChangeActivityRole(id, roleId),
+            onCreateRole,
           },
-          onInlineRename: (id, nextLabel) => onInlineRenameActivity(id, nextLabel),
-        },
       }
     })
 
@@ -597,7 +738,7 @@ export function WorkflowCanvas({
     }))
 
     return [...activityNodes, ...objectNodes]
-  }, [activities, activityAssigneesById, activityRolesById, groupingMode, hoveredConnectionTargetNodeId, liveNodePositions, onInlineRenameActivity, onOpenDataObject, onOpenSubprocess, onOpenSubprocessMenu, onSelectActivity, roleLanes, selectedNodeIds, sourceObjects])
+  }, [activities, activityAssigneesById, activityRoleAcronymsById, activityRolesById, groupingMode, hoveredConnectionTargetNodeId, liveNodePositions, onCreateRole, onInlineRenameActivity, onOpenDataObject, onOpenSubprocess, onOpenSubprocessMenu, onQuickChangeActivityRole, onQuickChangeActivityType, onSelectActivity, organizationRoles, roleLanes, selectedNodeIds, sourceObjects])
 
   const [renderNodes, setRenderNodes] = useState<Array<Node<ActivityNodeData | CanvasObjectNodeData>>>([])
 
@@ -680,12 +821,6 @@ export function WorkflowCanvas({
           ),
           selectedDataObjectId,
           isPopoverOpen: openEdgePopoverId === edge.id,
-          onSelectDataObject: (canvasObject: EdgeDataObject) => {
-            setSelectedNodeIds([])
-            setSelectedEdgeIds([edge.id])
-            setOpenEdgePopoverId(edge.id)
-            onSelectionChange({ nodeId: null, edgeId: edge.id, dataObjectId: canvasObject.id })
-          },
           onOpenDataObject: (canvasObject: EdgeDataObject) => {
             setSelectedNodeIds([])
             setSelectedEdgeIds([])

@@ -9,6 +9,7 @@ export interface OrganizationRoleRecord {
   id: string
   organization_id: string
   label: string
+  acronym: string
   description: string | null
   sort_order: number
   created_at: string
@@ -18,6 +19,30 @@ export interface OrganizationRoleRecord {
 @Injectable()
 export class OrganizationRolesService {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  private async getNextSortOrder(organizationId: string) {
+    const { data, error } = await this.databaseService.supabase
+      .from('organization_roles')
+      .select('sort_order')
+      .eq('organization_id', organizationId)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      throw error
+    }
+
+    return ((data as { sort_order?: number } | null)?.sort_order ?? -1) + 1
+  }
+
+  private getNextFallbackSortOrder(organizationId: string) {
+    const currentMax = Array.from(fallbackOrganizationRoles.values())
+      .filter((role) => role.organization_id === organizationId)
+      .reduce((max, role) => Math.max(max, role.sort_order), -1)
+
+    return currentMax + 1
+  }
 
   private rethrowRolesSchemaError(error: unknown): never {
     const code = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code?: unknown }).code ?? '') : ''
@@ -39,6 +64,52 @@ export class OrganizationRolesService {
 
   private normalizeLabel(label: string) {
     return label.trim().replace(/\s+/g, ' ')
+  }
+
+  private normalizeAcronym(acronym: string) {
+    return acronym
+      .trim()
+      .replace(/\s+/g, '')
+      .toUpperCase()
+  }
+
+  private deriveAcronym(label: string) {
+    const tokens = label
+      .replace(/[/-]+/g, ' ')
+      .split(/\s+/)
+      .map((token) => token.trim())
+      .filter((token) => Boolean(token) && !/^\d+$/.test(token))
+
+    if (tokens.length === 0) {
+      return 'R'
+    }
+
+    const acronym = tokens
+      .map((token) => {
+        if (/^[A-ZÄÖÜ0-9]{2,4}$/.test(token)) {
+          return token
+        }
+
+        const normalizedUpper = token.toUpperCase()
+        const knownShortforms = ['BIM', 'CAD', 'ERP', 'PLM', 'SAP', 'IT']
+        if (knownShortforms.includes(normalizedUpper)) {
+          return normalizedUpper
+        }
+
+        return normalizedUpper.charAt(0)
+      })
+      .join('')
+
+    return acronym || 'R'
+  }
+
+  private resolveAcronym(label: string, acronym?: string | null) {
+    const normalized = acronym ? this.normalizeAcronym(acronym) : ''
+    if (normalized) {
+      return normalized
+    }
+
+    return this.deriveAcronym(label)
   }
 
   private async getRole(organizationId: string, roleId: string) {
@@ -109,8 +180,9 @@ export class OrganizationRolesService {
           id: randomUUID(),
           organization_id: organizationId,
           label,
+          acronym: this.resolveAcronym(label, dto.acronym),
           description: dto.description?.trim() || null,
-          sort_order: Date.now(),
+          sort_order: await this.getNextSortOrder(organizationId),
           created_by: userId,
         })
         .select('*')
@@ -138,8 +210,9 @@ export class OrganizationRolesService {
         id: randomUUID(),
         organization_id: organizationId,
         label,
+        acronym: this.resolveAcronym(label, dto.acronym),
         description: dto.description?.trim() || null,
-        sort_order: Date.now(),
+        sort_order: this.getNextFallbackSortOrder(organizationId),
         created_at: new Date().toISOString(),
         created_by: userId,
       }
@@ -151,16 +224,17 @@ export class OrganizationRolesService {
   async update(userId: string, organizationId: string, roleId: string, dto: UpdateOrganizationRoleDto) {
     try {
       await this.databaseService.assertOrganizationRole(organizationId, userId, ['owner', 'admin'])
-      await this.getRoleOrThrow(organizationId, roleId)
+      const role = await this.getRoleOrThrow(organizationId, roleId)
 
       const payload: Record<string, unknown> = {}
+      let nextLabel: string | null = null
       if (dto.label !== undefined) {
-        const label = this.normalizeLabel(dto.label)
+        nextLabel = this.normalizeLabel(dto.label)
         const { data: existing, error: existingError } = await this.databaseService.supabase
           .from('organization_roles')
           .select('id')
           .eq('organization_id', organizationId)
-          .ilike('label', label)
+          .ilike('label', nextLabel)
           .neq('id', roleId)
           .maybeSingle()
 
@@ -172,7 +246,11 @@ export class OrganizationRolesService {
           throw new BadRequestException('Eine Rolle mit diesem Namen existiert bereits.')
         }
 
-        payload.label = label
+        payload.label = nextLabel
+      }
+
+      if (dto.acronym !== undefined || nextLabel !== null) {
+        payload.acronym = this.resolveAcronym(nextLabel ?? role.label, dto.acronym ?? role.acronym)
       }
 
       if (dto.description !== undefined) {
@@ -212,6 +290,7 @@ export class OrganizationRolesService {
       const updated: OrganizationRoleRecord = {
         ...role,
         label,
+        acronym: dto.acronym !== undefined || dto.label !== undefined ? this.resolveAcronym(label, dto.acronym ?? role.acronym) : role.acronym,
         description: dto.description !== undefined ? dto.description?.trim() || null : role.description,
       }
       fallbackOrganizationRoles.set(roleId, updated)

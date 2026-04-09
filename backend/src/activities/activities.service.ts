@@ -105,13 +105,13 @@ export class ActivitiesService {
     return (data ?? []).map((activity) => ({
       ...activity,
       assignee_label:
-        fallbackActivityAssignments.get(activity.id as string)?.assigneeLabel ??
-        (activity as { assignee_label?: string | null }).assignee_label ??
-        null,
+        'assignee_label' in activity
+          ? ((activity as { assignee_label?: string | null }).assignee_label ?? null)
+          : (fallbackActivityAssignments.get(activity.id as string)?.assigneeLabel ?? null),
       role_id:
-        fallbackActivityAssignments.get(activity.id as string)?.roleId ??
-        (activity as { role_id?: string | null }).role_id ??
-        null,
+        'role_id' in activity
+          ? ((activity as { role_id?: string | null }).role_id ?? null)
+          : (fallbackActivityAssignments.get(activity.id as string)?.roleId ?? null),
     }))
   }
 
@@ -159,6 +159,7 @@ export class ActivitiesService {
         throw result.error
       }
 
+      fallbackActivityAssignments.delete(String(result.data.id))
       data = result.data
     } catch (error) {
       if (!this.isMissingAssignmentSchema(error)) {
@@ -321,6 +322,7 @@ export class ActivitiesService {
     if (error) {
       throw error
     }
+    fallbackActivityAssignments.delete(id)
     return { success: true }
   }
 

@@ -15,6 +15,7 @@ describe('ActivitiesService', () => {
       id: 'role-2',
       organization_id: 'org-1',
       label: 'BIM-Koordination',
+      acronym: 'BK',
       description: null,
       sort_order: 1,
       created_at: new Date().toISOString(),
@@ -103,6 +104,132 @@ describe('ActivitiesService', () => {
       assigneeLabel: 'Marie Mustermann',
       roleId: 'role-2',
     })
+  })
+
+  it('prefers persisted role assignments from the database over stale fallback values', async () => {
+    fallbackActivityAssignments.set('activity-1', {
+      activityId: 'activity-1',
+      assigneeLabel: 'Stale User',
+      roleId: 'role-stale',
+    })
+
+    const listQuery: any = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      is: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      data: [
+        {
+          id: 'activity-1',
+          workspace_id: 'workspace-1',
+          parent_id: null,
+          node_type: 'activity',
+          label: 'Pruefen',
+          position_x: 120,
+          position_y: 220,
+          assignee_label: 'Persisted User',
+          role_id: 'role-persisted',
+        },
+      ],
+      error: null,
+    }
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        ActivitiesService,
+        {
+          provide: DatabaseService,
+          useValue: {
+            assertWorkspaceAccess: jest.fn().mockResolvedValue({
+              id: 'workspace-1',
+              organization_id: 'org-1',
+            }),
+            supabase: { from: jest.fn().mockReturnValue(listQuery) },
+          },
+        },
+      ],
+    }).compile()
+
+    const service = moduleRef.get(ActivitiesService)
+    const activities = await service.list('user-1', 'workspace-1', null)
+
+    expect(activities).toEqual([
+      expect.objectContaining({
+        id: 'activity-1',
+        assignee_label: 'Persisted User',
+        role_id: 'role-persisted',
+      }),
+    ])
+  })
+
+  it('clears stale fallback assignments after a successful persisted upsert', async () => {
+    fallbackActivityAssignments.set('activity-1', {
+      activityId: 'activity-1',
+      assigneeLabel: 'Old User',
+      roleId: 'role-old',
+    })
+
+    const roleLookup = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: { id: 'role-2' },
+        error: null,
+      }),
+    }
+    const upsertQuery = {
+      upsert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({
+        data: {
+          id: 'activity-1',
+          workspace_id: 'workspace-1',
+          role_id: 'role-2',
+          assignee_label: null,
+          activity_type: 'unbestimmt',
+        },
+        error: null,
+      }),
+    }
+
+    const from = jest.fn().mockReturnValueOnce(roleLookup).mockReturnValueOnce(upsertQuery)
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        ActivitiesService,
+        {
+          provide: DatabaseService,
+          useValue: {
+            assertWorkspaceAccess: jest.fn().mockResolvedValue({
+              id: 'workspace-1',
+              organization_id: 'org-1',
+            }),
+            supabase: { from },
+          },
+        },
+      ],
+    }).compile()
+
+    const service = moduleRef.get(ActivitiesService)
+    await service.upsert('user-1', 'workspace-1', {
+      id: 'activity-1',
+      parent_id: null,
+      node_type: 'activity',
+      label: 'Pruefen',
+      trigger_type: null,
+      position_x: 120,
+      position_y: 220,
+      status: 'draft',
+      status_icon: null,
+      activity_type: null,
+      description: null,
+      notes: null,
+      assignee_label: null,
+      role_id: 'role-2',
+      duration_minutes: null,
+    })
+
+    expect(fallbackActivityAssignments.has('activity-1')).toBe(false)
   })
 
   it('supports comment CRUD through the fallback store when the table is not available yet', async () => {

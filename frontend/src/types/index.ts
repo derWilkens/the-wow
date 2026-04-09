@@ -17,6 +17,7 @@ export interface CatalogRole {
   id: string
   organization_id: string
   label: string
+  acronym: string
   description: string | null
   sort_order: number
   created_at: string
@@ -49,6 +50,7 @@ export interface UiPreferences {
   snap_to_grid: boolean
   enable_table_view: boolean
   enable_swimlane_view: boolean
+  enable_node_collision_avoidance: boolean
 }
 
 export interface OrganizationMember {
@@ -328,12 +330,17 @@ export interface ActivityNodeData {
   activity: Activity
   hasChildren: boolean
   roleLabel?: string
+  roleAcronym?: string | null
+  availableRoles?: CatalogRole[]
   assigneeLabel?: string | null
   groupingMode?: CanvasGroupingMode
   showHandles?: boolean
   isConnectionPreviewTarget?: boolean
   onOpenDetail: (id: string) => void
   onInlineRename?: (id: string, label: string) => Promise<void> | void
+  onQuickChangeType?: (id: string, nextType: ActivityType) => Promise<void> | void
+  onQuickChangeRole?: (id: string, roleId: string | null) => Promise<void> | void
+  onCreateRole?: (input: { label: string; acronym?: string | null; description: string }) => Promise<CatalogRole | void> | CatalogRole | void
   onOpenSubprocessMenu: (activityId: string, position: { x: number; y: number }) => void
   onOpenSubprocess: (activityId: string) => void
 }

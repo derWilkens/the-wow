@@ -1,4 +1,5 @@
 create type activity_type_enum as enum (
+  'unbestimmt',
   'erstellen',
   'transformieren_aktualisieren',
   'pruefen_freigeben',

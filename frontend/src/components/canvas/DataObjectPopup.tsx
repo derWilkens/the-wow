@@ -48,8 +48,20 @@ export function DataObjectPopup({
   }
 
   return (
-    <div className="pointer-events-none absolute inset-0 flex items-start justify-end p-4">
-      <div data-testid={`data-object-detail-${canvasObject.id}`} className="pointer-events-auto w-full max-w-md rounded-[26px] border border-white/10 bg-slate-950/95 p-5 shadow-[0_30px_90px_rgba(2,8,12,0.6)] backdrop-blur-xl">
+    <div
+      data-testid="data-object-overlay"
+      className="wow-overlay-scrim pointer-events-auto absolute inset-0 flex items-start justify-end p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose()
+        }
+      }}
+    >
+      <div
+        data-testid={`data-object-detail-${canvasObject.id}`}
+        className="wow-surface-dialog pointer-events-auto w-full max-w-md rounded-[26px] border border-white/10 p-5 shadow-[0_30px_90px_rgba(2,8,12,0.6)]"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <div className="mb-4 flex items-start justify-between">
           <div>
             <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/80">{title}</p>

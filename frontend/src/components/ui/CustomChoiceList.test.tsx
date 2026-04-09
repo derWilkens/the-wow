@@ -135,6 +135,7 @@ describe('CustomChoiceList', () => {
         label: 'Im Datenspeicher bereitgestellt',
         description: 'Zwischenspeicherung bis zur weiteren Bearbeitung.',
         flag: true,
+        tertiary: '',
       })
       expect(onSelect).toHaveBeenCalledWith('opt-3')
     })

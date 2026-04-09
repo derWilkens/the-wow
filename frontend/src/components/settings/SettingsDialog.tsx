@@ -27,7 +27,7 @@ const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
 
 function readUiPreferences(): UiPreferences {
   if (typeof window === 'undefined') {
-    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false }
+    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false, enable_node_collision_avoidance: true }
   }
 
   try {
@@ -40,9 +40,10 @@ function readUiPreferences(): UiPreferences {
       snap_to_grid: typeof parsed.snap_to_grid === 'boolean' ? parsed.snap_to_grid : true,
       enable_table_view: typeof parsed.enable_table_view === 'boolean' ? parsed.enable_table_view : false,
       enable_swimlane_view: typeof parsed.enable_swimlane_view === 'boolean' ? parsed.enable_swimlane_view : false,
+      enable_node_collision_avoidance: typeof parsed.enable_node_collision_avoidance === 'boolean' ? parsed.enable_node_collision_avoidance : true,
     }
   } catch {
-    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false }
+    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false, enable_node_collision_avoidance: true }
   }
 }
 
@@ -226,22 +227,33 @@ function RoleRow({
 }: {
   role: CatalogRole
   isEditable: boolean
-  onSave: (input: { id: string; label: string; description: string }) => void
+  onSave: (input: { id: string; label: string; acronym: string; description: string }) => void
   onDelete: (id: string) => void
 }) {
   const [label, setLabel] = useState(role.label)
+  const [acronym, setAcronym] = useState(role.acronym)
   const [description, setDescription] = useState(role.description ?? '')
-  const hasChanges = label.trim() !== role.label || description.trim() !== (role.description ?? '')
+  const hasChanges =
+    label.trim() !== role.label ||
+    acronym.trim() !== role.acronym ||
+    description.trim() !== (role.description ?? '')
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-      <div className="grid gap-3 md:grid-cols-[1.2fr_1.6fr_auto]">
+      <div className="grid gap-3 md:grid-cols-[1.1fr_140px_1.4fr_auto]">
         <input
           value={label}
           onChange={(event) => setLabel(event.target.value)}
           disabled={!isEditable}
           className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none disabled:opacity-60"
           aria-label={`${role.label} Rollenname`}
+        />
+        <input
+          value={acronym}
+          onChange={(event) => setAcronym(event.target.value)}
+          disabled={!isEditable}
+          className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none disabled:opacity-60"
+          aria-label={`${role.label} Akronym`}
         />
         <input
           value={description}
@@ -256,7 +268,7 @@ function RoleRow({
               type="button"
               data-testid={`settings-role-save-${role.id}`}
               disabled={!hasChanges || !label.trim()}
-              onClick={() => onSave({ id: role.id, label, description })}
+              onClick={() => onSave({ id: role.id, label, acronym, description })}
               className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100 disabled:opacity-40"
             >
               <Save className="h-3.5 w-3.5" />
@@ -310,6 +322,7 @@ export function SettingsDialog({
   const [newToolName, setNewToolName] = useState('')
   const [newToolDescription, setNewToolDescription] = useState('')
   const [newRoleLabel, setNewRoleLabel] = useState('')
+  const [newRoleAcronym, setNewRoleAcronym] = useState('')
   const [newRoleDescription, setNewRoleDescription] = useState('')
   const [uiPreferences, setUiPreferences] = useState<UiPreferences>(() => readUiPreferences())
 
@@ -359,8 +372,8 @@ export function SettingsDialog({
   }
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 px-4">
-      <div className="pointer-events-auto flex h-[min(86vh,860px)] w-full max-w-6xl overflow-hidden rounded-[30px] border border-white/10 bg-slate-950/95 shadow-[0_30px_90px_rgba(2,8,12,0.6)] backdrop-blur-xl">
+    <div className="wow-overlay-scrim pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="wow-surface-dialog pointer-events-auto flex h-[min(86vh,860px)] w-full max-w-6xl overflow-hidden rounded-[30px] border border-white/10 shadow-[0_30px_90px_rgba(2,8,12,0.6)]">
         <aside className="w-full max-w-[260px] border-r border-white/10 bg-white/[0.03] p-5">
           <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Einstellungen</p>
           <h2 className="mt-2 font-display text-3xl text-white">Verwaltung</h2>
@@ -543,6 +556,30 @@ export function SettingsDialog({
                       </button>
                     </div>
                   </div>
+                  <div className="mt-5">
+                    <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Kollisionserkennung</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Verschiebt beim manuellen Ziehen lokal kollidierende Nachbarknoten. Standard ist eingeschaltet.
+                    </p>
+                    <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+                      <button
+                        type="button"
+                        data-testid="settings-ui-collision-on"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_node_collision_avoidance: true }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.enable_node_collision_avoidance ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Eingeschaltet
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="settings-ui-collision-off"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_node_collision_avoidance: false }))}
+                        className={`rounded-full px-4 py-2 text-sm ${!uiPreferences.enable_node_collision_avoidance ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Ausgeschaltet
+                      </button>
+                    </div>
+                  </div>
                   <div className="mt-4 flex justify-end">
                     <button
                       type="button"
@@ -638,13 +675,21 @@ export function SettingsDialog({
                     <ShieldAlert className="h-4 w-4 text-cyan-200" />
                     <span>Rollen</span>
                   </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-[1.2fr_1.6fr_auto]">
+                  <div className="mt-4 grid gap-3 md:grid-cols-[1.1fr_140px_1.4fr_auto]">
                     <input
                       data-testid="settings-role-new-label"
                       value={newRoleLabel}
                       onChange={(event) => setNewRoleLabel(event.target.value)}
                       disabled={!isEditable}
                       placeholder="Neue Rolle"
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none disabled:opacity-60"
+                    />
+                    <input
+                      data-testid="settings-role-new-acronym"
+                      value={newRoleAcronym}
+                      onChange={(event) => setNewRoleAcronym(event.target.value)}
+                      disabled={!isEditable}
+                      placeholder="Akronym optional"
                       className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none disabled:opacity-60"
                     />
                     <input
@@ -665,9 +710,11 @@ export function SettingsDialog({
                           try {
                             await createOrganizationRole.mutateAsync({
                               label: newRoleLabel,
+                              acronym: newRoleAcronym.trim() || null,
                               description: newRoleDescription.trim() || null,
                             })
                             setNewRoleLabel('')
+                            setNewRoleAcronym('')
                             setNewRoleDescription('')
                           } catch (error) {
                             setMasterDataError(error instanceof Error ? error.message : 'Rolle konnte nicht angelegt werden.')
@@ -689,6 +736,7 @@ export function SettingsDialog({
                           void updateOrganizationRole.mutateAsync({
                             id: input.id,
                             label: input.label,
+                            acronym: input.acronym.trim() || null,
                             description: input.description.trim() || null,
                           })
                         }

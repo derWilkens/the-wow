@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { Position } from 'reactflow'
 import { ActivityNode } from './ActivityNode'
-import type { Activity } from '../../types'
+import type { Activity, CatalogRole } from '../../types'
 
 vi.mock('reactflow', async () => {
   const React = await import('react')
@@ -47,8 +47,31 @@ function createActivity(overrides: Partial<Activity> = {}): Activity {
   }
 }
 
+const availableRoles: CatalogRole[] = [
+  {
+    id: 'role-1',
+    organization_id: 'org-1',
+    label: 'Sachbearbeitung',
+    acronym: 'SB',
+    description: 'Bearbeitet den Vorgang',
+    sort_order: 0,
+    created_at: '2026-04-05T00:00:00.000Z',
+    created_by: 'user-1',
+  },
+  {
+    id: 'role-2',
+    organization_id: 'org-1',
+    label: 'BIM-Koordination',
+    acronym: 'BK',
+    description: 'Koordiniert die BIM-Runde',
+    sort_order: 1,
+    created_at: '2026-04-05T00:00:00.000Z',
+    created_by: 'user-1',
+  },
+]
+
 describe('ActivityNode', () => {
-  it('shows role and assignee labels on the activity card, but not the description text', () => {
+  it('shows the role badge with acronym and the assignee label on the activity card, but not the description text', () => {
     render(
       <ActivityNode
         id="activity-1"
@@ -64,6 +87,8 @@ describe('ActivityNode', () => {
           activity: createActivity(),
           hasChildren: false,
           roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
@@ -77,7 +102,8 @@ describe('ActivityNode', () => {
     )
 
     const title = screen.getByTestId('activity-inline-label-activity-1')
-    expect(screen.getByTestId('activity-role-activity-1')).toHaveTextContent('Sachbearbeitung')
+    expect(screen.getByTestId('activity-role-activity-1')).toHaveTextContent('SB')
+    expect(screen.queryByText('Sachbearbeitung')).not.toBeInTheDocument()
     expect(screen.getByTestId('activity-assignee-activity-1')).toHaveTextContent('Max Mustermann')
     expect(screen.queryByText('Aktivität')).not.toBeInTheDocument()
     expect(screen.queryByText('Beschreibung')).not.toBeInTheDocument()
@@ -101,6 +127,8 @@ describe('ActivityNode', () => {
           activity: createActivity(),
           hasChildren: false,
           roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'role_lanes',
           onOpenDetail: vi.fn(),
@@ -133,6 +161,8 @@ describe('ActivityNode', () => {
           activity: createActivity(),
           hasChildren: false,
           roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           showHandles: true,
@@ -167,6 +197,8 @@ describe('ActivityNode', () => {
           activity: createActivity({ description: 'Tooltip Beschreibung' }),
           hasChildren: false,
           roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
@@ -204,6 +236,8 @@ describe('ActivityNode', () => {
           activity: createActivity({ description: null }),
           hasChildren: false,
           roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
@@ -238,6 +272,8 @@ describe('ActivityNode', () => {
           }),
           hasChildren: false,
           roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
@@ -252,6 +288,191 @@ describe('ActivityNode', () => {
 
     expect(screen.getByTestId('activity-inline-label-activity-1')).toHaveClass('wow-activity-node__title--compact-strong')
     expect(screen.getByTestId('activity-inline-label-activity-1')).toHaveAttribute('data-title-density', 'compact-strong')
+  })
+
+  it('shows the quick type tooltip, opens the type popover and changes the type', async () => {
+    const onOpenDetail = vi.fn()
+    const onQuickChangeType = vi.fn().mockResolvedValue(undefined)
+
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity(),
+          hasChildren: false,
+          roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
+          assigneeLabel: 'Max Mustermann',
+          groupingMode: 'free',
+          onOpenDetail,
+          onOpenSubprocessMenu: vi.fn(),
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+          onQuickChangeType,
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    const trigger = screen.getByTestId('activity-type-trigger-activity-1')
+
+    fireEvent.mouseEnter(trigger)
+    expect(screen.getByTestId('activity-type-trigger-tooltip-activity-1')).toHaveTextContent('Typ aendern')
+
+    fireEvent.click(trigger)
+    expect(screen.getByTestId('activity-type-popover-activity-1')).toBeInTheDocument()
+    expect(screen.getAllByTestId(/activity-type-option-activity-1-/)).toHaveLength(5)
+
+    const createOption = screen.getByTestId('activity-type-option-activity-1-erstellen')
+    fireEvent.mouseEnter(createOption)
+    expect(screen.getByTestId('activity-type-option-tooltip-activity-1')).toHaveTextContent('Erstellen')
+
+    fireEvent.click(createOption)
+
+    await waitFor(() => {
+      expect(onQuickChangeType).toHaveBeenCalledWith('activity-1', 'erstellen')
+    })
+    expect(onOpenDetail).not.toHaveBeenCalled()
+  })
+
+  it('closes the type popover via escape and outside click', () => {
+    render(
+      <div>
+        <button type="button" data-testid="outside">
+          Outside
+        </button>
+        <ActivityNode
+          id="activity-1"
+          type="activity"
+          zIndex={1}
+          selected={false}
+          isConnectable
+          xPos={100}
+          yPos={100}
+          dragging={false}
+          dragHandle={undefined}
+          data={{
+            activity: createActivity(),
+            hasChildren: false,
+            roleLabel: 'Sachbearbeitung',
+            roleAcronym: 'SB',
+            availableRoles,
+            assigneeLabel: 'Max Mustermann',
+            groupingMode: 'free',
+            onOpenDetail: vi.fn(),
+            onOpenSubprocessMenu: vi.fn(),
+            onOpenSubprocess: vi.fn(),
+            onInlineRename: vi.fn(),
+            onQuickChangeType: vi.fn(),
+          }}
+          targetPosition={Position.Left}
+          sourcePosition={Position.Right}
+        />
+      </div>,
+    )
+
+    const trigger = screen.getByTestId('activity-type-trigger-activity-1')
+
+    fireEvent.click(trigger)
+    expect(screen.getByTestId('activity-type-popover-activity-1')).toBeInTheDocument()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByTestId('activity-type-popover-activity-1')).not.toBeInTheDocument()
+
+    fireEvent.click(trigger)
+    expect(screen.getByTestId('activity-type-popover-activity-1')).toBeInTheDocument()
+
+    fireEvent.mouseDown(screen.getByTestId('outside'))
+    expect(screen.queryByTestId('activity-type-popover-activity-1')).not.toBeInTheDocument()
+  })
+
+  it('shows the missing-role badge, opens the role popover and creates or assigns roles', async () => {
+    const onQuickChangeRole = vi.fn().mockResolvedValue(undefined)
+    const onCreateRole = vi.fn().mockResolvedValue({
+      id: 'role-3',
+      organization_id: 'org-1',
+      label: 'Projekt-Leiter',
+      acronym: 'PL',
+      description: 'Leitet das Projekt',
+      sort_order: 2,
+      created_at: '2026-04-05T00:00:00.000Z',
+      created_by: 'user-1',
+    } satisfies CatalogRole)
+
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity({ role_id: null, assignee_label: null }),
+          hasChildren: false,
+          roleLabel: 'Nicht zugeordnet',
+          roleAcronym: null,
+          availableRoles,
+          assigneeLabel: null,
+          groupingMode: 'free',
+          onOpenDetail: vi.fn(),
+          onOpenSubprocessMenu: vi.fn(),
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+          onQuickChangeRole,
+          onCreateRole,
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    const trigger = screen.getByTestId('activity-role-trigger-activity-1')
+    expect(screen.getByTestId('activity-role-activity-1')).toHaveTextContent('?')
+
+    fireEvent.mouseEnter(trigger)
+    expect(screen.getByTestId('activity-role-trigger-tooltip-activity-1')).toHaveTextContent('Rolle festlegen')
+
+    fireEvent.click(trigger)
+    expect(screen.getByTestId('activity-role-popover-activity-1')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('activity-role-option-activity-1-role-2'))
+
+    await waitFor(() => {
+      expect(onQuickChangeRole).toHaveBeenCalledWith('activity-1', 'role-2')
+    })
+
+    fireEvent.click(trigger)
+    expect(screen.getByTestId('activity-role-create-toggle-activity-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('activity-role-create-name-activity-1')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('activity-role-create-toggle-activity-1'))
+    fireEvent.change(screen.getByTestId('activity-role-create-name-activity-1'), { target: { value: 'Projekt-Leiter' } })
+    fireEvent.change(screen.getByTestId('activity-role-create-acronym-activity-1'), { target: { value: 'PL' } })
+    fireEvent.change(screen.getByTestId('activity-role-create-description-activity-1'), {
+      target: { value: 'Leitet das Projekt' },
+    })
+    fireEvent.click(screen.getByTestId('activity-role-create-submit-activity-1'))
+
+    await waitFor(() => {
+      expect(onCreateRole).toHaveBeenCalledWith({
+        label: 'Projekt-Leiter',
+        acronym: 'PL',
+        description: 'Leitet das Projekt',
+      })
+      expect(onQuickChangeRole).toHaveBeenCalledWith('activity-1', 'role-3')
+    })
   })
 
   it('opens detail on double click, supports inline rename and uses the centered subprocess marker', async () => {
@@ -274,6 +495,8 @@ describe('ActivityNode', () => {
           activity: createActivity({ linked_workflow_id: 'workspace-2' }),
           hasChildren: true,
           roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail,
@@ -325,6 +548,8 @@ describe('ActivityNode', () => {
           activity: createActivity({ linked_workflow_id: null }),
           hasChildren: false,
           roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),

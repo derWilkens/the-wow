@@ -112,4 +112,20 @@ describe('DataObjectPopup', () => {
       }),
     )
   })
+
+  it('closes when the overlay outside the dialog is clicked', () => {
+    const onClose = vi.fn()
+
+    render(
+      <DataObjectPopup
+        canvasObject={createDataObject()}
+        onClose={onClose}
+        onSave={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+
+    fireEvent.mouseDown(screen.getByTestId('data-object-overlay'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })

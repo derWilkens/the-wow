@@ -9,11 +9,12 @@ import { useCanvasObjects, useDeleteCanvasObject, useUpsertCanvasObject } from '
 import { useCreateTransportMode, useTransportModes } from './api/transportModes'
 import { useUpdateWorkspace, useWorkspaces } from './api/workspaces'
 import { AuthScreen } from './components/auth/AuthScreen'
-import { ActivityDetailPopup } from './components/canvas/ActivityDetailPopup'
+import { ActivityDetailPopup, type ActivityDetailPopupHandle } from './components/canvas/ActivityDetailPopup'
 import { DataObjectPopup } from './components/canvas/DataObjectPopup'
 import { EdgeDetailPanel } from './components/canvas/EdgeDetailPanel'
 import { FloatingCanvasToolbar } from './components/canvas/FloatingCanvasToolbar'
 import { LinkWorkflowModal } from './components/canvas/LinkWorkflowModal'
+import { SourceInsertDialog } from './components/canvas/SourceInsertDialog'
 import { OrganizationAccessScreen } from './components/organization/OrganizationAccessScreen'
 import { SubprocessMenu } from './components/canvas/SubprocessMenu'
 import { SubprocessWizard } from './components/canvas/SubprocessWizard'
@@ -45,7 +46,7 @@ const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
 
 function readUiPreferences(): UiPreferences {
   if (typeof window === 'undefined') {
-    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false }
+    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false, enable_node_collision_avoidance: true }
   }
 
   try {
@@ -55,9 +56,10 @@ function readUiPreferences(): UiPreferences {
       snap_to_grid: typeof parsed.snap_to_grid === 'boolean' ? parsed.snap_to_grid : true,
       enable_table_view: typeof parsed.enable_table_view === 'boolean' ? parsed.enable_table_view : false,
       enable_swimlane_view: typeof parsed.enable_swimlane_view === 'boolean' ? parsed.enable_swimlane_view : false,
+      enable_node_collision_avoidance: typeof parsed.enable_node_collision_avoidance === 'boolean' ? parsed.enable_node_collision_avoidance : true,
     }
   } catch {
-    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false }
+    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false, enable_node_collision_avoidance: true }
   }
 }
 
@@ -174,6 +176,17 @@ function areFieldsEqual(left: ObjectField[] | undefined, right: ObjectField[] | 
   })
 }
 
+function areStringArraysEqual(left: string[] | undefined, right: string[] | undefined) {
+  const leftValues = left ?? []
+  const rightValues = right ?? []
+
+  if (leftValues.length !== rightValues.length) {
+    return false
+  }
+
+  return leftValues.every((value, index) => value === rightValues[index])
+}
+
 function getCanvasNodeKind(nodeId: string, activities: Activity[], sourceObjects: Extract<CanvasObject, { object_type: 'quelle' }>[]) {
   const activity = activities.find((item) => item.id === nodeId)
   if (activity) {
@@ -210,6 +223,19 @@ function getOppositeTargetHandleId(sourceHandleId: string | null) {
   }
 
   return 'target-left'
+}
+
+function getSourceInsertName(
+  mode: 'new' | 'existing',
+  sources: Extract<CanvasObject, { object_type: 'quelle' }>[],
+  sourceId?: string | null,
+) {
+  if (mode === 'new') {
+    return 'Neuer Datenspeicher'
+  }
+
+  const source = sources.find((entry) => entry.id === sourceId)
+  return source?.name ?? 'Neuer Datenspeicher'
 }
 
 const DEFAULT_ACTIVITY_NODE_SIZE = {
@@ -268,17 +294,8 @@ function getDefaultActivityLabel(nodeType: Activity['node_type']) {
   }
 }
 
-function getDefaultActivityDescription(nodeType: Activity['node_type']) {
-  switch (nodeType) {
-    case 'activity':
-      return 'Beschreibe den nächsten fachlichen Schritt in diesem Ablauf.'
-    case 'gateway_decision':
-      return 'Lege fest, nach welcher Bedingung der Ablauf in alternative Pfade verzweigt.'
-    case 'gateway_merge':
-      return 'Führe hier mehrere zuvor getrennte Pfade wieder zusammen.'
-    default:
-      return null
-  }
+function getDefaultActivityDescription(_nodeType: Activity['node_type']) {
+  return null
 }
 
 function WorkspaceCanvasApp({
@@ -329,6 +346,7 @@ function WorkspaceCanvasApp({
   const pendingNodePositionRef = useRef<Record<string, { x: number; y: number }>>({})
   const selectedCanvasNodeIdRef = useRef<string | null>(null)
   const selectedCanvasEdgeIdRef = useRef<string | null>(null)
+  const activityDetailPopupRef = useRef<ActivityDetailPopupHandle | null>(null)
 
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null)
   const [selectedDataObjectId, setSelectedDataObjectId] = useState<string | null>(null)
@@ -357,6 +375,7 @@ function WorkspaceCanvasApp({
   const [uiPreferences, setUiPreferences] = useState<UiPreferences>(() => readUiPreferences())
   const [focusedCanvasNodeId, setFocusedCanvasNodeId] = useState<string | null>(null)
   const [activeWorkspaceName, setActiveWorkspaceName] = useState(workspaceName)
+  const [sourceInsertPosition, setSourceInsertPosition] = useState<{ x: number; y: number } | null>(null)
 
   const currentSnapshot = useMemo<CanvasSnapshot>(
     () => cloneSnapshot({ activities, canvasObjects, canvasEdges }),
@@ -426,7 +445,19 @@ function WorkspaceCanvasApp({
           persisted.position_x !== activity.position_x ||
           persisted.position_y !== activity.position_y ||
           persisted.label !== activity.label ||
-          persisted.description !== activity.description
+          persisted.description !== activity.description ||
+          (persisted.role_id ?? null) !== (activity.role_id ?? null) ||
+          (persisted.assignee_label ?? null) !== (activity.assignee_label ?? null) ||
+          persisted.activity_type !== activity.activity_type ||
+          persisted.notes !== activity.notes ||
+          persisted.status !== activity.status ||
+          persisted.status_icon !== activity.status_icon ||
+          (persisted.duration_minutes ?? null) !== (activity.duration_minutes ?? null) ||
+          (persisted.linked_workflow_id ?? null) !== (activity.linked_workflow_id ?? null) ||
+          (persisted.linked_workflow_mode ?? null) !== (activity.linked_workflow_mode ?? null) ||
+          (persisted.linked_workflow_purpose ?? null) !== (activity.linked_workflow_purpose ?? null) ||
+          !areStringArraysEqual(persisted.linked_workflow_inputs, activity.linked_workflow_inputs) ||
+          !areStringArraysEqual(persisted.linked_workflow_outputs, activity.linked_workflow_outputs)
         )
       }),
     )
@@ -522,6 +553,59 @@ function WorkspaceCanvasApp({
     () => uniqueById([...activities, ...optimisticActivities]).filter((activity) => !optimisticHiddenNodeIds.includes(activity.id)),
     [activities, optimisticActivities, optimisticHiddenNodeIds],
   )
+  const handleActivityDetailSelectionChange = useCallback(async (selection: { nodeId: string | null; edgeId: string | null; dataObjectId: string | null }) => {
+    if (!isActivityPopupOpen || !selectedActivity) {
+      return
+    }
+
+    const nextSelectedActivity = selection.nodeId ? visibleActivities.find((activity) => activity.id === selection.nodeId) ?? null : null
+
+    if (nextSelectedActivity && nextSelectedActivity.id === selectedActivity.id) {
+      return
+    }
+
+    const shouldSwitchToAnotherActivity = Boolean(nextSelectedActivity)
+    const shouldCloseCurrentPopup = !nextSelectedActivity
+
+    if (!shouldSwitchToAnotherActivity && !shouldCloseCurrentPopup) {
+      return
+    }
+
+    const saved = await activityDetailPopupRef.current?.saveIfDirty() ?? true
+    if (!saved) {
+      setSelectedCanvasNodeId(selectedActivity.id)
+      setSelectedCanvasEdgeId(null)
+      setSelectedDataObjectId(null)
+      selectedCanvasNodeIdRef.current = selectedActivity.id
+      selectedCanvasEdgeIdRef.current = null
+      return
+    }
+
+    if (nextSelectedActivity) {
+      setSelectedActivityId(nextSelectedActivity.id)
+      setIsActivityPopupOpen(true)
+      return
+    }
+
+    setIsActivityPopupOpen(false)
+  }, [isActivityPopupOpen, selectedActivity, visibleActivities])
+
+  const openActivityDetails = useCallback(async (activityId: string) => {
+    const nextSelectedActivity = visibleActivities.find((activity) => activity.id === activityId)
+    if (!nextSelectedActivity) {
+      return
+    }
+
+    if (isActivityPopupOpen && selectedActivity && selectedActivity.id !== nextSelectedActivity.id) {
+      const saved = await activityDetailPopupRef.current?.saveIfDirty() ?? true
+      if (!saved) {
+        return
+      }
+    }
+
+    setSelectedActivityId(nextSelectedActivity.id)
+    setIsActivityPopupOpen(true)
+  }, [isActivityPopupOpen, selectedActivity, visibleActivities])
 
   const visibleCanvasObjects = useMemo(
     () => uniqueById([...canvasObjects, ...optimisticCanvasObjects]).filter((canvasObject) => !optimisticHiddenNodeIds.includes(canvasObject.id)),
@@ -590,6 +674,16 @@ function WorkspaceCanvasApp({
         visibleActivities.map((activity) => [
           activity.id,
           organizationRoles.find((role) => role.id === activity.role_id)?.label ?? 'Nicht zugeordnet',
+        ]),
+      ),
+    [organizationRoles, visibleActivities],
+  )
+  const activityRoleAcronymsById = useMemo(
+    () =>
+      Object.fromEntries(
+        visibleActivities.map((activity) => [
+          activity.id,
+          organizationRoles.find((role) => role.id === activity.role_id)?.acronym ?? null,
         ]),
       ),
     [organizationRoles, visibleActivities],
@@ -670,9 +764,10 @@ function WorkspaceCanvasApp({
     }
   }
 
-  async function createSipocRole(input: { label: string; description: string }) {
+  async function createSipocRole(input: { label: string; description: string; acronym?: string | null }) {
     return createOrganizationRole.mutateAsync({
       label: input.label.trim(),
+      acronym: input.acronym?.trim() || null,
       description: input.description.trim() || null,
     })
   }
@@ -719,6 +814,54 @@ function WorkspaceCanvasApp({
       setOptimisticActivities((current) => current.filter((entry) => entry.id !== activityId))
       throw error
     }
+  }
+
+  async function quickChangeActivityType(activityId: string, nextType: Activity['activity_type']) {
+    const activity = visibleActivities.find((entry) => entry.id === activityId)
+    if (!activity || activity.activity_type === nextType) {
+      return
+    }
+
+    rememberSnapshot()
+    setOptimisticActivities((current) => [
+      ...current.filter((entry) => entry.id !== activityId),
+      {
+        ...activity,
+        activity_type: nextType,
+      },
+    ])
+
+    try {
+      await upsertActivity.mutateAsync({
+        id: activity.id,
+        parent_id: activity.parent_id,
+        node_type: activity.node_type,
+        label: activity.label,
+        trigger_type: activity.trigger_type,
+        position_x: activity.position_x,
+        position_y: activity.position_y,
+        status: activity.status,
+        status_icon: activity.status_icon,
+        activity_type: nextType,
+        description: activity.description,
+        notes: activity.notes,
+        assignee_label: activity.assignee_label ?? null,
+        role_id: activity.role_id ?? null,
+        duration_minutes: activity.duration_minutes ?? null,
+        linked_workflow_id: activity.linked_workflow_id,
+        linked_workflow_mode: activity.linked_workflow_mode,
+        linked_workflow_purpose: activity.linked_workflow_purpose,
+        linked_workflow_inputs: activity.linked_workflow_inputs,
+        linked_workflow_outputs: activity.linked_workflow_outputs,
+      })
+    } catch (error) {
+      setOptimisticActivities((current) => current.filter((entry) => entry.id !== activityId))
+      throw error
+    }
+  }
+
+  async function quickChangeActivityRole(activityId: string, nextRoleId: string | null) {
+    await updateActivityFromSipoc(activityId, { role_id: nextRoleId })
   }
 
   function canConnectActivityNodes(sourceId: string, targetId: string) {
@@ -840,7 +983,7 @@ function WorkspaceCanvasApp({
           label: 'Neue Aktivität',
           position_x: 250,
           position_y: 210,
-          description: 'Beschreibe den ersten fachlichen Schritt in diesem Ablauf.',
+          description: null,
         })
 
         await upsertCanvasEdge.mutateAsync({
@@ -1267,26 +1410,16 @@ function WorkspaceCanvasApp({
     await createEdgeDataObject(edgeId, template)
   }
 
-  async function insertCanvasObject(objectType: CanvasObject['object_type'], options?: { position?: { x: number; y: number } }) {
-    const currentSelectedEdge = visibleCanvasEdges.find((edge) => edge.id === selectedCanvasEdgeIdRef.current) ?? null
-
-    if (objectType === 'datenobjekt') {
-      if (!currentSelectedEdge) {
-        return
-      }
-      await createEdgeDataObject(currentSelectedEdge.id)
-      return
-    }
-
+  async function createSourceObject(name: string, options?: { position?: { x: number; y: number } }) {
     rememberSnapshot()
-    const position = options?.position ?? getViewportCenteredPosition(objectType)
+    const position = options?.position ?? getViewportCenteredPosition('quelle')
     const optimisticObjectId = crypto.randomUUID()
     const optimisticObject: CanvasObject = {
       id: optimisticObjectId,
       workspace_id: workspaceId,
       parent_activity_id: parentActivityId,
-      object_type: objectType,
-      name: 'Neuer Datenspeicher',
+      object_type: 'quelle',
+      name,
       position_x: position.x,
       position_y: position.y,
       edge_id: null,
@@ -1304,7 +1437,7 @@ function WorkspaceCanvasApp({
       const createdObject = await upsertCanvasObject.mutateAsync({
         id: optimisticObjectId,
         parent_activity_id: parentActivityId,
-        object_type: objectType,
+        object_type: 'quelle',
         name: optimisticObject.name,
         position_x: position.x,
         position_y: position.y,
@@ -1341,6 +1474,27 @@ function WorkspaceCanvasApp({
       selectedCanvasNodeIdRef.current = null
       throw error
     }
+  }
+
+  async function insertCanvasObject(objectType: CanvasObject['object_type'], options?: { position?: { x: number; y: number } }) {
+    const currentSelectedEdge = visibleCanvasEdges.find((edge) => edge.id === selectedCanvasEdgeIdRef.current) ?? null
+
+    if (objectType === 'datenobjekt') {
+      if (!currentSelectedEdge) {
+        return
+      }
+      await createEdgeDataObject(currentSelectedEdge.id)
+      return
+    }
+
+    setSourceInsertPosition(options?.position ?? getViewportCenteredPosition('quelle'))
+  }
+
+  async function insertSourceFromDialog(mode: 'new' | 'existing', sourceId?: string | null) {
+    const nextPosition = sourceInsertPosition ?? getViewportCenteredPosition('quelle')
+    const sourceName = getSourceInsertName(mode, visibleSourceObjects, sourceId)
+    setSourceInsertPosition(null)
+    await createSourceObject(sourceName, { position: nextPosition })
   }
 
   async function connectCanvasNodes(connection: Connection) {
@@ -1430,7 +1584,7 @@ function WorkspaceCanvasApp({
       status: 'draft',
       status_icon: null,
       activity_type: 'unbestimmt',
-      description: 'Beschreibe den nächsten fachlichen Schritt in diesem Ablauf.',
+      description: null,
       notes: null,
       duration_minutes: null,
       linked_workflow_id: null,
@@ -1469,7 +1623,7 @@ function WorkspaceCanvasApp({
         label: 'Neue Aktivität',
         position_x: nodePosition.x,
         position_y: nodePosition.y,
-        description: 'Beschreibe den nächsten fachlichen Schritt in diesem Ablauf.',
+        description: null,
       })
 
       setOptimisticActivities((current) => current.map((activity) => (activity.id === optimisticActivityId ? createdActivity : activity)))
@@ -1926,6 +2080,14 @@ function WorkspaceCanvasApp({
                 {dataObjectActionError}
               </div>
             ) : null}
+            <SourceInsertDialog
+              isOpen={sourceInsertPosition !== null}
+              existingSources={visibleSourceObjects.map((source) => ({ id: source.id, name: source.name }))}
+              isSubmitting={upsertCanvasObject.isPending}
+              onClose={() => setSourceInsertPosition(null)}
+              onUseExisting={(sourceId) => void insertSourceFromDialog('existing', sourceId)}
+              onCreateNew={() => void insertSourceFromDialog('new')}
+            />
             {workflowViewMode === 'canvas' ? (
               <div className="h-full pl-24 sm:pl-28">
                 <WorkflowCanvas
@@ -1935,10 +2097,13 @@ function WorkspaceCanvasApp({
                   selectedNodeId={selectedCanvasNodeId}
                   selectedEdgeId={selectedCanvasEdgeId}
                   selectedDataObjectId={selectedDataObjectId}
-                  groupingMode={uiPreferences.default_grouping_mode}
-                  snapToGridEnabled={uiPreferences.snap_to_grid}
-                  activityRolesById={activityRolesById}
-                  activityAssigneesById={activityAssigneesById}
+                    groupingMode={uiPreferences.default_grouping_mode}
+                    snapToGridEnabled={uiPreferences.snap_to_grid}
+                    collisionAvoidanceEnabled={uiPreferences.enable_node_collision_avoidance}
+                    activityRolesById={activityRolesById}
+                    activityRoleAcronymsById={activityRoleAcronymsById}
+                    organizationRoles={organizationRoles}
+                    activityAssigneesById={activityAssigneesById}
                   focusNodeId={focusedCanvasNodeId}
                   onInterruptFocusAnimation={() => setFocusedCanvasNodeId(null)}
                   onViewportCenterChange={setViewportCenter}
@@ -1948,6 +2113,7 @@ function WorkspaceCanvasApp({
                     setSelectedDataObjectId(dataObjectId)
                     selectedCanvasNodeIdRef.current = nodeId
                     selectedCanvasEdgeIdRef.current = edgeId
+                    void handleActivityDetailSelectionChange({ nodeId, edgeId, dataObjectId })
                   }}
                   onToolbarDrop={({ kind, position }) => {
                     const centeredPosition =
@@ -1997,9 +2163,12 @@ function WorkspaceCanvasApp({
                   }}
                   onOpenSubprocess={(activity) => {
                     openLinkedSubprocess(activity)
-                  }}
-                  onInlineRenameActivity={(activityId, nextLabel) => void renameActivityInline(activityId, nextLabel)}
-                  onConnectEdge={(connection) => void connectCanvasNodes(connection)}
+                    }}
+                    onInlineRenameActivity={(activityId, nextLabel) => void renameActivityInline(activityId, nextLabel)}
+                    onQuickChangeActivityType={(activityId, nextType) => void quickChangeActivityType(activityId, nextType)}
+                    onQuickChangeActivityRole={(activityId, roleId) => void quickChangeActivityRole(activityId, roleId)}
+                    onCreateRole={(input) => createSipocRole(input)}
+                    onConnectEdge={(connection) => void connectCanvasNodes(connection)}
                   onCreateActivityFromConnectionDrop={(input) => void createActivityFromConnectionDrop(input)}
                   onMoveNode={(nodeId, position) => void persistNodePosition(nodeId, position)}
                   onDeleteEdges={(edgeIds) => void removeEdges(edgeIds)}
@@ -2008,8 +2177,7 @@ function WorkspaceCanvasApp({
                   onCreateDataObjectOnEdge={(edgeId) => void createEdgeDataObject(edgeId)}
                   onAddExistingDataObjectToEdge={(edgeId, dataObjectId) => void addExistingDataObjectToEdge(edgeId, dataObjectId)}
                   onSelectActivity={(activity) => {
-                    setSelectedActivityId(activity.id)
-                    setIsActivityPopupOpen(true)
+                    void openActivityDetails(activity.id)
                   }}
                   onOpenDataObject={(object) => {
                     setDataObjectActionError(null)
@@ -2053,6 +2221,7 @@ function WorkspaceCanvasApp({
 
             {isActivityPopupOpen && selectedActivity ? (
               <ActivityDetailPopup
+                ref={activityDetailPopupRef}
                 activity={selectedActivity}
                 workspaceId={workspaceId}
                 organizationId={organizationId}

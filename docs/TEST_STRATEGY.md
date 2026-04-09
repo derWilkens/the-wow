@@ -171,6 +171,9 @@ Aktuelle Beispiele:
 - `frontend/e2e/view-preferences.spec.ts`
   - gezielter Repro fuer sichtbare/unsichtbare optionale Views im Header
   - prueft Defaults, Aktivierung, Deaktivierung und den aufgeraeumten Header ohne Suche/Export
+- `frontend/e2e/activity-type-quick-change.spec.ts`
+  - gezielter Repro fuer den direkten Typwechsel am Aktivitaets-Node
+  - prueft Tooltip, Popover, sofortiges Speichern und Persistenz ueber eine frische Sitzung
 
 Diese Specs sind absichtlich klein und diagnostisch stark.
 
@@ -253,6 +256,9 @@ Die Vollsuite ist **nicht** das beste erste Diagnosewerkzeug fuer einen frisch g
 - bei alternativen Ansichten wie SIPOC zuerst die reine Ableitungslogik per Unit-Test absichern und erst dann die View-Umschaltung im Browser pruefen
 - bei workflowweiten Metadaten zuerst den direkten Update-Pfad im Backend testen, dann den Dialog isoliert als Komponente und erst danach den Header-Einstieg im Browser pruefen
 - bei UI-Praeferenzen fuer sichtbare Views zuerst den Header und den Settings-Dialog als Komponenten absichern und dann einen kleinen Browsertest fuer Persistenz und Sichtbarkeit anlegen
+- bei kleinen Direktinteraktionen auf dem Node zuerst den isolierten Komponentenpfad testen und danach einen schmalen Browser-Repro fuer Speichern plus Persistenz anlegen
+- wenn dieselbe Erstellungs- oder Auswahlaktion an mehreren Einstiegspunkten existiert, zuerst eine gemeinsame Formular- oder Optionskomponente schaffen und dann beide Einstiege gezielt gegeneinander absichern
+- bei visuellen Oberflaechenregeln wie Dialog-/Popover-Transparenz zuerst die gemeinsamen CSS-Surfaces zentralisieren und dann nur gezielt die betroffenen Komponenten gegen Build plus kleine Komponententest-Sets pruefen
 - bei React-Flow-Hitbox-Problemen lieber gezielt robust machen als globale Workarounds bauen
 - Browsertests gegen den lokalen echten Stack ernst nehmen, nicht gegen zufaellige entfernte Deployments
 - Testdaten immer aktiv bereinigen

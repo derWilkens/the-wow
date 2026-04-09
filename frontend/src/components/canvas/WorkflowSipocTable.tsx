@@ -2,17 +2,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import { Check, Pencil } from 'lucide-react'
 import type { CatalogRole, EdgeDataObject, TransportModeOption, WorkflowSipocItem, WorkflowSipocRoleRef, WorkflowSipocRow } from '../../types'
 import { CustomChoiceList, type CustomChoiceOption } from '../ui/CustomChoiceList'
-
-function buildRoleOptions(roles: CatalogRole[]): CustomChoiceOption[] {
-  return roles
-    .slice()
-    .sort((left, right) => left.label.localeCompare(right.label, 'de'))
-    .map((role) => ({
-      id: role.id,
-      label: role.label,
-      description: role.description,
-    }))
-}
+import { buildCatalogRoleChoiceOptions } from '../../lib/catalogRoles'
 
 function buildTransportModeOptions(transportModes: TransportModeOption[]): CustomChoiceOption[] {
   return transportModes
@@ -50,7 +40,7 @@ function SipocRoleEditor({
   roleRef: WorkflowSipocRoleRef
   roles: CatalogRole[]
   onUpdateRole: (activityId: string, roleId: string | null) => void
-  onCreateRole: (input: { label: string; description: string }) => Promise<CatalogRole | void> | CatalogRole | void
+  onCreateRole: (input: { label: string; description: string; acronym?: string | null }) => Promise<CatalogRole | void> | CatalogRole | void
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
@@ -58,7 +48,7 @@ function SipocRoleEditor({
       <CustomChoiceList
         testId={testId}
         value={roleRef.roleId ?? ''}
-        options={buildRoleOptions(roles)}
+        options={buildCatalogRoleChoiceOptions(roles)}
         placeholder="Nicht zugeordnet"
         allowClear
         clearLabel="Nicht zugeordnet"
@@ -71,7 +61,7 @@ function SipocRoleEditor({
         createSecondaryLabel="Beschreibung"
         createSecondaryPlaceholder="Optional: kurze Beschreibung"
         onSelect={(roleId) => onUpdateRole(roleRef.activityId, roleId || null)}
-        onCreate={(input) => onCreateRole({ label: input.label, description: input.description })}
+        onCreate={(input) => onCreateRole({ label: input.label, description: input.description, acronym: null })}
       />
     </div>
   )
@@ -215,7 +205,7 @@ export function WorkflowSipocTable({
   onRenameProcess: (activityId: string, label: string) => Promise<void> | void
   onUpdateProcessRole: (activityId: string, roleId: string | null) => Promise<void> | void
   onUpdateRelatedRole: (activityId: string, roleId: string | null) => Promise<void> | void
-  onCreateRole: (input: { label: string; description: string }) => Promise<CatalogRole | void> | CatalogRole | void
+  onCreateRole: (input: { label: string; description: string; acronym?: string | null }) => Promise<CatalogRole | void> | CatalogRole | void
   onUpdateEdgeTransportMode: (edgeId: string, transportModeId: string | null) => Promise<void> | void
   onAddExistingDataObjectToEdge: (edgeId: string, dataObjectId: string) => Promise<void> | void
   onCreateDataObjectOnEdge: (edgeId: string, name: string) => Promise<EdgeDataObject | void> | EdgeDataObject | void
@@ -367,7 +357,7 @@ export function WorkflowSipocTable({
                       <CustomChoiceList
                         testId={`sipoc-process-role-${row.activityId}`}
                         value={row.processRoleId ?? ''}
-                        options={buildRoleOptions(roles)}
+                        options={buildCatalogRoleChoiceOptions(roles)}
                         placeholder="Nicht zugeordnet"
                         allowClear
                         clearLabel="Nicht zugeordnet"

@@ -39,14 +39,30 @@ describe('TransportModesService', () => {
   })
 
   it('creates a normalized transport mode for admins', async () => {
-    const query = {
+    const sortQuery = {
+      select: jest.fn(),
+      eq: jest.fn(),
+      order: jest.fn(),
+      limit: jest.fn(),
+      maybeSingle: jest.fn(),
+    }
+    sortQuery.select.mockReturnValue(sortQuery)
+    sortQuery.eq.mockReturnValue(sortQuery)
+    sortQuery.order.mockReturnValue(sortQuery)
+    sortQuery.limit.mockReturnValue(sortQuery)
+    sortQuery.maybeSingle.mockResolvedValue({
+      data: { sort_order: 3 },
+      error: null,
+    })
+
+    const insertQuery = {
       insert: jest.fn(),
       select: jest.fn(),
       single: jest.fn(),
     }
-    query.insert.mockReturnValue(query)
-    query.select.mockReturnValue(query)
-    query.single.mockResolvedValue({
+    insertQuery.insert.mockReturnValue(insertQuery)
+    insertQuery.select.mockReturnValue(insertQuery)
+    insertQuery.single.mockResolvedValue({
       data: {
         id: 'mode-1',
         organization_id: 'org-1',
@@ -64,7 +80,7 @@ describe('TransportModesService', () => {
           useValue: {
             assertOrganizationRole: jest.fn(),
             supabase: {
-              from: jest.fn(() => query),
+              from: jest.fn().mockReturnValueOnce(sortQuery).mockReturnValueOnce(insertQuery),
             },
           },
         },

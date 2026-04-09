@@ -37,9 +37,7 @@ function createDataObject(id: string, name: string, edgeId = 'edge-1', edgeSortO
 describe('WorkflowEdge', () => {
   it('renders a named chip for a single data object and opens quick actions on click', () => {
     const dataObject = createDataObject('data-1', 'Gepruefte Rechnung')
-    const onTogglePopover = vi.fn()
     const onOpenDataObject = vi.fn()
-    const onSelectDataObject = vi.fn()
 
     render(
       <WorkflowEdge
@@ -60,12 +58,11 @@ describe('WorkflowEdge', () => {
           dataObjects: [dataObject],
           reusableDataObjects: [createDataObject('data-2', 'Lieferschein', 'edge-2')],
           selectedDataObjectId: null,
-          onSelectDataObject,
           onOpenDataObject,
           onCreateDataObject: vi.fn(),
           onAddExistingDataObject: vi.fn(),
           isPopoverOpen: true,
-          onTogglePopover,
+          onTogglePopover: vi.fn(),
         }}
       />,
     )
@@ -75,12 +72,6 @@ describe('WorkflowEdge', () => {
     expect(screen.getByTestId('edge-label-edge-1')).toHaveTextContent('Ja')
 
     fireEvent.click(chip)
-    expect(onSelectDataObject).toHaveBeenCalledWith(dataObject)
-    expect(screen.getByTestId('edge-data-object-popover-edge-1')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Details der Verbindung' })).toBeInTheDocument()
-    expect(screen.getByTestId('edge-data-object-existing-select-edge-1')).toBeInTheDocument()
-
-    fireEvent.doubleClick(chip)
     expect(onOpenDataObject).toHaveBeenCalledWith(dataObject)
   })
 
@@ -109,7 +100,6 @@ describe('WorkflowEdge', () => {
           ],
           reusableDataObjects: [createDataObject('data-3', 'Wareneingang', 'edge-2', 0)],
           selectedDataObjectId: null,
-          onSelectDataObject: vi.fn(),
           onOpenDataObject: vi.fn(),
           onCreateDataObject: vi.fn(),
           onAddExistingDataObject: vi.fn(),
@@ -122,14 +112,12 @@ describe('WorkflowEdge', () => {
     const aggregate = screen.getByTestId('edge-data-object-aggregate-edge-1')
     expect(screen.getByTestId('edge-label-edge-1')).toHaveTextContent('Betrag > 1000 EUR')
     expect(aggregate).toHaveTextContent('2')
-    expect(aggregate).toHaveAttribute('title', expect.stringContaining('Gepruefte Rechnung'))
-    expect(aggregate).toHaveAttribute('title', expect.stringContaining('Lieferschein'))
 
     fireEvent.click(aggregate)
     expect(onTogglePopover).toHaveBeenCalled()
     expect(screen.getByTestId('edge-data-object-popover-edge-1')).toBeInTheDocument()
     expect(screen.getByTestId('edge-data-object-item-data-1')).toBeInTheDocument()
     expect(screen.getByTestId('edge-data-object-item-data-2')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Details der Verbindung' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Details der Verbindung' })).not.toBeInTheDocument()
   })
 })

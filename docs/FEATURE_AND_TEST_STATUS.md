@@ -124,11 +124,13 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Aktivitaetsdetails bearbeiten
 - [x] Aktivitaetstyp
 - [x] Default-Aktivitaetstyp `Unbestimmt` mit Fragezeichen-Icon
+- [x] Aktivitaetstyp direkt ueber das Node-Icon aenderbar
 - [x] Sollzustand fuer `pruefen_freigeben`
 - [x] Ausfuehrenden-Freitext in Aktivitaetsdetails
 - [x] Swimlane-Rolle aus der an der Aktivitaet gesetzten Rolle ableiten
 - [x] Kommentare an Aktivitaeten
 - [x] Rollen-Chip direkt auf Aktivitaetsknoten
+- [x] Rollen-Anlege-Dialog in Aktivitaetsknoten und Aktivitaetsdetail vereinheitlicht
 - [x] IT-Tools als wiederverwendbarer Katalog
 - [x] Bestehendes IT-Tool verlinken
 - [x] Neues IT-Tool anlegen und direkt verlinken
@@ -163,6 +165,8 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Login per `Enter`, wenn das Formular gueltig ist
 - [x] Verbindungsdialog voll opak
 - [x] Detailablauf-Dialog weniger transparent
+- [x] Popovers und Dialoge zentral ueber CSS-Surface-Klassen auf sehr geringe Transparenz vereinheitlicht
+- [x] Aktivitaetstyp-Popover praktisch opak
 
 ### Zusätzliche Workflow-Views
 - [x] Umschaltung zwischen Zeichenmodus und tabellarischer SIPOC-View
@@ -247,7 +251,20 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `src/components/workspace/WorkflowDetailDialog.test.tsx`
 - [x] `src/components/organization/OrganizationAccessScreen.test.tsx`
 - [x] `src/components/ui/CustomChoiceList.test.tsx`
+- [x] `src/components/roles/RoleCreateForm.tsx`
 - [x] `src/App.test.tsx`
+
+### Zuletzt gezielt verifiziert
+- [x] Zentrale Popup-/Dialog-Surfaces ueber `frontend/src/index.css`
+- [x] `src/components/canvas/ActivityNode.test.tsx`
+- [x] `src/components/ui/CustomChoiceList.test.tsx`
+- [x] `src/components/canvas/DataObjectPopup.test.tsx`
+- [x] `src/components/canvas/ActivityDetailPopup.test.tsx`
+- [x] `src/components/canvas/EdgeDetailPanel.test.tsx`
+- [x] `src/components/canvas/FloatingCanvasToolbar.test.tsx`
+- [x] `src/components/settings/SettingsDialog.test.tsx`
+- [x] `src/components/workspace/WorkflowDetailDialog.test.tsx`
+- [x] Frontend-Build nach Surface-Umstellung gruen
 
 ### Backend Unit
 - [x] `backend/src/activities/activities.service.spec.ts`
@@ -258,6 +275,9 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `backend/src/workflow-templates/workflow-templates.service.spec.ts`
 - [x] `backend/src/auth/auth.guard.spec.ts`
 - [x] `backend/src/organizations/organizations.service.spec.ts`
+
+### Browser E2E
+- [x] `frontend/e2e/activity-type-quick-change.spec.ts`
 
 ### E2E mit vorhandenem Login-User
 - [x] `e2e/activity-detail-check-sources.spec.ts`
@@ -328,6 +348,11 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
   - `frontend/src/components/canvas/WorkflowCanvas.test.tsx`: gruen
   - `e2e/view-preferences.spec.ts`: `1 passed`
 - [x] Rollen-/Ausfuehrenden-Modell lokal auch ohne eingespielte Migration `013` per Fallback verifiziert
+- [x] Gemeinsamer Rollen-Anlege-Dialog fuer Aktivitaetsknoten und Aktivitaetsdetail verifiziert
+  - `frontend/src/components/ui/CustomChoiceList.test.tsx`: gruen
+  - `frontend/src/components/canvas/ActivityNode.test.tsx`: gruen
+  - `frontend/src/components/canvas/ActivityDetailPopup.test.tsx`: gruen
+  - Frontend-Build: gruen
 - [x] Vorlagen-Regressionen gegen echten lokalen Stack
 - [x] Lokaler Screenshot-Capture fuer `01` bis `10`
 - [x] Credential-gebundene E2E-Gesamtsuite in dieser Session komplett durchgelaufen

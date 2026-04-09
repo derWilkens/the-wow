@@ -81,6 +81,8 @@ test.describe('smart insert', () => {
       expect(canvasBox).toBeTruthy()
 
       await page.getByTestId('toolbar-source').click()
+      await expect(page.getByTestId('source-insert-dialog')).toBeVisible()
+      await page.getByTestId('source-insert-create-new').click()
       await expect(page.locator('[data-testid^="source-node-"]')).toHaveCount(1, { timeout: 15_000 })
       const sourceNodeTestId = await page.locator('[data-testid^="source-node-"]').first().getAttribute('data-testid')
       expect(sourceNodeTestId).toBeTruthy()

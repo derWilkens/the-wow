@@ -31,6 +31,7 @@ type OrganizationRoleRecord = {
   id: string
   organization_id: string
   label: string
+  acronym: string
   description: string | null
   sort_order: number
   created_at: string

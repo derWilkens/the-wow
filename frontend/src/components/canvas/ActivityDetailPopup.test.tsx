@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ActivityDetailPopup } from './ActivityDetailPopup'
+import { ActivityDetailPopup, type ActivityDetailPopupHandle } from './ActivityDetailPopup'
+import { activityTypeOptions } from './activityTypeOptions'
 import type { Activity, CanvasEdge, CanvasObject, CatalogRole, ITTool } from '../../types'
 
 const mockUseUpsertActivity = vi.fn()
@@ -87,6 +89,10 @@ function createRole(id: string, label: string, description: string | null = null
     id,
     organization_id: 'org-1',
     label,
+    acronym: label
+      .split(/\s+/)
+      .map((token) => token.charAt(0).toUpperCase())
+      .join(''),
     description,
     sort_order: 0,
     created_at: '2026-04-03T00:00:00.000Z',
@@ -112,6 +118,29 @@ describe('ActivityDetailPopup', () => {
     mockUseOrganizationMembers.mockReturnValue({ data: [] })
     mockUseOrganizationRoles.mockReturnValue({ data: [] })
     mockUseCreateOrganizationRole.mockReturnValue({ mutateAsync: vi.fn() })
+  })
+
+  it('renders the shared set of five activity types including unbestimmt', () => {
+    render(
+      <ActivityDetailPopup
+        activity={createActivity({ activity_type: 'unbestimmt' })}
+        workspaceId="workspace-1"
+        organizationId="org-1"
+        currentUserId="user-1"
+        canvasObjects={defaultCanvasObjects}
+        canvasEdges={defaultCanvasEdges}
+        connectionCount={2}
+        onDelete={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(activityTypeOptions).toHaveLength(5)
+    expect(activityTypeOptions.some((option) => option.value === 'unbestimmt')).toBe(true)
+
+    activityTypeOptions.forEach((option) => {
+      expect(screen.getByTestId(`activity-type-${option.value}`)).toBeInTheDocument()
+    })
   })
 
   it('shows linked IT tools as chips and filters them from the selectable catalog', () => {
@@ -255,6 +284,69 @@ describe('ActivityDetailPopup', () => {
     })
   })
 
+  it('exposes saveIfDirty and skips persistence when nothing changed', async () => {
+    const upsertMutation = vi.fn().mockResolvedValue(undefined)
+    const onClose = vi.fn()
+    const ref = createRef<ActivityDetailPopupHandle>()
+    mockUseUpsertActivity.mockReturnValue({ mutateAsync: upsertMutation })
+
+    render(
+      <ActivityDetailPopup
+        ref={ref}
+        activity={createActivity({ activity_type: 'erstellen' })}
+        workspaceId="workspace-1"
+        organizationId="org-1"
+        currentUserId="user-1"
+        canvasObjects={defaultCanvasObjects}
+        canvasEdges={defaultCanvasEdges}
+        connectionCount={2}
+        onDelete={vi.fn()}
+        onClose={onClose}
+      />,
+    )
+
+    await act(async () => {
+      const saved = await ref.current?.saveIfDirty({ closeAfterSave: true })
+      expect(saved).toBe(true)
+    })
+
+    expect(upsertMutation).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('autosaves when the close action is used', async () => {
+    const upsertMutation = vi.fn().mockResolvedValue(undefined)
+    const onClose = vi.fn()
+    mockUseUpsertActivity.mockReturnValue({ mutateAsync: upsertMutation })
+
+    render(
+      <ActivityDetailPopup
+        activity={createActivity({ activity_type: 'erstellen', description: '' })}
+        workspaceId="workspace-1"
+        organizationId="org-1"
+        currentUserId="user-1"
+        canvasObjects={defaultCanvasObjects}
+        canvasEdges={defaultCanvasEdges}
+        connectionCount={2}
+        onDelete={vi.fn()}
+        onClose={onClose}
+      />,
+    )
+
+    fireEvent.change(screen.getByTestId('activity-detail-label'), { target: { value: 'Aktualisierte Aktivitaet' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }))
+
+    await waitFor(() => {
+      expect(upsertMutation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'activity-1',
+          label: 'Aktualisierte Aktivitaet',
+        }),
+      )
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('creates a new role from the detail dialog', async () => {
     const createRoleMutation = vi.fn().mockResolvedValue(createRole('role-2', 'Architektur'))
     mockUseCreateOrganizationRole.mockReturnValue({ mutateAsync: createRoleMutation })
@@ -282,10 +374,11 @@ describe('ActivityDetailPopup', () => {
       fireEvent.click(screen.getByTestId('activity-role-select-create-submit'))
     })
 
-    expect(createRoleMutation).toHaveBeenCalledWith({
-      label: 'Architektur',
-      description: 'Planung Architektur',
-    })
+      expect(createRoleMutation).toHaveBeenCalledWith({
+        label: 'Architektur',
+        acronym: null,
+        description: 'Planung Architektur',
+      })
   })
 
   it('creates, edits and deletes activity comments', async () => {

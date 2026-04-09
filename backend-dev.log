@@ -1,0 +1,181 @@
+
+> the-wow-backend@0.1.0 start:dev
+> nest start --watch
+
+[2J[3J[H[[90m18:03:27[0m] Starting compilation in watch mode...
+
+[96msrc/activities/activities.service.spec.ts[0m:[93m14[0m:[93m45[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ id: string; organization_id: string; label: string; description: null; sort_order: number; created_at: string; created_by: string; }' is not assignable to parameter of type 'OrganizationRoleRecord'.
+  Property 'acronym' is missing in type '{ id: string; organization_id: string; label: string; description: null; sort_order: number; created_at: string; created_by: string; }' but required in type 'OrganizationRoleRecord'.
+
+[7m 14[0m     fallbackOrganizationRoles.set('role-2', {
+[7m   [0m [91m                                            ~[0m
+[7m 15[0m       id: 'role-2',
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~[0m
+[7m...[0m 
+[7m 21[0m       created_by: 'user-1',
+[7m   [0m [91m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[7m 22[0m     })
+[7m   [0m [91m~~~~~[0m
+
+  [96msrc/fallback-store.ts[0m:[93m34[0m:[93m3[0m
+    [7m34[0m   acronym: string
+    [7m  [0m [96m  ~~~~~~~[0m
+    'acronym' is declared here.
+
+[[90m18:03:34[0m] Found 1 error. Watching for file changes.
+
+[2J[3J[H[[90m18:04:23[0m] File change detected. Starting incremental compilation...
+
+[[90m18:04:24[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 30884  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +111ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +1ms[39m[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +111ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +7ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTransportModesModule dependencies initialized[39m[38;5;3m +5ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWorkflowTemplatesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mOrganizationRolesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWorkspacesModule dependencies initialized[39m[38;5;3m +4ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mActivitiesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCanvasObjectsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCanvasEdgesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mActivityResourcesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mOrganizationsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/}:[39m[38;5;3m +24ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/health, GET} route[39m[38;5;3m +25ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mOrganizationsController {/}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations, POST} route[39m[38;5;3m +4ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId, PATCH} route[39m[38;5;3m +7ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/members, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/invitations, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organization-invitations/pending, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organization-invitations/:invitationId/accept, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mTransportModesController {/organizations/:organizationId/transport-modes}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/transport-modes, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/transport-modes, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/transport-modes/:transportModeId, PATCH} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/transport-modes/:transportModeId/deactivate, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mWorkflowTemplatesController {/}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates/:templateId, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates/:templateId, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates/:templateId/instantiate, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mOrganizationRolesController {/organizations/:organizationId/roles}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/roles, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/roles, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/roles/:roleId, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/roles/:roleId, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mWorkspacesController {/workspaces}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:id, PATCH} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mActivitiesController {/workspaces/:workspaceId/activities}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/upsert, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/subprocess, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/subprocess-link, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/subprocess-link, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/comments, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/comments, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/comments/:commentId, POST} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/comments/:commentId, DELETE} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCanvasObjectsController {/workspaces/:workspaceId/canvas-objects}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-objects, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-objects/upsert, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-objects/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCanvasEdgesController {/workspaces/:workspaceId/canvas-edges}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-edges, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-edges/upsert, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-edges/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mActivityResourcesController {/workspaces/:workspaceId/activities/:activityId}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/tools, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/tools, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/tools/:toolId, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/check-sources, GET} route[39m[38;5;3m +4ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/check-sources, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/check-sources/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mITToolsController {/workspaces/:workspaceId/it-tools}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/it-tools, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/it-tools, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mOrganizationITToolsController {/organizations/:organizationId/it-tools}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/it-tools, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/it-tools, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/it-tools/:toolId, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/it-tools/:toolId, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 32940  - [39m09.04.2026, 18:04:33 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +15ms[39[[2J[3J[[[90m18:05:42[0m] File change detected. Starting incremental compilation...[[90m18:05:44[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 17428  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +63ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +1ms[39[[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +69ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTransportModesModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWorkflowTemplatesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mOrganizationRolesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWorkspacesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mActivitiesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCanvasObjectsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCanvasEdgesModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mActivityResourcesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mOrganizationsModule dependencies initialized[39m[38;5;3m +0ms[39[[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/}:[39m[38;5;3m +15ms[39[[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/health, GET} route[39m[38;5;3m +9ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mOrganizationsController {/}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId, PATCH} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/members, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/invitations, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organization-invitations/pending, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organization-invitations/:invitationId/accept, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mTransportModesController {/organizations/:organizationId/transport-modes}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/transport-modes, GET} route[39m[38;5;3m +3ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/transport-modes, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/transport-modes/:transportModeId, PATCH} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/transport-modes/:transportModeId/deactivate, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mWorkflowTemplatesController {/}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates/:templateId, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates/:templateId, DELETE} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workflow-templates/:templateId/instantiate, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mOrganizationRolesController {/organizations/:organizationId/roles}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/roles, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/roles, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/roles/:roleId, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/roles/:roleId, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mWorkspacesController {/workspaces}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:id, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mActivitiesController {/workspaces/:workspaceId/activities}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/upsert, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/subprocess, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/subprocess-link, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/subprocess-link, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/comments, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/comments, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/comments/:commentId, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/comments/:commentId, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCanvasObjectsController {/workspaces/:workspaceId/canvas-objects}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-objects, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-objects/upsert, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-objects/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCanvasEdgesController {/workspaces/:workspaceId/canvas-edges}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-edges, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-edges/upsert, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/canvas-edges/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mActivityResourcesController {/workspaces/:workspaceId/activities/:activityId}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/tools, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/tools, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/tools/:toolId, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/check-sources, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/check-sources, POST} route[39m[38;5;3m +1ms[39m[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/activities/:activityId/check-sources/:id, DELETE} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mITToolsController {/workspaces/:workspaceId/it-tools}:[39m[38;5;3m +1ms[39m[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/it-tools, GET} route[39m[38;5;3m +1ms[39m[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/workspaces/:workspaceId/it-tools, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mOrganizationITToolsController {/organizations/:organizationId/it-tools}:[39m[38;5;3m +0ms[39m[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/it-tools, GET} route[39m[38;5;3m +1ms[39m[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/it-tools, POST} route[39m[38;5;3m +1ms[39m[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/it-tools/:toolId, PATCH} route[39m[38;5;3m +0ms[39m[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/organizations/:organizationId/it-tools/:toolId, DELETE} route[39m[38;5;3m +1ms[39m[32m[Nest] 20432  - [39m09.04.2026, 18:05:48 [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +10ms[39[

@@ -148,8 +148,8 @@ export function TransportModeSettingsDialog({
   }
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 px-4">
-      <div className="pointer-events-auto w-full max-w-4xl rounded-[30px] border border-white/10 bg-slate-950/95 p-6 shadow-[0_30px_90px_rgba(2,8,12,0.6)] backdrop-blur-xl">
+    <div className="wow-overlay-scrim pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="wow-surface-dialog pointer-events-auto w-full max-w-4xl rounded-[30px] border border-white/10 p-6 shadow-[0_30px_90px_rgba(2,8,12,0.6)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Einstellungen</p>

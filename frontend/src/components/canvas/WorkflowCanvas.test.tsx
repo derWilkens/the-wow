@@ -151,7 +151,9 @@ function renderCanvas({
   canvasEdges = [] as CanvasEdge[],
   groupingMode = 'free' as CanvasGroupingMode,
   snapToGridEnabled = true,
+  collisionAvoidanceEnabled = true,
   activityRolesById = {} as Record<string, string>,
+  activityRoleAcronymsById = {} as Record<string, string | null>,
   activityAssigneesById = {} as Record<string, string | null>,
   onMoveNode = vi.fn(),
 } = {}) {
@@ -166,7 +168,10 @@ function renderCanvas({
         selectedDataObjectId={null}
         groupingMode={groupingMode}
         snapToGridEnabled={snapToGridEnabled}
+        collisionAvoidanceEnabled={collisionAvoidanceEnabled}
         activityRolesById={activityRolesById}
+        activityRoleAcronymsById={activityRoleAcronymsById}
+        organizationRoles={[]}
         activityAssigneesById={activityAssigneesById}
         focusNodeId={null}
         onInterruptFocusAnimation={vi.fn()}
@@ -178,6 +183,9 @@ function renderCanvas({
         onOpenSubprocessMenu={vi.fn()}
         onOpenSubprocess={vi.fn()}
         onInlineRenameActivity={vi.fn()}
+        onQuickChangeActivityType={vi.fn()}
+        onQuickChangeActivityRole={vi.fn()}
+        onCreateRole={vi.fn()}
         onConnectEdge={vi.fn()}
         onCreateActivityFromConnectionDrop={vi.fn()}
         onMoveNode={onMoveNode}
@@ -249,6 +257,89 @@ describe('WorkflowCanvas', () => {
     })
   })
 
+  it('moves a collided neighbor aside when collision avoidance is enabled during drag stop', () => {
+    const onMoveNode = vi.fn()
+
+    renderCanvas({
+      activities: [
+        createActivity({ id: 'activity-1', position_x: 200, position_y: 120 }),
+        createActivity({ id: 'activity-2', position_x: 520, position_y: 120 }),
+      ],
+      onMoveNode,
+    })
+
+    const latestProps = getLatestReactFlowProps<{ onNodeDragStop?: (event: unknown, node: { id: string; position: { x: number; y: number } }) => void }>()
+
+    act(() => {
+      latestProps.onNodeDragStop?.({}, { id: 'activity-1', position: { x: 460, y: 120 } })
+    })
+
+    expect(onMoveNode).toHaveBeenCalledWith('activity-2', { x: 708, y: 120 })
+    expect(onMoveNode).toHaveBeenCalledWith('activity-1', { x: 460, y: 120 })
+  })
+
+  it('also applies collision avoidance when a start node collides with another node', () => {
+    const onMoveNode = vi.fn()
+
+    renderCanvas({
+      activities: [
+        createActivity({ id: 'start-1', node_type: 'start_event', label: 'Start', position_x: 200, position_y: 120 }),
+        createActivity({ id: 'activity-2', position_x: 320, position_y: 120 }),
+      ],
+      onMoveNode,
+    })
+
+    const latestProps = getLatestReactFlowProps<{ onNodeDragStop?: (event: unknown, node: { id: string; position: { x: number; y: number } }) => void }>()
+
+    act(() => {
+      latestProps.onNodeDragStop?.({}, { id: 'start-1', position: { x: 300, y: 120 } })
+    })
+
+    expect(onMoveNode).toHaveBeenCalledWith('activity-2', { x: 384, y: 120 })
+    expect(onMoveNode).toHaveBeenCalledWith('start-1', { x: 300, y: 120 })
+  })
+
+  it('also applies collision avoidance when a source node collides with another node', () => {
+    const onMoveNode = vi.fn()
+
+    renderCanvas({
+      activities: [createActivity({ id: 'activity-1', position_x: 420, position_y: 120 })],
+      canvasObjects: [createSourceObject({ id: 'source-1', position_x: 200, position_y: 120 })],
+      onMoveNode,
+    })
+
+    const latestProps = getLatestReactFlowProps<{ onNodeDragStop?: (event: unknown, node: { id: string; position: { x: number; y: number } }) => void }>()
+
+    act(() => {
+      latestProps.onNodeDragStop?.({}, { id: 'source-1', position: { x: 360, y: 120 } })
+    })
+
+    expect(onMoveNode).toHaveBeenCalledWith('activity-1', { x: 564, y: 120 })
+    expect(onMoveNode).toHaveBeenCalledWith('source-1', { x: 360, y: 120 })
+  })
+
+  it('does not move neighboring nodes when collision avoidance is disabled', () => {
+    const onMoveNode = vi.fn()
+
+    renderCanvas({
+      activities: [
+        createActivity({ id: 'activity-1', position_x: 200, position_y: 120 }),
+        createActivity({ id: 'activity-2', position_x: 520, position_y: 120 }),
+      ],
+      collisionAvoidanceEnabled: false,
+      onMoveNode,
+    })
+
+    const latestProps = getLatestReactFlowProps<{ onNodeDragStop?: (event: unknown, node: { id: string; position: { x: number; y: number } }) => void }>()
+
+    act(() => {
+      latestProps.onNodeDragStop?.({}, { id: 'activity-1', position: { x: 460, y: 120 } })
+    })
+
+    expect(onMoveNode).toHaveBeenCalledTimes(1)
+    expect(onMoveNode).toHaveBeenCalledWith('activity-1', { x: 460, y: 120 })
+  })
+
   it('does not render lane backgrounds in free mode', () => {
     renderCanvas({
       groupingMode: 'free',
@@ -276,6 +367,8 @@ describe('WorkflowCanvas', () => {
           selectedDataObjectId={null}
           groupingMode="free"
           activityRolesById={{}}
+          activityRoleAcronymsById={{}}
+          organizationRoles={[]}
           activityAssigneesById={{}}
           focusNodeId={null}
           onInterruptFocusAnimation={vi.fn()}
@@ -287,6 +380,9 @@ describe('WorkflowCanvas', () => {
           onOpenSubprocessMenu={vi.fn()}
           onOpenSubprocess={vi.fn()}
           onInlineRenameActivity={vi.fn()}
+          onQuickChangeActivityType={vi.fn()}
+          onQuickChangeActivityRole={vi.fn()}
+          onCreateRole={vi.fn()}
           onConnectEdge={onConnectEdge}
           onCreateActivityFromConnectionDrop={vi.fn()}
           onMoveNode={vi.fn()}
@@ -328,6 +424,8 @@ describe('WorkflowCanvas', () => {
           selectedDataObjectId={null}
           groupingMode="free"
           activityRolesById={{}}
+          activityRoleAcronymsById={{}}
+          organizationRoles={[]}
           activityAssigneesById={{}}
           focusNodeId={null}
           onInterruptFocusAnimation={vi.fn()}
@@ -339,6 +437,9 @@ describe('WorkflowCanvas', () => {
           onOpenSubprocessMenu={vi.fn()}
           onOpenSubprocess={vi.fn()}
           onInlineRenameActivity={vi.fn()}
+          onQuickChangeActivityType={vi.fn()}
+          onQuickChangeActivityRole={vi.fn()}
+          onCreateRole={vi.fn()}
           onConnectEdge={vi.fn()}
           onCreateActivityFromConnectionDrop={vi.fn()}
           onMoveNode={vi.fn()}
@@ -394,6 +495,8 @@ describe('WorkflowCanvas', () => {
           selectedDataObjectId={null}
           groupingMode="free"
           activityRolesById={{}}
+          activityRoleAcronymsById={{}}
+          organizationRoles={[]}
           activityAssigneesById={{}}
           focusNodeId="activity-1"
           onInterruptFocusAnimation={onInterruptFocusAnimation}
@@ -405,6 +508,9 @@ describe('WorkflowCanvas', () => {
           onOpenSubprocessMenu={vi.fn()}
           onOpenSubprocess={vi.fn()}
           onInlineRenameActivity={vi.fn()}
+          onQuickChangeActivityType={vi.fn()}
+          onQuickChangeActivityRole={vi.fn()}
+          onCreateRole={vi.fn()}
           onConnectEdge={vi.fn()}
           onCreateActivityFromConnectionDrop={vi.fn()}
           onMoveNode={vi.fn()}

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Diamond, Play, PlusSquare, Radio, Redo2, Shapes, Split, Undo2 } from 'lucide-react'
 
 interface FloatingCanvasToolbarProps {
@@ -124,7 +124,6 @@ export function FloatingCanvasToolbar({
             color="amber"
             icon={<Shapes className="h-5 w-5 shrink-0" />}
             onClick={onInsertDatenobjekt}
-            title={dataObjectToolbarHint}
           />
         </div>
       </div>
@@ -141,7 +140,6 @@ function FloatingToolbarButton({
   disabled = false,
   dragKind,
   onDragStart,
-  title,
 }: {
   testId: string
   label: string
@@ -151,7 +149,6 @@ function FloatingToolbarButton({
   disabled?: boolean
   dragKind?: 'start' | 'activity' | 'decision' | 'merge' | 'end' | 'quelle' | 'datenobjekt'
   onDragStart?: (kind: 'start' | 'activity' | 'decision' | 'merge' | 'end' | 'quelle' | 'datenobjekt') => void
-  title?: string
 }) {
   const palettes = {
     green: 'border-emerald-400/30 bg-emerald-400/14 text-emerald-100 hover:border-emerald-300/45 focus-visible:border-emerald-300/45',
@@ -164,33 +161,43 @@ function FloatingToolbarButton({
     indigo: 'border-indigo-400/30 bg-indigo-400/14 text-indigo-100 hover:border-indigo-300/45 focus-visible:border-indigo-300/45',
   }
 
-  return (
-    <button
-      data-testid={testId}
-      type="button"
-      title={title}
-      aria-label={label}
-      disabled={disabled}
-      draggable={!disabled && Boolean(dragKind)}
-      onDragStart={(event) => {
-        if (!dragKind) {
-          return
-        }
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false)
 
-        event.dataTransfer.effectAllowed = 'copy'
-        event.dataTransfer.setData('application/x-wow-toolbar-item', dragKind)
-        onDragStart?.(dragKind)
-      }}
-      onClick={onClick}
-      className={`pointer-events-auto group flex h-14 w-14 items-center overflow-hidden rounded-full border px-4 py-3 text-sm font-medium shadow-[0_8px_20px_rgba(2,8,12,0.18)] transition-[width,transform,background-color,opacity] duration-200 ease-out hover:w-60 hover:translate-x-1 focus-visible:w-60 focus-visible:translate-x-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 sm:hover:w-52 ${palettes[color]}`}
-    >
-      <span className="flex w-6 shrink-0 justify-center">{icon}</span>
-      <span
-        data-testid={`${testId}-label`}
-        className="ml-0 max-w-0 overflow-hidden whitespace-nowrap pl-0 text-left opacity-0 transition-[max-width,opacity,margin,padding] duration-200 ease-out group-hover:ml-3 group-hover:max-w-[11rem] group-hover:pl-1 group-hover:opacity-100 group-focus-visible:ml-3 group-focus-visible:max-w-[11rem] group-focus-visible:pl-1 group-focus-visible:opacity-100"
+  return (
+    <div className="pointer-events-auto relative">
+      <button
+        data-testid={testId}
+        type="button"
+        aria-label={label}
+        disabled={disabled}
+        draggable={!disabled && Boolean(dragKind)}
+        onDragStart={(event) => {
+          if (!dragKind) {
+            return
+          }
+
+          event.dataTransfer.effectAllowed = 'copy'
+          event.dataTransfer.setData('application/x-wow-toolbar-item', dragKind)
+          onDragStart?.(dragKind)
+        }}
+        onClick={onClick}
+        onMouseEnter={() => setIsTooltipVisible(true)}
+        onMouseLeave={() => setIsTooltipVisible(false)}
+        onFocus={() => setIsTooltipVisible(true)}
+        onBlur={() => setIsTooltipVisible(false)}
+        className={`flex h-14 w-14 items-center justify-center rounded-full border px-4 py-3 text-sm font-medium shadow-[0_8px_20px_rgba(2,8,12,0.18)] transition-[transform,background-color,opacity] duration-200 ease-out hover:translate-x-1 focus-visible:translate-x-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 ${palettes[color]}`}
       >
-        {label}
-      </span>
-    </button>
+        <span className="flex w-6 shrink-0 justify-center">{icon}</span>
+      </button>
+      {isTooltipVisible ? (
+        <div
+          role="tooltip"
+          data-testid={`${testId}-tooltip`}
+          className="wow-surface-popover pointer-events-none absolute left-[calc(100%+0.75rem)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/10 px-3 py-2 text-xs font-medium text-slate-100 shadow-[0_14px_34px_rgba(2,8,12,0.32)]"
+        >
+          {label}
+        </div>
+      ) : null}
+    </div>
   )
 }

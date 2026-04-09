@@ -46,8 +46,8 @@ export function LinkWorkflowModal({
   }
 
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-      <div data-testid="link-workflow-modal" className="w-full max-w-3xl rounded-[30px] border border-white/10 bg-slate-950/96 p-6 shadow-[0_40px_120px_rgba(2,8,12,0.72)]">
+    <div className="wow-overlay-scrim absolute inset-0 z-40 flex items-center justify-center p-4">
+      <div data-testid="link-workflow-modal" className="wow-surface-dialog w-full max-w-3xl rounded-[30px] border border-white/10 p-6 shadow-[0_40px_120px_rgba(2,8,12,0.72)]">
         <div className="flex items-start justify-between gap-6">
           <div>
             <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-300/80">Arbeitsablauf verlinken</p>

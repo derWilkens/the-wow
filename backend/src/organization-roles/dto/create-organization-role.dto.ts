@@ -7,5 +7,9 @@ export class CreateOrganizationRoleDto {
 
   @IsOptional()
   @IsString()
+  acronym?: string | null
+
+  @IsOptional()
+  @IsString()
   description?: string | null
 }

@@ -81,6 +81,7 @@ vi.mock('../../api/organizationRoles', () => ({
         id: 'role-1',
         organization_id: 'org-1',
         label: 'BIM-Koordination',
+        acronym: 'BK',
         description: 'koordiniert',
         sort_order: 0,
         created_at: new Date().toISOString(),
@@ -172,6 +173,7 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByTestId('settings-ui-table-view-on'))
     fireEvent.click(screen.getByTestId('settings-ui-swimlane-on'))
     fireEvent.click(screen.getByTestId('settings-ui-snap-off'))
+    fireEvent.click(screen.getByTestId('settings-ui-collision-off'))
     fireEvent.click(screen.getByTestId('settings-ui-save'))
 
     expect(onUiPreferencesChange).toHaveBeenCalledWith({
@@ -179,11 +181,13 @@ describe('SettingsDialog', () => {
       snap_to_grid: false,
       enable_table_view: true,
       enable_swimlane_view: true,
+      enable_node_collision_avoidance: false,
     })
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('role_lanes')
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"snap_to_grid":false')
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_table_view":true')
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_swimlane_view":true')
+    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_node_collision_avoidance":false')
   })
 
   it('defaults snap to grid to enabled and optional views to disabled when no preference is stored', () => {
@@ -194,6 +198,7 @@ describe('SettingsDialog', () => {
     expect(screen.getByTestId('settings-ui-snap-on')).toHaveClass('bg-cyan-400')
     expect(screen.getByTestId('settings-ui-table-view-off')).toHaveClass('bg-cyan-400')
     expect(screen.getByTestId('settings-ui-swimlane-off')).toHaveClass('bg-cyan-400')
+    expect(screen.getByTestId('settings-ui-collision-on')).toHaveClass('bg-cyan-400')
   })
 
   it('resets grouping to free when swimlane view is disabled before saving', () => {
@@ -221,6 +226,7 @@ describe('SettingsDialog', () => {
       snap_to_grid: true,
       enable_table_view: false,
       enable_swimlane_view: false,
+      enable_node_collision_avoidance: true,
     })
   })
 
@@ -246,12 +252,14 @@ describe('SettingsDialog', () => {
     )
 
     fireEvent.change(screen.getByTestId('settings-role-new-label'), { target: { value: 'Architektur' } })
+    fireEvent.change(screen.getByTestId('settings-role-new-acronym'), { target: { value: 'ARC' } })
     fireEvent.change(screen.getByTestId('settings-role-new-description'), { target: { value: 'Fachplanung Architektur' } })
     fireEvent.click(screen.getByTestId('settings-role-create'))
 
     await waitFor(() =>
       expect(mutateCreateRoleAsync).toHaveBeenCalledWith({
         label: 'Architektur',
+        acronym: 'ARC',
         description: 'Fachplanung Architektur',
       }),
     )
@@ -278,12 +286,14 @@ describe('SettingsDialog', () => {
 
     fireEvent.click(screen.getByTestId('settings-nav-master-data'))
     fireEvent.change(screen.getByLabelText('BIM-Koordination Rollenname'), { target: { value: 'BIM-Lead' } })
+    fireEvent.change(screen.getByLabelText('BIM-Koordination Akronym'), { target: { value: 'BL' } })
     fireEvent.click(screen.getByTestId('settings-role-save-role-1'))
 
     await waitFor(() =>
       expect(mutateUpdateRoleAsync).toHaveBeenCalledWith({
         id: 'role-1',
         label: 'BIM-Lead',
+        acronym: 'BL',
         description: 'koordiniert',
       }),
     )

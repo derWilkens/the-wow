@@ -206,7 +206,7 @@ export function EdgeDetailPanel({
     <div className="pointer-events-none absolute inset-0 flex items-start justify-end p-4">
       <div
         data-testid={`edge-detail-${edge.from_node_id}-${edge.to_node_id}`}
-        className="pointer-events-auto max-h-[calc(100%-2rem)] w-full max-w-[22rem] overflow-y-auto rounded-[24px] border border-white/10 bg-slate-950 p-4 shadow-[0_24px_70px_rgba(2,8,12,0.55)] backdrop-blur-xl"
+        className="wow-surface-dialog pointer-events-auto max-h-[calc(100%-2rem)] w-full max-w-[22rem] overflow-y-auto rounded-[24px] border border-white/10 p-4 shadow-[0_24px_70px_rgba(2,8,12,0.55)]"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>

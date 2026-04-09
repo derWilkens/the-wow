@@ -396,8 +396,8 @@ export function WorkspaceList() {
       </div>
 
       {templateDialog ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 px-4">
-          <div className="w-full max-w-lg rounded-[28px] border border-white/10 bg-slate-950 p-6 shadow-[0_30px_100px_rgba(2,8,12,0.72)]">
+        <div className="wow-overlay-scrim fixed inset-0 z-40 flex items-center justify-center px-4">
+          <div className="wow-surface-dialog w-full max-w-lg rounded-[28px] border border-white/10 p-6 shadow-[0_30px_100px_rgba(2,8,12,0.72)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/80">Vorlage</p>
@@ -455,8 +455,8 @@ export function WorkspaceList() {
       ) : null}
 
       {templateEditDialog ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/70 px-4">
-          <div className="w-full max-w-lg rounded-[28px] border border-white/10 bg-slate-950 p-6 shadow-[0_30px_100px_rgba(2,8,12,0.72)]">
+        <div className="wow-overlay-scrim fixed inset-0 z-40 flex items-center justify-center px-4">
+          <div className="wow-surface-dialog w-full max-w-lg rounded-[28px] border border-white/10 p-6 shadow-[0_30px_100px_rgba(2,8,12,0.72)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Vorlage bearbeiten</p>

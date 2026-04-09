@@ -21,6 +21,22 @@ function slugifyTransportMode(label: string) {
 export class TransportModesService {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private async getNextSortOrder(organizationId: string) {
+    const { data, error } = await this.databaseService.supabase
+      .from('transport_modes')
+      .select('sort_order')
+      .eq('organization_id', organizationId)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      throw error
+    }
+
+    return ((data as { sort_order?: number } | null)?.sort_order ?? -1) + 1
+  }
+
   async seedDefaultsForOrganization(organizationId: string, createdBy: string | null) {
     const { error } = await this.databaseService.supabase.from('transport_modes').upsert(
       defaultTransportModes.map((mode) => ({
@@ -98,7 +114,7 @@ export class TransportModesService {
       key: slugifyTransportMode(label),
       label,
       description: dto.description?.trim() || null,
-      sort_order: dto.sort_order ?? Date.now(),
+      sort_order: dto.sort_order ?? (await this.getNextSortOrder(organizationId)),
       is_active: true,
       is_default: dto.is_default ?? false,
       created_by: userId,

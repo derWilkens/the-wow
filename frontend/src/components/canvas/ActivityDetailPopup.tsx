@@ -1,5 +1,5 @@
-import { CheckCircle2, CircleHelp, FileCog, Forward, MessageSquare, Pencil, Shapes, Trash2, UserRound, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { MessageSquare, Pencil, Trash2, UserRound, X } from 'lucide-react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import {
   useActivityComments,
   useCreateActivityComment,
@@ -19,48 +19,18 @@ import {
   useOrganizationRoles,
 } from '../../api/organizationRoles'
 import { useOrganizationMembers } from '../../api/organizations'
-import type { Activity, ActivityType, CanvasEdge, CanvasObject, CatalogRole, CanvasGroupingMode, ITTool } from '../../types'
+import type { Activity, ActivityType, CanvasEdge, CanvasObject, CatalogRole, ITTool } from '../../types'
 import { deriveActivityDataObjects } from './canvasData'
 import { CustomChoiceList } from '../ui/CustomChoiceList'
+import { activityTypeOptions } from './activityTypeOptions'
+import { buildCatalogRoleChoiceOptions } from '../../lib/catalogRoles'
+import { RoleCreateForm } from '../roles/RoleCreateForm'
 
-const activityTypes: Array<{ label: string; value: ActivityType; description: string; icon: typeof FileCog }> = [
-  {
-    label: 'Unbestimmt',
-    value: 'unbestimmt',
-    description: 'Noch offen, welcher fachliche Aktivitaetstyp passend ist',
-    icon: CircleHelp,
-  },
-  { label: 'Erstellen', value: 'erstellen', description: 'Neue Inhalte oder Ergebnisse erzeugen', icon: FileCog },
-  {
-    label: 'Transformieren / Aktualisieren',
-    value: 'transformieren_aktualisieren',
-    description: 'Bestehende Inhalte anpassen oder fortschreiben',
-    icon: Shapes,
-  },
-  {
-    label: 'Pruefen / Freigeben',
-    value: 'pruefen_freigeben',
-    description: 'Ergebnisse fachlich pruefen und freigeben',
-    icon: CheckCircle2,
-  },
-  {
-    label: 'Weiterleiten / Ablegen',
-    value: 'weiterleiten_ablegen',
-    description: 'Informationen weitergeben oder dokumentieren',
-    icon: Forward,
-  },
-]
+export interface ActivityDetailPopupHandle {
+  saveIfDirty: (options?: { closeAfterSave?: boolean }) => Promise<boolean>
+}
 
-export function ActivityDetailPopup({
-  activity,
-  workspaceId,
-  organizationId,
-  currentUserId,
-  canvasObjects,
-  canvasEdges,
-  onDelete,
-  onClose,
-}: {
+export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
   activity: Activity
   workspaceId: string
   organizationId: string
@@ -70,7 +40,16 @@ export function ActivityDetailPopup({
   connectionCount: number
   onDelete: () => void
   onClose: () => void
-}) {
+}>(function ActivityDetailPopup({
+  activity,
+  workspaceId,
+  organizationId,
+  currentUserId,
+  canvasObjects,
+  canvasEdges,
+  onDelete,
+  onClose,
+}, ref) {
   const [label, setLabel] = useState(activity.label)
   const [activityType, setActivityType] = useState<ActivityType | null>(activity.activity_type ?? 'unbestimmt')
   const [description, setDescription] = useState(activity.description ?? '')
@@ -85,6 +64,7 @@ export function ActivityDetailPopup({
   const [optimisticCatalogTools, setOptimisticCatalogTools] = useState<ITTool[]>([])
   const [optimisticCatalogRoles, setOptimisticCatalogRoles] = useState<CatalogRole[]>([])
   const [optimisticUnlinkedToolIds, setOptimisticUnlinkedToolIds] = useState<string[]>([])
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const upsertActivity = useUpsertActivity(workspaceId)
   const { data: tools = [] } = useActivityTools(workspaceId, activity.id)
@@ -121,12 +101,7 @@ export function ActivityDetailPopup({
     [optimisticCatalogRoles, organizationRoles],
   )
   const roleChoiceOptions = useMemo(
-    () =>
-      visibleCatalogRoles.map((role) => ({
-        id: role.id,
-        label: role.label,
-        description: role.description,
-      })),
+    () => buildCatalogRoleChoiceOptions(visibleCatalogRoles),
     [visibleCatalogRoles],
   )
   const toolChoiceOptions = useMemo(
@@ -139,25 +114,80 @@ export function ActivityDetailPopup({
     [availableToolOptions],
   )
 
+  useEffect(() => {
+    setLabel(activity.label)
+    setActivityType(activity.activity_type ?? 'unbestimmt')
+    setDescription(activity.description ?? '')
+    setNotes(activity.notes ?? '')
+    setAssigneeLabel(activity.assignee_label ?? '')
+    setSelectedRoleId(activity.role_id ?? '')
+    setSaveError(null)
+  }, [activity])
+
+  const isDirty = useMemo(
+    () =>
+      label !== activity.label ||
+      activityType !== activity.activity_type ||
+      description !== (activity.description ?? '') ||
+      notes !== (activity.notes ?? '') ||
+      assigneeLabel !== (activity.assignee_label ?? '') ||
+      selectedRoleId !== (activity.role_id ?? ''),
+    [activity, activityType, assigneeLabel, description, label, notes, selectedRoleId],
+  )
+
+  async function persistChanges(closeAfterSave: boolean) {
+    if (!isDirty) {
+      setSaveError(null)
+      if (closeAfterSave) {
+        onClose()
+      }
+      return true
+    }
+
+    try {
+      setSaveError(null)
+      await upsertActivity.mutateAsync({
+        id: activity.id,
+        parent_id: activity.parent_id,
+        node_type: activity.node_type,
+        label,
+        trigger_type: activity.trigger_type,
+        position_x: activity.position_x,
+        position_y: activity.position_y,
+        status: activity.status,
+        status_icon: activity.status_icon,
+        activity_type: activityType ?? 'unbestimmt',
+        description,
+        notes,
+        assignee_label: assigneeLabel.trim() || null,
+        role_id: selectedRoleId || null,
+        duration_minutes: activity.duration_minutes ?? null,
+      })
+
+      if (closeAfterSave) {
+        onClose()
+      }
+      return true
+    } catch {
+      setSaveError('Aktivitaet konnte nicht gespeichert werden.')
+      return false
+    }
+  }
+
+  useImperativeHandle(ref, () => ({
+    saveIfDirty: ({ closeAfterSave = false } = {}) => persistChanges(closeAfterSave),
+  }), [persistChanges])
+
   async function handleSave() {
-    await upsertActivity.mutateAsync({
-      id: activity.id,
-      parent_id: activity.parent_id,
-      node_type: activity.node_type,
-      label,
-      trigger_type: activity.trigger_type,
-      position_x: activity.position_x,
-      position_y: activity.position_y,
-      status: activity.status,
-      status_icon: activity.status_icon,
-      activity_type: activityType ?? 'unbestimmt',
-      description,
-      notes,
-      assignee_label: assigneeLabel.trim() || null,
-      role_id: selectedRoleId || null,
-      duration_minutes: activity.duration_minutes ?? null,
-    })
-    onClose()
+    await persistChanges(true)
+  }
+
+  async function handleClose() {
+    await persistChanges(true)
+  }
+
+  async function handleDelete() {
+    await onDelete()
   }
 
   async function handleLinkTool() {
@@ -185,9 +215,10 @@ export function ActivityDetailPopup({
     await linkTool.mutateAsync(tool.id)
   }
 
-  async function handleCreateRole(input: { label: string; description: string }) {
+  async function handleCreateRole(input: { label: string; description: string; acronym?: string | null }) {
     const role = await createOrganizationRole.mutateAsync({
       label: input.label.trim(),
+      acronym: input.acronym?.trim() || null,
       description: input.description.trim() || null,
     })
     setOptimisticCatalogRoles((current) => [...current.filter((entry) => entry.id !== role.id), role])
@@ -220,7 +251,7 @@ export function ActivityDetailPopup({
     <div className="pointer-events-none absolute inset-0 flex items-start justify-end p-4">
       <div
         data-testid={`activity-detail-${activity.id}`}
-        className="pointer-events-auto max-h-[calc(100%-2rem)] w-full max-w-2xl overflow-auto rounded-[28px] border border-white/10 bg-slate-950/95 p-6 shadow-[0_35px_120px_rgba(2,8,12,0.72)] backdrop-blur-xl"
+        className="wow-surface-dialog pointer-events-auto max-h-[calc(100%-2rem)] w-full max-w-2xl overflow-auto rounded-[28px] border border-white/10 p-6 shadow-[0_35px_120px_rgba(2,8,12,0.72)]"
       >
         <div className="flex items-start justify-between border-b border-white/10 pb-4">
           <div>
@@ -232,16 +263,21 @@ export function ActivityDetailPopup({
               className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 font-display text-2xl text-white outline-none"
             />
           </div>
-          <button onClick={onClose} className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300">
+          <button type="button" onClick={() => void handleClose()} className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="mt-5 grid gap-5 text-sm text-slate-300">
+          {saveError ? (
+            <div className="rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+              {saveError}
+            </div>
+          ) : null}
           <section>
             <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Aktivitaetstyp</p>
             <div className="mt-3 grid gap-2">
-              {activityTypes.map((type) => {
+              {activityTypeOptions.map((type) => {
                 const Icon = type.icon
                 return (
                   <label
@@ -285,9 +321,10 @@ export function ActivityDetailPopup({
                   testId="activity-role-select"
                   value={selectedRoleId}
                   options={roleChoiceOptions}
-                  placeholder="Rolle auswaehlen"
+                  placeholder="Rolle festlegen"
                   allowClear
                   clearLabel="Ohne Rolle"
+                  clearDescription="Es wird keine fachliche Rolle gesetzt."
                   searchable
                   searchPlaceholder="Rolle suchen"
                   creatable
@@ -297,7 +334,25 @@ export function ActivityDetailPopup({
                   createSecondaryLabel="Beschreibung"
                   createSecondaryPlaceholder="Optional: kurze Beschreibung"
                   onSelect={setSelectedRoleId}
-                  onCreate={(input) => handleCreateRole({ label: input.label, description: input.description })}
+                  onCreate={(input) => handleCreateRole({ label: input.label, description: input.description, acronym: input.tertiary })}
+                  renderCreateForm={({ label, tertiary, description, isCreating, setLabel, setTertiary, setDescription, submit, cancel, testId }) => (
+                    <RoleCreateForm
+                      label={label}
+                      acronym={tertiary}
+                      description={description}
+                      isSubmitting={isCreating}
+                      nameTestId={`${testId}-create-name`}
+                      acronymTestId={`${testId}-create-acronym`}
+                      descriptionTestId={`${testId}-create-description`}
+                      submitTestId={`${testId}-create-submit`}
+                      cancelTestId={`${testId}-create-cancel`}
+                      onLabelChange={setLabel}
+                      onAcronymChange={setTertiary}
+                      onDescriptionChange={setDescription}
+                      onSubmit={submit}
+                      onCancel={cancel}
+                    />
+                  )}
                 />
               </div>
             </div>
@@ -505,15 +560,15 @@ export function ActivityDetailPopup({
         </div>
 
         <div className="mt-6 flex justify-between gap-3">
-          <button data-testid="activity-detail-delete" onClick={onDelete} className="inline-flex items-center gap-2 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-rose-100">
+          <button data-testid="activity-detail-delete" onClick={() => void handleDelete()} className="inline-flex items-center gap-2 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-rose-100">
             <Trash2 className="h-4 w-4" /> Loeschen
           </button>
           <div className="flex gap-3">
-            <button onClick={onClose} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white">Abbrechen</button>
+            <button onClick={() => void handleClose()} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white">Abbrechen</button>
             <button data-testid="activity-detail-save" onClick={() => void handleSave()} className="rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 disabled:opacity-40">Speichern</button>
           </div>
         </div>
       </div>
     </div>
   )
-}
+})

@@ -1,6 +1,6 @@
 ﻿import { memo } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from 'reactflow'
-import { ChevronDown, Database, ExternalLink, Plus } from 'lucide-react'
+import { Database, Plus } from 'lucide-react'
 import type { EdgeDataObject } from '../../types'
 
 interface WorkflowEdgeData {
@@ -8,7 +8,6 @@ interface WorkflowEdgeData {
   dataObjects: EdgeDataObject[]
   reusableDataObjects: EdgeDataObject[]
   selectedDataObjectId: string | null
-  onSelectDataObject: (canvasObject: EdgeDataObject) => void
   onOpenDataObject: (canvasObject: EdgeDataObject) => void
   onCreateDataObject: () => void
   onAddExistingDataObject: (dataObjectId: string) => void
@@ -20,8 +19,6 @@ function EdgeDataObjectPopover({
   edgeId,
   dataObjects,
   reusableDataObjects,
-  selectedDataObjectId,
-  onSelectDataObject,
   onOpenDataObject,
   onCreateDataObject,
   onAddExistingDataObject,
@@ -30,8 +27,6 @@ function EdgeDataObjectPopover({
   edgeId: string
   dataObjects: EdgeDataObject[]
   reusableDataObjects: EdgeDataObject[]
-  selectedDataObjectId: string | null
-  onSelectDataObject: (canvasObject: EdgeDataObject) => void
   onOpenDataObject: (canvasObject: EdgeDataObject) => void
   onCreateDataObject: () => void
   onAddExistingDataObject: (dataObjectId: string) => void
@@ -55,33 +50,24 @@ function EdgeDataObjectPopover({
       </div>
       <div className="wow-edge-data-popover__list">
         {dataObjects.map((canvasObject) => {
-          const isSelected = selectedDataObjectId === canvasObject.id
           return (
             <div
               key={canvasObject.id}
               data-testid={`edge-data-object-item-${canvasObject.id}`}
-              className={`wow-edge-data-popover__item ${isSelected ? 'wow-edge-data-popover__item--selected' : ''}`}
+              className="wow-edge-data-popover__item"
             >
               <button
                 type="button"
                 className="wow-edge-data-popover__name"
-                onClick={() => onSelectDataObject(canvasObject)}
+                onClick={() => onOpenDataObject(canvasObject)}
               >
                 {canvasObject.name}
               </button>
-              <div className="wow-edge-data-popover__actions">
-                <button type="button" onClick={() => onOpenDataObject(canvasObject)} aria-label={`${canvasObject.name} oeffnen`}>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </button>
-              </div>
             </div>
           )
         })}
       </div>
       <div className="wow-edge-data-popover__footer">
-        <button type="button" onClick={() => onTogglePopover()}>
-          Details der Verbindung
-        </button>
         <button type="button" onClick={onCreateDataObject}>
           <Plus className="h-3.5 w-3.5" />
           Neues Datenobjekt
@@ -135,7 +121,6 @@ export const WorkflowEdge = memo(function WorkflowEdge({
 
   const dataObjects = data?.dataObjects ?? []
   const selectedDataObjectId = data?.selectedDataObjectId ?? null
-  const visibleNames = dataObjects.map((canvasObject) => canvasObject.name).join('\n')
   const singleObject = dataObjects[0] ?? null
   const edgeLabel = data?.label?.trim() ?? ''
   const hasEdgeLabel = edgeLabel.length > 0
@@ -160,48 +145,23 @@ export const WorkflowEdge = memo(function WorkflowEdge({
               {dataObjects.length > 0 ? (
                 <div className="wow-edge-data-stack">
                   {dataObjects.length === 1 && singleObject ? (
-                    <div className="relative">
-                      <button
-                        key={singleObject.id}
-                        type="button"
-                        title={singleObject.name}
-                        data-testid={`edge-data-object-chip-${singleObject.id}`}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          if (!data?.isPopoverOpen) {
-                            data?.onTogglePopover()
-                          }
-                          data?.onSelectDataObject(singleObject)
-                        }}
-                        onDoubleClick={(event) => {
-                          event.stopPropagation()
-                          data?.onOpenDataObject(singleObject)
-                        }}
-                        className={`wow-edge-data-chip ${selectedDataObjectId === singleObject.id ? 'wow-edge-data-chip--selected' : ''} ${selected ? 'wow-edge-data-chip--edge-selected' : ''}`}
-                      >
-                        <Database className="h-3.5 w-3.5" />
-                        <span>{singleObject.name}</span>
-                        <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-                      </button>
-                      {data?.isPopoverOpen ? (
-                        <EdgeDataObjectPopover
-                          edgeId={id}
-                          dataObjects={dataObjects}
-                          reusableDataObjects={data?.reusableDataObjects ?? []}
-                          selectedDataObjectId={selectedDataObjectId}
-                          onSelectDataObject={(canvasObject) => data?.onSelectDataObject(canvasObject)}
-                          onOpenDataObject={(canvasObject) => data?.onOpenDataObject(canvasObject)}
-                          onCreateDataObject={() => data?.onCreateDataObject()}
-                          onAddExistingDataObject={(dataObjectId) => data?.onAddExistingDataObject(dataObjectId)}
-                          onTogglePopover={() => data?.onTogglePopover()}
-                        />
-                      ) : null}
-                    </div>
+                    <button
+                      key={singleObject.id}
+                      type="button"
+                      data-testid={`edge-data-object-chip-${singleObject.id}`}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        data?.onOpenDataObject(singleObject)
+                      }}
+                      className={`wow-edge-data-chip ${selectedDataObjectId === singleObject.id ? 'wow-edge-data-chip--selected' : ''} ${selected ? 'wow-edge-data-chip--edge-selected' : ''}`}
+                    >
+                      <Database className="h-3.5 w-3.5" />
+                      <span>{singleObject.name}</span>
+                    </button>
                   ) : (
                     <div className="relative">
                       <button
                         type="button"
-                        title={visibleNames}
                         data-testid={`edge-data-object-aggregate-${id}`}
                         onClick={(event) => {
                           event.stopPropagation()
@@ -212,18 +172,11 @@ export const WorkflowEdge = memo(function WorkflowEdge({
                         <Database className="h-4 w-4" />
                         <span className="wow-edge-data-aggregate__count">{dataObjects.length}</span>
                       </button>
-                      <div className="wow-edge-data-tooltip">
-                        {dataObjects.map((canvasObject) => (
-                          <div key={canvasObject.id}>{canvasObject.name}</div>
-                        ))}
-                      </div>
                       {data?.isPopoverOpen ? (
                         <EdgeDataObjectPopover
                           edgeId={id}
                           dataObjects={dataObjects}
                           reusableDataObjects={data?.reusableDataObjects ?? []}
-                          selectedDataObjectId={selectedDataObjectId}
-                          onSelectDataObject={(canvasObject) => data?.onSelectDataObject(canvasObject)}
                           onOpenDataObject={(canvasObject) => data?.onOpenDataObject(canvasObject)}
                           onCreateDataObject={() => data?.onCreateDataObject()}
                           onAddExistingDataObject={(dataObjectId) => data?.onAddExistingDataObject(dataObjectId)}
