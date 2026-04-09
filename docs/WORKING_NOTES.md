@@ -166,6 +166,12 @@ Important detail:
   - `Firma`
   - `UI`
   - `Stammdaten`
+- the `UI` section now also controls whether optional workflow views are visible:
+  - `Tabellensicht`
+  - `Swimlane View`
+  - both default to off
+  - if disabled, their header toggles are intentionally hidden
+  - disabling swimlanes also forces the saved grouping mode back to `free`
 - company name changes are now handled in that settings dialog and should update visible organization context immediately
 - roles are now also managed centrally from that same settings dialog:
   - create, edit, and delete from the company catalog
@@ -190,6 +196,9 @@ Important detail:
 - the workflow now has two top-level views:
   - `Zeichenmodus`
   - `Tabellarische View`
+- those optional view toggles are no longer always present:
+  - `Tabellarische View` is only shown when enabled in settings
+  - role-lane grouping is only shown when `Swimlane View` is enabled
 - the current workflow now also has a dedicated header entry for its own metadata:
   - `Ablaufdetails`
   - edits the currently open workflow directly
@@ -203,6 +212,11 @@ Important detail:
 - when returning from SIPOC to canvas, the focus/zoom motion is intentional
   - it must stop immediately on click, pan, or drag
   - user interaction always wins over the automatic camera move
+- the header was intentionally reduced again:
+  - no undo/redo in the header
+  - no search field in the header
+  - no export button in the header
+  - undo/redo remain only in the left floating canvas toolbar
 - IT tools are now modeled as reusable entities:
   - create new tools from activity details
   - link existing tools from the shared catalog
@@ -245,6 +259,11 @@ Important detail:
   - `frontend/e2e/sipoc-view.spec.ts`
   - prepares a stable workflow model via API
   - verifies the tabellarische SIPOC read model in the UI
+- a dedicated browser flow now also exists for UI view preferences:
+  - `frontend/e2e/view-preferences.spec.ts`
+  - verifies default-hidden optional view controls
+  - verifies enabling/disabling `Tabellensicht` and `Swimlane View`
+  - verifies that search/export stay hidden and undo/redo remain only in the floating toolbar
 - current rule for large browser failures:
   - isolate the concrete failing interaction in a dedicated repro spec first
   - get that smaller repro green
@@ -322,6 +341,11 @@ Avoid introducing a separate business entity called `subprocess`. A child workfl
   - `AppHeader.test.tsx`: workflow-detail entry covered
   - `backend/src/workspaces/workspaces.service.spec.ts`: update path covered
   - `workflow-details.spec.ts`: `1 passed`
+- Latest view-preferences verification is green with:
+  - `AppHeader.test.tsx`: header cleanup and conditional toggles covered
+  - `SettingsDialog.test.tsx`: persisted UI flags and grouping fallback covered
+  - `WorkflowCanvas.test.tsx`: grouping regression remains covered
+  - `view-preferences.spec.ts`: `1 passed`
 - Latest role/assignee model verification is green with:
   - local save path remains functional through fallback behavior even when migration `013_activity_roles_and_assignments.sql` is not yet applied
 

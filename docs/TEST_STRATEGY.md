@@ -168,6 +168,9 @@ Aktuelle Beispiele:
 - `frontend/e2e/workflow-details.spec.ts`
   - gezielter Repro fuer den neuen Header-Einstieg in die Details des aktuellen Arbeitsablaufs
   - prueft Oeffnen, Speichern und erneutes Oeffnen nach frischem Login
+- `frontend/e2e/view-preferences.spec.ts`
+  - gezielter Repro fuer sichtbare/unsichtbare optionale Views im Header
+  - prueft Defaults, Aktivierung, Deaktivierung und den aufgeraeumten Header ohne Suche/Export
 
 Diese Specs sind absichtlich klein und diagnostisch stark.
 
@@ -249,6 +252,7 @@ Die Vollsuite ist **nicht** das beste erste Diagnosewerkzeug fuer einen frisch g
 - Assertions moeglichst auf den relevanten Dialog oder Bereich scopen
 - bei alternativen Ansichten wie SIPOC zuerst die reine Ableitungslogik per Unit-Test absichern und erst dann die View-Umschaltung im Browser pruefen
 - bei workflowweiten Metadaten zuerst den direkten Update-Pfad im Backend testen, dann den Dialog isoliert als Komponente und erst danach den Header-Einstieg im Browser pruefen
+- bei UI-Praeferenzen fuer sichtbare Views zuerst den Header und den Settings-Dialog als Komponenten absichern und dann einen kleinen Browsertest fuer Persistenz und Sichtbarkeit anlegen
 - bei React-Flow-Hitbox-Problemen lieber gezielt robust machen als globale Workarounds bauen
 - Browsertests gegen den lokalen echten Stack ernst nehmen, nicht gegen zufaellige entfernte Deployments
 - Testdaten immer aktiv bereinigen

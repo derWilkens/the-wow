@@ -169,20 +169,59 @@ describe('SettingsDialog', () => {
 
     fireEvent.click(screen.getByTestId('settings-nav-ui'))
     fireEvent.click(screen.getByTestId('settings-ui-grouping-lanes'))
+    fireEvent.click(screen.getByTestId('settings-ui-table-view-on'))
+    fireEvent.click(screen.getByTestId('settings-ui-swimlane-on'))
     fireEvent.click(screen.getByTestId('settings-ui-snap-off'))
     fireEvent.click(screen.getByTestId('settings-ui-save'))
 
-    expect(onUiPreferencesChange).toHaveBeenCalledWith({ default_grouping_mode: 'role_lanes', snap_to_grid: false })
+    expect(onUiPreferencesChange).toHaveBeenCalledWith({
+      default_grouping_mode: 'role_lanes',
+      snap_to_grid: false,
+      enable_table_view: true,
+      enable_swimlane_view: true,
+    })
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('role_lanes')
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"snap_to_grid":false')
+    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_table_view":true')
+    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_swimlane_view":true')
   })
 
-  it('defaults snap to grid to enabled when no preference is stored', () => {
+  it('defaults snap to grid to enabled and optional views to disabled when no preference is stored', () => {
     renderDialog()
 
     fireEvent.click(screen.getByTestId('settings-nav-ui'))
 
     expect(screen.getByTestId('settings-ui-snap-on')).toHaveClass('bg-cyan-400')
+    expect(screen.getByTestId('settings-ui-table-view-off')).toHaveClass('bg-cyan-400')
+    expect(screen.getByTestId('settings-ui-swimlane-off')).toHaveClass('bg-cyan-400')
+  })
+
+  it('resets grouping to free when swimlane view is disabled before saving', () => {
+    const onUiPreferencesChange = vi.fn()
+
+    render(
+      <SettingsDialog
+        organizationId="org-1"
+        organizationName="Acme GmbH"
+        organizationRole="owner"
+        isOpen
+        onClose={vi.fn()}
+        onOrganizationRenamed={vi.fn()}
+        onUiPreferencesChange={onUiPreferencesChange}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('settings-nav-ui'))
+    fireEvent.click(screen.getByTestId('settings-ui-grouping-lanes'))
+    fireEvent.click(screen.getByTestId('settings-ui-swimlane-off'))
+    fireEvent.click(screen.getByTestId('settings-ui-save'))
+
+    expect(onUiPreferencesChange).toHaveBeenCalledWith({
+      default_grouping_mode: 'free',
+      snap_to_grid: true,
+      enable_table_view: false,
+      enable_swimlane_view: false,
+    })
   })
 
   it('creates transport modes, roles and organization IT tools from the master-data section', async () => {

@@ -35,6 +35,7 @@ Hinweis:
   - optimistic UI for create/connect/delete flows
   - workflow hierarchy navigation
   - switching between canvas and SIPOC table view
+  - enforcement of UI preferences for optional view toggles
   - workflow-detail dialog wiring for the currently open workflow
 - `frontend/src/components/workspace/WorkflowDetailDialog.tsx`
   - dedicated entry for the current workflow metadata from the header
@@ -62,7 +63,11 @@ Hinweis:
   - uses the shared custom choice list for transport mode selection
 - `frontend/src/components/settings/SettingsDialog.tsx`
   - central settings surface for company settings, UI preferences, and company master data
-  - manages organization rename, default grouping mode, transport modes, IT tools, and organization roles
+  - manages organization rename, default grouping mode, snap-to-grid, optional view visibility, transport modes, IT tools, and organization roles
+- `frontend/src/components/layout/AppHeader.tsx`
+  - renders only the currently wanted high-signal controls
+  - hides table/swimlane toggles when their UI preferences are disabled
+  - no longer renders undo/redo, search, or export in the header
 - `frontend/src/components/canvas/ActivityDetailPopup.tsx`
   - activity editing
   - free-text assignee, organization role selection, comments, and IT tools
@@ -116,6 +121,9 @@ Hinweis:
 - `frontend/e2e/workflow-details.spec.ts`
   - focused business E2E for the new header entry into current-workflow details
   - verifies save and reopen of workflow metadata
+- `frontend/e2e/view-preferences.spec.ts`
+  - focused business E2E for optional view visibility and header cleanup
+  - verifies default-hidden view toggles, enable/disable behavior, and that search/export stay absent from the header
 
 ## Backend Important Files
 
@@ -255,6 +263,8 @@ Stable:
 - workspace create flow
 - current-workflow details from dedicated header button
 - workspace update flow for name, purpose, expected inputs, and expected outputs
+- optional header view toggles controlled through persisted UI preferences
+- hidden header search/export and header-free undo/redo layout
 - live data persistence
 - workflow hierarchy creation and linking
 - workflow template save/edit/create flows
@@ -316,6 +326,8 @@ Latest known good local verification:
   - `settings-master-data.spec.ts`: `1 passed`
 - dedicated workflow-details verification: green
   - `workflow-details.spec.ts`: `1 passed`
+- dedicated view-preferences verification: green
+  - `view-preferences.spec.ts`: `1 passed`
 - focused workspace-update backend verification: green
   - `backend/src/workspaces/workspaces.service.spec.ts`: `2 passed`
 - local fallback-safe role/assignee persistence without applied migration `013`: green

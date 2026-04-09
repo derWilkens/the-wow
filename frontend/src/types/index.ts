@@ -47,6 +47,8 @@ export interface Organization {
 export interface UiPreferences {
   default_grouping_mode: CanvasGroupingMode
   snap_to_grid: boolean
+  enable_table_view: boolean
+  enable_swimlane_view: boolean
 }
 
 export interface OrganizationMember {

@@ -27,7 +27,7 @@ const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
 
 function readUiPreferences(): UiPreferences {
   if (typeof window === 'undefined') {
-    return { default_grouping_mode: 'free', snap_to_grid: true }
+    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false }
   }
 
   try {
@@ -38,9 +38,11 @@ function readUiPreferences(): UiPreferences {
           ? parsed.default_grouping_mode
           : 'free',
       snap_to_grid: typeof parsed.snap_to_grid === 'boolean' ? parsed.snap_to_grid : true,
+      enable_table_view: typeof parsed.enable_table_view === 'boolean' ? parsed.enable_table_view : false,
+      enable_swimlane_view: typeof parsed.enable_swimlane_view === 'boolean' ? parsed.enable_swimlane_view : false,
     }
   } catch {
-    return { default_grouping_mode: 'free', snap_to_grid: true }
+    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false }
   }
 }
 
@@ -465,9 +467,57 @@ export function SettingsDialog({
                       data-testid="settings-ui-grouping-lanes"
                       onClick={() => setUiPreferences((current) => ({ ...current, default_grouping_mode: 'role_lanes' }))}
                       className={`rounded-full px-4 py-2 text-sm ${uiPreferences.default_grouping_mode === 'role_lanes' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
-                    >
-                      Nach Rollen gruppieren
+                      >
+                        Nach Rollen gruppieren
                     </button>
+                  </div>
+                  <div className="mt-5">
+                    <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Tabellensicht</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Steuert, ob die Umschaltung zur tabellarischen SIPOC-Ansicht im Header sichtbar ist.
+                    </p>
+                    <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+                      <button
+                        type="button"
+                        data-testid="settings-ui-table-view-on"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_table_view: true }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.enable_table_view ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Eingeschaltet
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="settings-ui-table-view-off"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_table_view: false }))}
+                        className={`rounded-full px-4 py-2 text-sm ${!uiPreferences.enable_table_view ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Ausgeschaltet
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-5">
+                    <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Swimlane View</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Steuert, ob die Rollen-Gruppierung im Header sichtbar und nutzbar ist. Standard ist ausgeschaltet.
+                    </p>
+                    <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+                      <button
+                        type="button"
+                        data-testid="settings-ui-swimlane-on"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_swimlane_view: true }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.enable_swimlane_view ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Eingeschaltet
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="settings-ui-swimlane-off"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_swimlane_view: false }))}
+                        className={`rounded-full px-4 py-2 text-sm ${!uiPreferences.enable_swimlane_view ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Ausgeschaltet
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-5">
                     <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Snap to Grid</p>
@@ -498,8 +548,13 @@ export function SettingsDialog({
                       type="button"
                       data-testid="settings-ui-save"
                       onClick={() => {
-                        writeUiPreferences(uiPreferences)
-                        onUiPreferencesChange(uiPreferences)
+                        const nextPreferences = {
+                          ...uiPreferences,
+                          default_grouping_mode:
+                            uiPreferences.enable_swimlane_view ? uiPreferences.default_grouping_mode : 'free',
+                        }
+                        writeUiPreferences(nextPreferences)
+                        onUiPreferencesChange(nextPreferences)
                       }}
                       className="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950"
                     >

@@ -143,6 +143,12 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Firmenname wird nach Save sofort im UI aktualisiert
 - [x] UI-Praeferenzstruktur fuer Canvas-Gruppierung vorbereitet
 - [x] Default-Gruppierung im Einstellungsdialog speicherbar
+- [x] Tabellensicht in UI-Einstellungen aktivierbar/deaktivierbar
+- [x] Swimlane View in UI-Einstellungen aktivierbar/deaktivierbar
+- [x] Tabellensicht standardmaessig deaktiviert
+- [x] Swimlane View standardmaessig deaktiviert
+- [x] Deaktivierte optionale Views blenden ihre Header-Umschaltung aus
+- [x] Deaktivierte Swimlane View faellt sicher auf `free` zurueck
 - [x] Transportmodi im zentralen Stammdatenbereich verwaltbar
 - [x] IT-Tools im zentralen Stammdatenbereich anlegen, bearbeiten und loeschen
 - [x] Loeschen verknuepfter IT-Tools wird fachlich blockiert
@@ -196,6 +202,10 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] PNG-Export
 - [x] PDF-Export
 - [x] Exportmenue nach Reload weiter verfuegbar
+- [x] Suchfeld im Header ausgeblendet
+- [x] Export-Button im Header ausgeblendet
+- [x] Undo/Redo im Header entfernt
+- [x] Undo/Redo nur noch in der linken Floating-Toolbar sichtbar
 - [ ] Bundle-/Chunk-Groesse optimieren
 
 ### SaaS und Organisation
@@ -273,6 +283,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `e2e/template-regressions.spec.ts`
 - [x] `e2e/settings-master-data.spec.ts`
 - [x] `e2e/sipoc-view.spec.ts`
+- [x] `e2e/view-preferences.spec.ts`
 - [x] `e2e/workflow-details.spec.ts`
 
 Hinweis: Die Login-gebundene Suite laeuft mit `E2E_EMAIL`/`E2E_PASSWORD` gegen die lokale Preview. `playwright.config.ts` zeigt standardmaessig auf `http://127.0.0.1:4174`; die aktuellen verifizierten Browserlaeufe wurden gegen `http://127.0.0.1:4175` ausgefuehrt. Der letzte komplette Vollsuiten-Stand in dieser Session ist jetzt `54 passed / 1 skipped`.
@@ -311,6 +322,11 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
   - `frontend/src/components/workspace/WorkflowDetailDialog.test.tsx`: gruen
   - `backend/src/workspaces/workspaces.service.spec.ts`: gruen
   - `e2e/workflow-details.spec.ts`: `1 passed`
+- [x] View-Praeferenzen und aufgeraeumter Header verifiziert
+  - `frontend/src/components/layout/AppHeader.test.tsx`: gruen
+  - `frontend/src/components/settings/SettingsDialog.test.tsx`: gruen
+  - `frontend/src/components/canvas/WorkflowCanvas.test.tsx`: gruen
+  - `e2e/view-preferences.spec.ts`: `1 passed`
 - [x] Rollen-/Ausfuehrenden-Modell lokal auch ohne eingespielte Migration `013` per Fallback verifiziert
 - [x] Vorlagen-Regressionen gegen echten lokalen Stack
 - [x] Lokaler Screenshot-Capture fuer `01` bis `10`

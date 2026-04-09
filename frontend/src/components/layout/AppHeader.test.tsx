@@ -10,19 +10,13 @@ function renderHeader(overrides: Partial<Parameters<typeof AppHeader>[0]> = {}) 
     onNavigateWorkspaceTrail: vi.fn(),
     onLeaveWorkspace: vi.fn(),
     onSignOut: vi.fn(),
-    onExportPng: vi.fn(),
-    onExportPdf: vi.fn(),
     onOpenSettings: vi.fn(),
+    showTableViewToggle: true,
     workflowViewMode: 'canvas',
     onWorkflowViewModeChange: vi.fn(),
     groupingMode: 'free',
+    showSwimlaneToggle: true,
     onToggleGroupingMode: vi.fn(),
-    canvasSearchOptions: [],
-    onSelectCanvasSearchResult: vi.fn(),
-    onUndo: vi.fn(),
-    onRedo: vi.fn(),
-    canUndo: true,
-    canRedo: false,
     ...overrides,
   }
 
@@ -60,54 +54,6 @@ describe('AppHeader', () => {
     expect(screen.queryByTestId('toolbar-grouping-toggle')).not.toBeInTheDocument()
   })
 
-  it('opens the export menu and triggers PNG/PDF actions', () => {
-    const onExportPng = vi.fn()
-    const onExportPdf = vi.fn()
-
-    renderHeader({
-      onExportPng,
-      onExportPdf,
-    })
-
-    fireEvent.click(screen.getByTestId('toolbar-export'))
-    fireEvent.click(screen.getByTestId('export-png'))
-    expect(onExportPng).toHaveBeenCalled()
-
-    fireEvent.click(screen.getByTestId('toolbar-export'))
-    fireEvent.click(screen.getByTestId('export-pdf'))
-    expect(onExportPdf).toHaveBeenCalled()
-  })
-
-  it('filters canvas search results and selects a node from the dropdown', () => {
-    const onSelectCanvasSearchResult = vi.fn()
-
-    renderHeader({
-      onSelectCanvasSearchResult,
-      canvasSearchOptions: [
-        {
-          id: 'activity-1',
-          label: 'Rechnung pruefen',
-          kind: 'activity',
-          subtitle: 'Sachbearbeitung',
-        },
-        {
-          id: 'source-1',
-          label: 'Archiv',
-          kind: 'source',
-          subtitle: 'Datenspeicher',
-        },
-      ],
-    })
-
-    fireEvent.change(screen.getByTestId('toolbar-canvas-search'), {
-      target: { value: 'rech' },
-    })
-
-    expect(screen.getByTestId('toolbar-canvas-search-results')).toBeInTheDocument()
-    fireEvent.click(screen.getByTestId('toolbar-canvas-search-option-activity-1'))
-    expect(onSelectCanvasSearchResult).toHaveBeenCalledWith('activity-1')
-  })
-
   it('keeps insert tools out of the header DOM', () => {
     renderHeader()
 
@@ -124,5 +70,25 @@ describe('AppHeader', () => {
 
     fireEvent.click(screen.getByTestId('toolbar-workflow-details'))
     expect(onOpenWorkflowDetails).toHaveBeenCalled()
+  })
+
+  it('hides table and swimlane controls when the corresponding preferences are disabled', () => {
+    renderHeader({
+      showTableViewToggle: false,
+      showSwimlaneToggle: false,
+    })
+
+    expect(screen.queryByTestId('toolbar-view-canvas')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('toolbar-view-sipoc')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('toolbar-grouping-toggle')).not.toBeInTheDocument()
+  })
+
+  it('does not render undo redo search or export in the header anymore', () => {
+    renderHeader()
+
+    expect(screen.queryByTestId('toolbar-undo')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('toolbar-redo')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('toolbar-canvas-search')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('toolbar-export')).not.toBeInTheDocument()
   })
 })

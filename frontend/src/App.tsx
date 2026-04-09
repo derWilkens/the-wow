@@ -1,7 +1,6 @@
 ﻿import { Loader2 } from 'lucide-react'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import type { Connection } from 'reactflow'
-import { toPng } from 'html-to-image'
 import { useActivities, useCreateSubprocess, useDeleteActivity, useLinkSubprocess, useUnlinkSubprocess, useUpsertActivity } from './api/activities'
 import { useAcceptOrganizationInvitation, useCreateOrganization, useOrganizations, usePendingOrganizationInvitations } from './api/organizations'
 import { useCreateOrganizationRole, useOrganizationRoles } from './api/organizationRoles'
@@ -21,7 +20,7 @@ import { SubprocessWizard } from './components/canvas/SubprocessWizard'
 import { WorkflowCanvas } from './components/canvas/WorkflowCanvas'
 import { WorkflowSipocTable } from './components/canvas/WorkflowSipocTable'
 import { deriveWorkflowSipocRows, getReusableDataObjectsForEdge } from './components/canvas/canvasData'
-import { AppHeader, type CanvasSearchOption } from './components/layout/AppHeader'
+import { AppHeader } from './components/layout/AppHeader'
 import { SettingsDialog } from './components/settings/SettingsDialog'
 import { WorkspaceList } from './components/workspace/WorkspaceList'
 import { WorkflowDetailDialog } from './components/workspace/WorkflowDetailDialog'
@@ -46,7 +45,7 @@ const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
 
 function readUiPreferences(): UiPreferences {
   if (typeof window === 'undefined') {
-    return { default_grouping_mode: 'free', snap_to_grid: true }
+    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false }
   }
 
   try {
@@ -54,9 +53,11 @@ function readUiPreferences(): UiPreferences {
     return {
       default_grouping_mode: parsed.default_grouping_mode === 'role_lanes' ? 'role_lanes' : 'free',
       snap_to_grid: typeof parsed.snap_to_grid === 'boolean' ? parsed.snap_to_grid : true,
+      enable_table_view: typeof parsed.enable_table_view === 'boolean' ? parsed.enable_table_view : false,
+      enable_swimlane_view: typeof parsed.enable_swimlane_view === 'boolean' ? parsed.enable_swimlane_view : false,
     }
   } catch {
-    return { default_grouping_mode: 'free', snap_to_grid: true }
+    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false }
   }
 }
 
@@ -371,6 +372,18 @@ function WorkspaceCanvasApp({
   }, [workspaceId, workspaceName])
 
   useEffect(() => {
+    if (!uiPreferences.enable_table_view && workflowViewMode === 'sipoc_table') {
+      setWorkflowViewMode('canvas')
+    }
+  }, [uiPreferences.enable_table_view, workflowViewMode])
+
+  useEffect(() => {
+    if (!uiPreferences.enable_swimlane_view && uiPreferences.default_grouping_mode !== 'free') {
+      setUiPreferences((current) => ({ ...current, default_grouping_mode: 'free' }))
+    }
+  }, [uiPreferences.default_grouping_mode, uiPreferences.enable_swimlane_view])
+
+  useEffect(() => {
     seedInFlightRef.current = false
     isApplyingHistoryRef.current = false
     setUndoStack([])
@@ -601,31 +614,6 @@ function WorkspaceCanvasApp({
         .slice()
         .sort((left, right) => left.name.localeCompare(right.name, 'de')),
     [visibleDataObjects],
-  )
-  const canvasSearchOptions = useMemo<CanvasSearchOption[]>(
-    () => [
-      ...visibleActivities.map((activity) => ({
-        id: activity.id,
-        label: activity.label,
-        kind:
-          activity.node_type === 'gateway_decision' || activity.node_type === 'gateway_merge'
-            ? ('gateway' as const)
-            : ('activity' as const),
-        subtitle:
-          activity.node_type === 'gateway_decision'
-            ? 'Entscheidung'
-            : activity.node_type === 'gateway_merge'
-              ? 'Zusammenfuehrung'
-              : activityRolesById[activity.id] ?? 'Aktivitaet',
-      })),
-      ...visibleSourceObjects.map((canvasObject) => ({
-        id: canvasObject.id,
-        label: canvasObject.name,
-        kind: 'source' as const,
-        subtitle: 'Datenspeicher',
-      })),
-    ],
-    [activityRolesById, visibleActivities, visibleSourceObjects],
   )
   const dataObjectToolbarHint = selectedEdge
       ? 'Datenobjekt auf markierter Verbindung einfügen'
@@ -1865,28 +1853,6 @@ function WorkspaceCanvasApp({
     }
   }
 
-  async function exportAsPng() {
-    const canvasElement = document.querySelector('[data-testid="workflow-canvas"]') as HTMLElement | null
-    if (!canvasElement) {
-      return
-    }
-
-    const dataUrl = await toPng(canvasElement, {
-      cacheBust: true,
-      backgroundColor: '#08121b',
-      pixelRatio: 2,
-    })
-    const link = document.createElement('a')
-    const fileDate = new Date().toISOString().slice(0, 10)
-    link.download = `${activeWorkspaceName}-${fileDate}.png`
-    link.href = dataUrl
-    link.click()
-  }
-
-  function exportAsPdf() {
-    window.print()
-  }
-
   async function saveWorkflowDetails(input: {
     name: string
     purpose: string | null
@@ -1915,37 +1881,23 @@ function WorkspaceCanvasApp({
           onNavigateWorkspaceTrail={navigateToWorkspaceTrail}
           onLeaveWorkspace={leaveWorkspace}
           onSignOut={() => void signOut()}
-          onExportPng={() => void exportAsPng()}
-          onExportPdf={exportAsPdf}
           onOpenWorkflowDetails={() => setIsWorkflowDetailOpen(true)}
           onOpenSettings={
             organizationRole === 'owner' || organizationRole === 'admin'
               ? () => setIsSettingsOpen(true)
               : undefined
           }
+          showTableViewToggle={uiPreferences.enable_table_view}
           workflowViewMode={workflowViewMode}
           onWorkflowViewModeChange={(mode) => setWorkflowViewMode(mode)}
           groupingMode={uiPreferences.default_grouping_mode}
+          showSwimlaneToggle={uiPreferences.enable_swimlane_view}
           onToggleGroupingMode={() =>
             setUiPreferences((current) => ({
               ...current,
               default_grouping_mode: current.default_grouping_mode === 'free' ? 'role_lanes' : 'free',
             }))
           }
-          canvasSearchOptions={canvasSearchOptions}
-          onSelectCanvasSearchResult={(nodeId) => {
-            setFocusedCanvasNodeId(null)
-            window.setTimeout(() => setFocusedCanvasNodeId(nodeId), 0)
-            setSelectedCanvasNodeId(nodeId)
-            setSelectedCanvasEdgeId(null)
-            setSelectedDataObjectId(null)
-            selectedCanvasNodeIdRef.current = nodeId
-            selectedCanvasEdgeIdRef.current = null
-          }}
-          onUndo={() => void undo()}
-          onRedo={() => void redo()}
-          canUndo={undoStack.length > 0}
-          canRedo={redoStack.length > 0}
         />
 
         <main className="grid min-h-0 flex-1 gap-4 p-4 print:block print:p-0">
