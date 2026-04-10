@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   createWorkflow,
@@ -14,7 +14,7 @@ test.describe('toolbar drag and drop', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('inserts an activity at the drop position when dragged from the toolbar', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Toolbar Drag ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -60,5 +60,6 @@ test.describe('toolbar drag and drop', () => {
     }
   })
 })
+
 
 

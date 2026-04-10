@@ -1,4 +1,4 @@
-﻿import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 import {
   addUserToOrganization,
   cleanupOrganizationsByNames,
@@ -9,11 +9,12 @@ import {
   ensurePostLoginLanding,
   getAccessToken,
   getActivityNodeIds,
-  getActiveOrganizationId,
   getStartNodeIds,
   loginAs,
   openActivityDetail,
+  reopenWorkflowAfterReload,
   requireCredentials,
+  saveUiPreferencesViaSettings,
   testSuffix,
 } from './helpers'
 
@@ -59,12 +60,11 @@ async function seedRoleUser(organizationId: string, suffix: number, key: string,
   return { email, userId: user.id, displayName, domainRoleLabel } satisfies SeedUser
 }
 
-async function updateActivityAssignee(
+async function readActivity(
   request: APIRequestContext,
   accessToken: string,
   workspaceId: string,
   activityId: string,
-  assigneeUserId: string,
 ) {
   const activitiesResponse = await request.get(`http://127.0.0.1:3000/workspaces/${workspaceId}/activities`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -73,6 +73,35 @@ async function updateActivityAssignee(
   const activities = (await activitiesResponse.json()) as Array<Record<string, unknown>>
   const activity = activities.find((entry) => entry.id === activityId)
   expect(activity).toBeTruthy()
+
+  return activity!
+}
+
+async function createRole(
+  request: APIRequestContext,
+  accessToken: string,
+  organizationId: string,
+  label: string,
+) {
+  const response = await request.post(`http://127.0.0.1:3000/organizations/${organizationId}/roles`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    data: { label },
+  })
+  expect(response.ok()).toBeTruthy()
+  return (await response.json()) as { id: string; label: string }
+}
+
+async function updateActivityRole(
+  request: APIRequestContext,
+  accessToken: string,
+  workspaceId: string,
+  activityId: string,
+  roleId: string,
+) {
+  const activity = await readActivity(request, accessToken, workspaceId, activityId)
 
   const upsertResponse = await request.post(`http://127.0.0.1:3000/workspaces/${workspaceId}/activities/upsert`, {
     headers: {
@@ -90,15 +119,15 @@ async function updateActivityAssignee(
       status: activity!.status ?? 'draft',
       status_icon: activity!.status_icon ?? null,
       activity_type: activity!.activity_type ?? null,
-      description: activity!.description ?? 'Test',
-      notes: activity!.notes ?? 'Test',
-      assignee_user_id: assigneeUserId,
-      duration_minutes: activity!.duration_minutes ?? 10,
-      linked_workflow_id: activity!.linked_workflow_id ?? null,
-      linked_workflow_mode: activity!.linked_workflow_mode ?? null,
-      linked_workflow_purpose: activity!.linked_workflow_purpose ?? null,
-      linked_workflow_inputs: activity!.linked_workflow_inputs ?? [],
-      linked_workflow_outputs: activity!.linked_workflow_outputs ?? [],
+      description: activity.description ?? 'Test',
+      notes: activity.notes ?? 'Test',
+      role_id: roleId,
+      duration_minutes: activity.duration_minutes ?? 10,
+      linked_workflow_id: activity.linked_workflow_id ?? null,
+      linked_workflow_mode: activity.linked_workflow_mode ?? null,
+      linked_workflow_purpose: activity.linked_workflow_purpose ?? null,
+      linked_workflow_inputs: activity.linked_workflow_inputs ?? [],
+      linked_workflow_outputs: activity.linked_workflow_outputs ?? [],
     },
   })
   expect(upsertResponse.ok()).toBeTruthy()
@@ -125,7 +154,7 @@ test.describe('swimlane visible roles', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('renders lanes only for roles that are visible on the current canvas', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const workflowName = `Visible Roles ${suffix}`
     const createdWorkspaceIds: string[] = []
@@ -153,21 +182,25 @@ test.describe('swimlane visible roles', () => {
       const firstActivityId = (await getActivityNodeIds(page))[0]
       const secondActivityId = await createConnectedActivity(page, firstActivityId, 'Architektur bearbeiten')
 
-      await updateActivityAssignee(request, accessToken!, workflow.id, firstActivityId, bimUser.userId)
-      await updateActivityAssignee(request, accessToken!, workflow.id, secondActivityId, architectUser.userId)
+      const bimRole = await createRole(request, accessToken!, scenario.organizationId, 'BIM-Koordination')
+      const architectureRole = await createRole(request, accessToken!, scenario.organizationId, 'Architektur')
+      await createRole(request, accessToken!, scenario.organizationId, 'TGA')
 
-      await page.reload()
-      await page.getByTestId(`workspace-open-${workflow.id}`).click()
+      await updateActivityRole(request, accessToken!, workflow.id, firstActivityId, bimRole.id)
+      await updateActivityRole(request, accessToken!, workflow.id, secondActivityId, architectureRole.id)
+
       await expect(page.getByTestId(`activity-node-${firstActivityId}`)).toBeVisible({ timeout: 20_000 })
 
+      await saveUiPreferencesViaSettings(page, { enable_swimlane_view: true })
+      await reopenWorkflowAfterReload(page, workflow.id, scenario.userEmail)
       await page.getByTestId('toolbar-grouping-toggle').click()
       await expect(page.getByTestId('role-lane-BIM-Koordination')).toBeVisible({ timeout: 10_000 })
       await expect(page.getByTestId('role-lane-Architektur')).toBeVisible({ timeout: 10_000 })
       await expect(page.getByTestId('role-lane-TGA')).toHaveCount(0)
 
       await page.getByTestId('toolbar-grouping-toggle').click()
-      await expect(page.getByTestId(`activity-role-${firstActivityId}`)).toContainText('BIM-Koordination')
-      await expect(page.getByTestId(`activity-role-${secondActivityId}`)).toContainText('Architektur')
+      await expect(page.getByTestId(`activity-role-${firstActivityId}`)).toContainText('BIMK')
+      await expect(page.getByTestId(`activity-role-${secondActivityId}`)).toContainText('A')
     } finally {
       await cleanupWorkspaces(request, createdWorkspaceIds, accessToken)
       await cleanupOrganizationsByNames(createdOrganizationNames)
@@ -177,5 +210,7 @@ test.describe('swimlane visible roles', () => {
     }
   })
 })
+
+
 
 

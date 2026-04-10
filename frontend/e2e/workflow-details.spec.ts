@@ -5,7 +5,7 @@ test.describe('workflow details', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('opens and saves the current workflow from the header', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workflowName = `Workflow Detail ${testSuffix()}`
     const renamedWorkflowName = `${workflowName} Update`
     const workflowPurpose = `Wirkung ${testSuffix(321)}`
@@ -49,3 +49,4 @@ test.describe('workflow details', () => {
     }
   })
 })
+

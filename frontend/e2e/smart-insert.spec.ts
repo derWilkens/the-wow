@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   createWorkflow,
@@ -16,7 +16,7 @@ test.describe('smart insert', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('builds a linear flow with smart insert from the current selection', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Smart Insert ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -65,7 +65,7 @@ test.describe('smart insert', () => {
   })
 
   test('falls back to centered insertion when smart insert context is incompatible', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Smart Fallback ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -111,5 +111,6 @@ test.describe('smart insert', () => {
     }
   })
 })
+
 
 

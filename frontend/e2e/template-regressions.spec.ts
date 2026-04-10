@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupOrganizationsByNames,
   createWorkflow,
@@ -10,7 +10,7 @@ import {
 
 test.describe('template regressions', () => {
   test('creates from template without a server error, opens the workflow, and keeps edges intact', async ({ page }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const userEmail = `template-regression-${suffix}@mailinator.com`
     const userPassword = 'CodexSaaS!2026'
@@ -66,7 +66,7 @@ test.describe('template regressions', () => {
   })
 
   test('allows editing a custom template from the template list', async ({ page }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const userEmail = `template-edit-${suffix}@mailinator.com`
     const userPassword = 'CodexSaaS!2026'
@@ -109,5 +109,6 @@ test.describe('template regressions', () => {
     }
   })
 })
+
 
 

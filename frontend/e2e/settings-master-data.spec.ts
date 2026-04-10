@@ -70,7 +70,7 @@ async function createOrganizationForSession(page: Parameters<typeof test>[0]['pa
 
 test.describe('settings and master data', () => {
   test('manages company name, roles, IT tools and transport modes from the central settings dialog', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const organizationName = `Settings Org ${suffix}`
     const renamedOrganizationName = `Settings Org Neu ${suffix}`
@@ -303,3 +303,4 @@ test.describe('settings and master data', () => {
     }
   })
 })
+

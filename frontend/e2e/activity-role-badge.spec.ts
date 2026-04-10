@@ -19,7 +19,7 @@ test.describe('activity role badge', () => {
     page,
     request,
   }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
     const suffix = testSuffix()
@@ -129,3 +129,4 @@ test.describe('activity role badge', () => {
     }
   })
 })
+

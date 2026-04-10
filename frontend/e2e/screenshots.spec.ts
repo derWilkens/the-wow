@@ -1,4 +1,4 @@
-﻿import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { mkdirSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
@@ -13,6 +13,7 @@ import {
   selectEdgeByIndex,
   selectFirstEdge,
   signupAndLogin,
+  updateUiPreferences,
   testSuffix,
 } from './helpers'
 
@@ -41,7 +42,7 @@ test.describe('screenshots', () => {
   })
 
   test('captures workspace list and template save dialog', async ({ page }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const { userEmail } = await createScreenshotUser(page, suffix)
     const organizationName = await createOrganizationForScreenshots(page, suffix)
@@ -72,7 +73,7 @@ test.describe('screenshots', () => {
   })
 
   test('captures canvas free mode, role lanes, and activity detail', async ({ page }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const { userEmail } = await createScreenshotUser(page, suffix)
     const organizationName = await createOrganizationForScreenshots(page, suffix)
@@ -102,6 +103,11 @@ test.describe('screenshots', () => {
       await page.getByTestId('activity-detail-save').click()
       await expect(page.locator(`[data-testid="activity-detail-${activityId}"]`)).toHaveCount(0)
 
+      await updateUiPreferences(page, { enable_swimlane_view: true })
+      await page.reload()
+      await expect(page.getByTestId(`workspace-open-${workflow.id}`)).toBeVisible({ timeout: 20_000 })
+      await page.getByTestId(`workspace-open-${workflow.id}`).click()
+      await expect(page.getByTestId('toolbar-activity')).toBeVisible({ timeout: 20_000 })
       await page.getByTestId('toolbar-grouping-toggle').click()
       await expect(page.getByTestId('role-lane-overlay')).toBeVisible({ timeout: 10_000 })
       await page.screenshot({
@@ -115,7 +121,7 @@ test.describe('screenshots', () => {
   })
 
   test('captures edge detail, data object detail, and settings', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const { userEmail } = await createScreenshotUser(page, suffix)
     const organizationName = await createOrganizationForScreenshots(page, suffix)
@@ -195,7 +201,7 @@ test.describe('screenshots', () => {
   })
 
   test('captures gateways and labels', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const { userEmail } = await createScreenshotUser(page, suffix)
     const organizationName = await createOrganizationForScreenshots(page, suffix)
@@ -399,7 +405,7 @@ test.describe('screenshots', () => {
   })
 
   test('captures the BIM cyclic coordination reference workflow', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const { userEmail } = await createScreenshotUser(page, suffix)
     const organizationName = await createOrganizationForScreenshots(page, suffix)
@@ -507,5 +513,6 @@ test.describe('screenshots', () => {
     }
   })
 })
+
 
 

@@ -9,6 +9,7 @@
   --panel-strong: #0b1f30;
   --surface-popover: rgba(6, 14, 22, 0.995);
   --surface-dialog: rgba(6, 14, 22, 0.992);
+  /* DEBUG: globale Tooltip-Flaeche, Alpha steckt im letzten rgba-Wert */
   --surface-tooltip: rgba(2, 10, 18, 0.98);
   --surface-overlay: rgba(2, 8, 12, 0.44);
   --line: rgba(132, 156, 177, 0.2);
@@ -790,6 +791,7 @@ select {
   color: #c7fff4;
 }
 
+/* DEBUG: Aktivitaetstyp-Tooltip am Node, sichtbare Transparenz kommt hier v. a. von background/color/shadow */
 .wow-activity-node__type-option-tooltip {
   pointer-events: none;
   position: absolute;
@@ -798,7 +800,11 @@ select {
   transform: translateX(-50%);
   z-index: 35;
   white-space: nowrap;
-  border-radius: 9999px;
+  border-
+  
+  
+  
+  : 9999px;
   border: 1px solid rgba(159, 231, 255, 0.18);
   background: var(--surface-tooltip);
   padding: 0.35rem 0.7rem;

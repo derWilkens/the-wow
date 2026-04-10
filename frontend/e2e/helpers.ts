@@ -10,6 +10,7 @@ export const apiBaseUrl = process.env.E2E_API_BASE_URL || 'http://127.0.0.1:3000
 export const workflowSelectionHeading =
   /Arbeitsablauf ausw|Arbeitsablauf auswaehl|Choose a workflow|Choose a process workspace/i
 export const workspacesButton = /Arbeitsabl(?:ae|\u00e4)ufe/i
+const uiPreferencesStorageKey = 'wow-ui-preferences'
 let adminSupabase: SupabaseClient | null = null
 const currentDir = fileURLToPath(new URL('.', import.meta.url))
 
@@ -84,9 +85,13 @@ export async function ensurePostLoginLanding(page: Page, userEmail: string) {
   const organizationCards = page.locator('[data-testid^="organization-select-"]')
   const loginHeading = page.getByRole('heading', { name: /Anmelden|Sign in/i })
   const localPart = userEmail.split('@')[0]?.replace(/[^a-zA-Z0-9_-]/g, '-') || 'e2e-user'
+  const storedOrganizationId = await page.evaluate(() => window.localStorage.getItem('wow-active-organization-id'))
 
   async function landOnWorkflowOverview() {
-    await expect(workflowHeading.or(toolbarActivity)).toBeVisible({ timeout: 15_000 })
+    await Promise.race([
+      workflowHeading.waitFor({ state: 'visible', timeout: 15_000 }),
+      toolbarActivity.waitFor({ state: 'visible', timeout: 15_000 }),
+    ])
   }
 
   async function isWorkflowOverviewVisible() {
@@ -175,26 +180,6 @@ export async function ensurePostLoginLanding(page: Page, userEmail: string) {
     return response.ok()
   }
 
-  async function listOrganizationsViaApi() {
-    const accessToken = await getAccessToken(page)
-    if (!accessToken) {
-      return []
-    }
-
-    const response = await page.request.get(`${apiBaseUrl}/organizations`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      failOnStatusCode: false,
-    })
-
-    if (!response.ok()) {
-      return []
-    }
-
-    return (await response.json()) as Array<{ id: string; name: string }>
-  }
-
   if (await loginHeading.isVisible({ timeout: 1_500 }).catch(() => false)) {
     await Promise.race([
       organizationHeading.waitFor({ state: 'visible', timeout: 20_000 }),
@@ -232,7 +217,14 @@ export async function ensurePostLoginLanding(page: Page, userEmail: string) {
         await page.reload()
       }
     } else {
-      const organizations = await listOrganizationsViaApi()
+      if (storedOrganizationId) {
+        const reachedWorkflowOverview = await activateOrganizationById(storedOrganizationId)
+        if (reachedWorkflowOverview) {
+          return
+        }
+      }
+
+      const organizations = await listOrganizationsViaApi(page)
       if (organizations[0]?.id) {
         const reachedWorkflowOverview = await activateOrganizationById(organizations[0].id)
         if (reachedWorkflowOverview) {
@@ -251,7 +243,14 @@ export async function ensurePostLoginLanding(page: Page, userEmail: string) {
   }
 
   if (await organizationHeading.isVisible({ timeout: 1_000 }).catch(() => false)) {
-    const organizations = await listOrganizationsViaApi()
+    if (storedOrganizationId) {
+      const reachedWorkflowOverview = await activateOrganizationById(storedOrganizationId)
+      if (reachedWorkflowOverview) {
+        return
+      }
+    }
+
+    const organizations = await listOrganizationsViaApi(page)
     if (organizations[0]?.id) {
       const reachedWorkflowOverview = await activateOrganizationById(organizations[0].id)
       if (reachedWorkflowOverview) {
@@ -337,8 +336,139 @@ export async function getAccessToken(page: Page) {
   })
 }
 
+async function listOrganizationsViaApi(page: Page) {
+  const accessToken = await getAccessToken(page)
+  if (!accessToken) {
+    return []
+  }
+
+  const response = await page.request.get(`${apiBaseUrl}/organizations`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    failOnStatusCode: false,
+  })
+
+  if (!response.ok()) {
+    return []
+  }
+
+  return (await response.json()) as Array<{ id: string; name: string }>
+}
+
+async function listWorkspacesViaApi(page: Page, organizationId: string) {
+  const accessToken = await getAccessToken(page)
+  if (!accessToken) {
+    return []
+  }
+
+  const response = await page.request.get(`${apiBaseUrl}/workspaces?organizationId=${organizationId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    failOnStatusCode: false,
+  })
+
+  if (!response.ok()) {
+    return []
+  }
+
+  return (await response.json()) as Array<{ id: string; name: string }>
+}
+
 export async function getActiveOrganizationId(page: Page) {
   return page.evaluate(() => window.localStorage.getItem('wow-active-organization-id'))
+}
+
+export async function updateUiPreferences(
+  page: Page,
+  preferences: Partial<{
+    default_grouping_mode: 'free' | 'role_lanes'
+    snap_to_grid: boolean
+    enable_table_view: boolean
+    enable_swimlane_view: boolean
+    enable_node_collision_avoidance: boolean
+  }>,
+) {
+  await page.evaluate(
+    ({ key, nextPreferences }) => {
+      const current = JSON.parse(window.localStorage.getItem(key) ?? '{}') as Record<string, unknown>
+      window.localStorage.setItem(key, JSON.stringify({ ...current, ...nextPreferences }))
+    },
+    { key: uiPreferencesStorageKey, nextPreferences: preferences },
+  )
+}
+
+export async function selectOrganizationCardIfVisible(page: Page, organizationId: string) {
+  const organizationCard = page.getByTestId(`organization-select-${organizationId}`)
+  if (await organizationCard.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await organizationCard.click()
+    return true
+  }
+
+  const firstOrganizationCard = page.locator('[data-testid^="organization-select-"]').first()
+  if (await firstOrganizationCard.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await firstOrganizationCard.click()
+    return true
+  }
+
+  return false
+}
+
+export async function saveUiPreferencesViaSettings(
+  page: Page,
+  preferences: Partial<{
+    default_grouping_mode: 'free' | 'role_lanes'
+    snap_to_grid: boolean
+    enable_table_view: boolean
+    enable_swimlane_view: boolean
+    enable_node_collision_avoidance: boolean
+  }>,
+) {
+  await page.getByTestId('toolbar-settings').click()
+  await expect(page.getByTestId('settings-nav-ui')).toBeVisible({ timeout: 10_000 })
+  await page.getByTestId('settings-nav-ui').click()
+
+  if (preferences.default_grouping_mode) {
+    await page
+      .getByTestId(
+        preferences.default_grouping_mode === 'role_lanes'
+          ? 'settings-ui-grouping-lanes'
+          : 'settings-ui-grouping-free',
+      )
+      .click()
+  }
+
+  if (typeof preferences.enable_table_view === 'boolean') {
+    await page
+      .getByTestId(preferences.enable_table_view ? 'settings-ui-table-view-on' : 'settings-ui-table-view-off')
+      .click()
+  }
+
+  if (typeof preferences.enable_swimlane_view === 'boolean') {
+    await page
+      .getByTestId(preferences.enable_swimlane_view ? 'settings-ui-swimlane-on' : 'settings-ui-swimlane-off')
+      .click()
+  }
+
+  if (typeof preferences.snap_to_grid === 'boolean') {
+    await page
+      .getByTestId(preferences.snap_to_grid ? 'settings-ui-snap-on' : 'settings-ui-snap-off')
+      .click()
+  }
+
+  if (typeof preferences.enable_node_collision_avoidance === 'boolean') {
+    await page
+      .getByTestId(
+        preferences.enable_node_collision_avoidance ? 'settings-ui-collision-on' : 'settings-ui-collision-off',
+      )
+      .click()
+  }
+
+  await page.getByTestId('settings-ui-save').click()
+  await expect(page.getByTestId('settings-dialog-close')).toBeVisible({ timeout: 10_000 })
+  await page.getByTestId('settings-dialog-close').click()
+  await expect(page.getByTestId('settings-dialog-close')).toHaveCount(0)
 }
 
 export async function createWorkflow(page: Page, name: string) {
@@ -346,6 +476,149 @@ export async function createWorkflow(page: Page, name: string) {
   const createWorkspaceResponse = page.waitForResponse((response) => response.url().includes('/workspaces') && response.request().method() === 'POST')
   await page.getByRole('button', { name: /^anlegen$|^create$/i }).click()
   return (await createWorkspaceResponse).json() as Promise<{ id: string; name: string }>
+}
+
+export async function reopenWorkflowAfterReload(
+  page: Page,
+  workflowId: string,
+  userEmail: string = email!,
+) {
+  const preferredOrganizationId = await getActiveOrganizationId(page)
+  await page.reload()
+  const workflowOpenButton = page.getByTestId(`workspace-open-${workflowId}`)
+  const workspaceTreeOpenButton = page.getByTestId(`workspace-tree-open-${workflowId}`)
+  const workflowHeading = page.getByText(workflowSelectionHeading)
+  const toolbarActivity = page.getByTestId('toolbar-activity')
+  const organizationHeading = page.getByRole('heading', { name: /Firma ausw|Select organization|Firma anlegen|Create organization/i })
+  const loginHeading = page.getByRole('heading', { name: /Anmelden|Sign in/i })
+  const createModeBlank = page.getByTestId('workspace-create-mode-blank')
+  const workspaceNameInput = page.getByPlaceholder(/Name des Arbeitsablaufs|New workspace name/i)
+  const organizationSelect = page.locator('select')
+
+  let matchingOrganizationId: string | null = preferredOrganizationId
+  const organizations = await listOrganizationsViaApi(page)
+  for (const organization of organizations) {
+    const workspaces = await listWorkspacesViaApi(page, organization.id)
+    if (workspaces.some((workspace) => workspace.id === workflowId)) {
+      matchingOrganizationId = organization.id
+      break
+    }
+  }
+
+  const waitForWorkspaceOverview = async () => {
+    await Promise.race([
+      workflowHeading.waitFor({ state: 'visible', timeout: 20_000 }),
+      createModeBlank.waitFor({ state: 'visible', timeout: 20_000 }),
+      workflowOpenButton.waitFor({ state: 'visible', timeout: 20_000 }),
+      workspaceTreeOpenButton.waitFor({ state: 'visible', timeout: 20_000 }),
+      workspaceNameInput.waitFor({ state: 'visible', timeout: 20_000 }),
+    ])
+  }
+
+  const openWorkflowFromCurrentLanding = async (timeout = 20_000) => {
+    await waitForWorkspaceOverview()
+
+    if (await workflowOpenButton.isVisible({ timeout }).catch(() => false)) {
+      await workflowOpenButton.click()
+      return true
+    }
+
+    if (await workspaceTreeOpenButton.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await workspaceTreeOpenButton.click()
+      return true
+    }
+
+    const workspacesToggle = page.getByRole('button', { name: workspacesButton })
+    if (await workspacesToggle.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await workspacesToggle.click()
+      if (await workflowOpenButton.isVisible({ timeout }).catch(() => false)) {
+        await workflowOpenButton.click()
+        return true
+      }
+    }
+
+    return false
+  }
+
+  if (await loginHeading.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await ensurePostLoginLanding(page, userEmail)
+  }
+
+  const selectMatchingOrganizationInWorkspaceOverview = async () => {
+    if (!matchingOrganizationId) {
+      return false
+    }
+
+    if (await organizationSelect.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await organizationSelect.selectOption(matchingOrganizationId)
+      if (await openWorkflowFromCurrentLanding()) {
+        return true
+      }
+    }
+
+    const tryOrganizationCard = async (organizationId: string) => {
+      if (!(await selectOrganizationCardIfVisible(page, organizationId))) {
+        return false
+      }
+
+      await Promise.race([
+        createModeBlank.waitFor({ state: 'visible', timeout: 20_000 }),
+        workflowHeading.waitFor({ state: 'visible', timeout: 20_000 }),
+        workflowOpenButton.waitFor({ state: 'visible', timeout: 20_000 }),
+        workspaceTreeOpenButton.waitFor({ state: 'visible', timeout: 20_000 }),
+        workspaceNameInput.waitFor({ state: 'visible', timeout: 20_000 }),
+      ]).catch(() => null)
+
+      if (await openWorkflowFromCurrentLanding()) {
+        return true
+      }
+
+      return false
+    }
+
+    if (await tryOrganizationCard(matchingOrganizationId)) {
+      return
+    }
+
+    return false
+  }
+
+  if (await organizationHeading.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    if (await selectMatchingOrganizationInWorkspaceOverview()) {
+      return
+    }
+
+    for (const organization of organizations) {
+      if (organization.id !== matchingOrganizationId) {
+        const organizationCard = page.getByTestId(`organization-select-${organization.id}`)
+        if (await organizationCard.isVisible({ timeout: 2_000 }).catch(() => false)) {
+          await organizationCard.click()
+          if (await openWorkflowFromCurrentLanding(10_000)) {
+            return
+          }
+        }
+      }
+    }
+  }
+
+  if (await openWorkflowFromCurrentLanding()) {
+    return
+  }
+
+  if (await loginHeading.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await ensurePostLoginLanding(page, userEmail)
+    if (await openWorkflowFromCurrentLanding()) {
+      return
+    }
+  }
+
+  if (await selectMatchingOrganizationInWorkspaceOverview()) {
+    return
+  }
+
+  await expect(workflowOpenButton).toBeVisible({ timeout: 20_000 })
+  await workflowOpenButton.click()
+  await expect(toolbarActivity).toBeVisible({ timeout: 15_000 })
 }
 
 export async function cleanupWorkspaces(request: APIRequestContext, workspaceIds: string[], token: string | null) {

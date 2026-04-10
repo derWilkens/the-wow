@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupOrganizationsByNames,
   createTestUser,
@@ -18,7 +18,7 @@ import {
 
 test.describe('saas organizations', () => {
   test('supports self-service signup, organization creation, and the first workflow', async ({ page }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const userEmail = `saas-owner-${suffix}@mailinator.com`
     const userPassword = 'CodexSaaS!2026'
@@ -46,7 +46,7 @@ test.describe('saas organizations', () => {
   })
 
   test.skip('lets an invited member access and edit a shared workflow inside the same organization', async ({ page, request }) => {
-    test.setTimeout(240_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const ownerEmail = `saas-shared-owner-${suffix}@example.com`
     const memberEmail = `saas-shared-member-${suffix}@example.com`
@@ -113,7 +113,7 @@ test.describe('saas organizations', () => {
   })
 
   test('isolates workflows and IT tools between different organizations', async ({ page }) => {
-    test.setTimeout(240_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const ownerAEmail = `saas-isolation-a-${suffix}@example.com`
     const ownerBEmail = `saas-isolation-b-${suffix}@example.com`
@@ -171,7 +171,7 @@ test.describe('saas organizations', () => {
   })
 
   test('keeps the selected organization context across a full reload', async ({ page }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const userEmail = `saas-reload-${suffix}@example.com`
     const userPassword = 'CodexSaaS!2026'
@@ -206,6 +206,7 @@ test.describe('saas organizations', () => {
     }
   })
 })
+
 
 
 

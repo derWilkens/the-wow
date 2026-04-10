@@ -1,12 +1,12 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   createWorkflow,
   getAccessToken,
   getActivityNodeIds,
   login,
+  reopenWorkflowAfterReload,
   requireCredentials,
-  workflowSelectionHeading,
   testSuffix,
 } from './helpers'
 
@@ -14,7 +14,7 @@ test.describe('canvas view', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('keeps viewport controls usable after a full page reload', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workflowName = `Canvas View Reload ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -39,9 +39,7 @@ test.describe('canvas view', () => {
         return box?.width ?? 0
       }, { timeout: 10_000 }).toBeGreaterThan((initialBox?.width ?? 0) + 5)
 
-      await page.reload()
-      await expect(page.getByText(workflowSelectionHeading)).toBeVisible()
-      await page.getByTestId(`workspace-open-${createdWorkflow.id}`).click()
+      await reopenWorkflowAfterReload(page, createdWorkflow.id)
 
       await expect(activity).toBeVisible({ timeout: 15_000 })
       const reloadedBox = await activity.boundingBox()
@@ -57,6 +55,7 @@ test.describe('canvas view', () => {
     }
   })
 })
+
 
 
 

@@ -1,0 +1,196 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ActivityNode > renders a stable hovered activity-type popover state for visual debugging 1`] = `
+<div
+  class="wow-activity-node__type-popover"
+  data-testid="activity-type-popover-activity-1"
+>
+  <button
+    aria-label="Unbestimmt"
+    class="wow-activity-node__type-option "
+    data-testid="activity-type-option-activity-1-unbestimmt"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-circle-help h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+      <path
+        d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"
+      />
+      <path
+        d="M12 17h.01"
+      />
+    </svg>
+  </button>
+  <button
+    aria-label="Erstellen"
+    class="wow-activity-node__type-option "
+    data-testid="activity-type-option-activity-1-erstellen"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-file-cog h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M14 2v4a2 2 0 0 0 2 2h4"
+      />
+      <path
+        d="m2.305 15.53.923-.382"
+      />
+      <path
+        d="m3.228 12.852-.924-.383"
+      />
+      <path
+        d="M4.677 21.5a2 2 0 0 0 1.313.5H18a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v2.5"
+      />
+      <path
+        d="m4.852 11.228-.383-.923"
+      />
+      <path
+        d="m4.852 16.772-.383.924"
+      />
+      <path
+        d="m7.148 11.228.383-.923"
+      />
+      <path
+        d="m7.53 17.696-.382-.924"
+      />
+      <path
+        d="m8.772 12.852.923-.383"
+      />
+      <path
+        d="m8.772 15.148.923.383"
+      />
+      <circle
+        cx="6"
+        cy="14"
+        r="3"
+      />
+    </svg>
+  </button>
+  <button
+    aria-label="Transformieren / Aktualisieren"
+    class="wow-activity-node__type-option "
+    data-testid="activity-type-option-activity-1-transformieren_aktualisieren"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-shapes h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z"
+      />
+      <rect
+        height="7"
+        rx="1"
+        width="7"
+        x="3"
+        y="14"
+      />
+      <circle
+        cx="17.5"
+        cy="17.5"
+        r="3.5"
+      />
+    </svg>
+  </button>
+  <button
+    aria-label="Pruefen / Freigeben"
+    class="wow-activity-node__type-option wow-activity-node__type-option--active"
+    data-testid="activity-type-option-activity-1-pruefen_freigeben"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-circle-check h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+      />
+      <path
+        d="m9 12 2 2 4-4"
+      />
+    </svg>
+  </button>
+  <button
+    aria-label="Weiterleiten / Ablegen"
+    class="wow-activity-node__type-option "
+    data-testid="activity-type-option-activity-1-weiterleiten_ablegen"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="lucide lucide-forward h-4 w-4"
+      fill="none"
+      height="24"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="2"
+      viewBox="0 0 24 24"
+      width="24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="m15 17 5-5-5-5"
+      />
+      <path
+        d="M4 18v-2a4 4 0 0 1 4-4h12"
+      />
+    </svg>
+  </button>
+  <div
+    class="wow-activity-node__type-option-tooltip"
+    data-testid="activity-type-option-tooltip-activity-1"
+    role="tooltip"
+  >
+    Erstellen
+  </div>
+</div>
+`;

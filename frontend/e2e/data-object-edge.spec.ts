@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   connectHandleToNodeSide,
@@ -7,10 +7,10 @@ import {
   getActivityNodeIds,
   getEdgeCount,
   login,
+  reopenWorkflowAfterReload,
   requireCredentials,
   selectEdgeByIndex,
   selectFirstEdge,
-  workflowSelectionHeading,
   testSuffix,
 } from './helpers'
 
@@ -18,7 +18,7 @@ test.describe('edge-attached data objects', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('shows the correct toolbar hint for data object edge mode', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekt Hinweis ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -43,7 +43,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('does not create a data object when no edge is selected', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekt Ohne Kante ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -66,7 +66,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('shows a named single data object directly on the edge and opens quick management on click', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekt Kante ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -95,7 +95,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('collapses multiple data objects on one edge into icon plus count and shows names on hover', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Mehrere Datenobjekte ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -122,7 +122,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('creates and names a new data object directly in the edge dialog', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekt Quick Create ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -153,7 +153,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('adds an existing data object from the same workflow in the edge dialog', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekt Wiederverwenden ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -192,7 +192,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('opens the full data object dialog from the edge detail panel and returns to the edge dialog on close', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekt Detail Rueckweg ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -229,7 +229,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('closes the data object dialog immediately when deleting from the detail view', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekt Dialog Delete ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -258,7 +258,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('deletes a selected edge-attached data object without deleting the edge', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekt Delete ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -285,7 +285,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('deletes attached data objects when deleting the parent edge', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekte Mit Kante ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -311,7 +311,7 @@ test.describe('edge-attached data objects', () => {
   })
 
   test('persists edge-attached data objects across a full page reload', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenobjekt Reload ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -342,9 +342,7 @@ test.describe('edge-attached data objects', () => {
       await expect(page.locator('[data-testid^="data-object-detail-"]')).toHaveCount(0)
       await expect(page.locator('[data-testid^="edge-data-object-chip-"]').first()).toContainText('Gepruefte Rechnung')
 
-      await page.reload()
-      await expect(page.getByText(workflowSelectionHeading)).toBeVisible()
-      await page.getByTestId(`workspace-open-${createdWorkflow.id}`).click()
+      await reopenWorkflowAfterReload(page, createdWorkflow.id)
 
       await expect.poll(async () => getEdgeCount(page), { timeout: 15_000 }).toBe(1)
       await expect(page.locator('[data-testid^="edge-data-object-chip-"]')).toHaveCount(1, { timeout: 15_000 })
@@ -354,6 +352,7 @@ test.describe('edge-attached data objects', () => {
     }
   })
 })
+
 
 
 

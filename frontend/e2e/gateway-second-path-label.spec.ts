@@ -30,7 +30,7 @@ test.describe('gateway second path label', () => {
   }
 
   test('labels the second outgoing decision edge after the first one was already saved', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Gateway Seq ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -76,3 +76,4 @@ test.describe('gateway second path label', () => {
     }
   })
 })
+

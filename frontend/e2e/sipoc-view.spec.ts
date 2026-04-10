@@ -2,10 +2,12 @@ import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   createWorkflow,
-  getAccessToken,
-  getActiveOrganizationId,
   login,
   requireCredentials,
+  getAccessToken,
+  getActiveOrganizationId,
+  reopenWorkflowAfterReload,
+  saveUiPreferencesViaSettings,
   testSuffix,
 } from './helpers'
 
@@ -16,15 +18,16 @@ test.describe('sipoc view', () => {
     page,
     request,
   }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workflowName = `SIPOC Edit ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
 
     try {
       await login(page)
-      accessToken = await getAccessToken(page)
       const organizationId = await getActiveOrganizationId(page)
+      expect(organizationId).toBeTruthy()
+      accessToken = await getAccessToken(page)
       expect(accessToken).toBeTruthy()
       expect(organizationId).toBeTruthy()
 
@@ -237,8 +240,8 @@ test.describe('sipoc view', () => {
         },
       })
 
-      await login(page)
-      await page.getByTestId(`workspace-open-${createdWorkflow.id}`).click()
+      await saveUiPreferencesViaSettings(page, { enable_table_view: true })
+      await reopenWorkflowAfterReload(page, createdWorkflow.id)
       await page.getByTestId('toolbar-view-sipoc').click()
 
       const processRow = page.getByTestId(`sipoc-row-${processActivity.id}`)
@@ -284,3 +287,5 @@ test.describe('sipoc view', () => {
     }
   })
 })
+
+

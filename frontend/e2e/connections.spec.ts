@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   connectHandleToNodeSide,
@@ -17,7 +17,7 @@ test.describe('connections', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('creates connections across activities and datenspeicher nodes', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Verbindungen ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -66,5 +66,6 @@ test.describe('connections', () => {
     }
   })
 })
+
 
 

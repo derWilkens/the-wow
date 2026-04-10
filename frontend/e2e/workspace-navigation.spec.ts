@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   createWorkflow,
@@ -15,7 +15,7 @@ test.describe('workspace navigation', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('opens deep detail workflows through the hierarchy explorer search', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
     const rootWorkflowName = `Navigation Root ${testSuffix()}`
@@ -65,6 +65,7 @@ test.describe('workspace navigation', () => {
     }
   })
 })
+
 
 
 

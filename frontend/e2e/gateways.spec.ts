@@ -1,4 +1,4 @@
-Ôªøimport { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   connectHandleToNodeSide,
@@ -51,7 +51,7 @@ test.describe('gateways', () => {
   }
 
   test('builds a decision with labeled outgoing paths', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Gateway Entscheidung ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -94,7 +94,7 @@ test.describe('gateways', () => {
   })
 
   test('supports merge gateways and preserves labels after reload', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Gateway Merge ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -134,20 +134,21 @@ test.describe('gateways', () => {
       await expect.poll(async () => getEdgeCount(page), { timeout: 15_000 }).toBe(6)
 
       await selectEdgeByConnection(page, decisionId, resolvedBranchActivityIds[0])
-      await saveEdgeLabel(page, 'Vollst√§ndig')
-      await expect(page.locator('[data-testid^="edge-label-"]')).toContainText('Vollst√§ndig')
+      await saveEdgeLabel(page, 'Vollst‰ndig')
+      await expect(page.locator('[data-testid^="edge-label-"]')).toContainText('Vollst‰ndig')
 
       await page.reload()
       await expect(page.getByText(workflowSelectionHeading)).toBeVisible()
       await page.getByTestId(`workspace-open-${createdWorkflow.id}`).click()
 
       await expect.poll(async () => (await getGatewayNodeIds(page)).length, { timeout: 15_000 }).toBe(2)
-      await expect(page.locator('[data-testid^="edge-label-"]')).toContainText('Vollst√§ndig')
+      await expect(page.locator('[data-testid^="edge-label-"]')).toContainText('Vollst‰ndig')
     } finally {
       await cleanupWorkspaces(request, createdWorkspaceIds, accessToken)
     }
   })
 })
+
 
 
 

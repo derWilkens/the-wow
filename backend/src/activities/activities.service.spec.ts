@@ -232,6 +232,71 @@ describe('ActivitiesService', () => {
     expect(fallbackActivityAssignments.has('activity-1')).toBe(false)
   })
 
+  it('does not overwrite persisted assignment fields when they are omitted from a partial upsert', async () => {
+    const upsertQuery = {
+      upsert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({
+        data: {
+          id: 'activity-1',
+          workspace_id: 'workspace-1',
+          activity_type: 'unbestimmt',
+        },
+        error: null,
+      }),
+    }
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        ActivitiesService,
+        {
+          provide: DatabaseService,
+          useValue: {
+            assertWorkspaceAccess: jest.fn().mockResolvedValue({
+              id: 'workspace-1',
+              organization_id: 'org-1',
+            }),
+            supabase: { from: jest.fn().mockReturnValue(upsertQuery) },
+          },
+        },
+      ],
+    }).compile()
+
+    const service = moduleRef.get(ActivitiesService)
+    await service.upsert('user-1', 'workspace-1', {
+      id: 'activity-1',
+      parent_id: null,
+      node_type: 'activity',
+      label: 'Pruefen',
+      trigger_type: null,
+      position_x: 120,
+      position_y: 220,
+      status: 'draft',
+      status_icon: null,
+      activity_type: 'unbestimmt',
+      description: null,
+      notes: null,
+      duration_minutes: null,
+    })
+
+    expect(upsertQuery.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'activity-1',
+        workspace_id: 'workspace-1',
+      }),
+    )
+    expect(upsertQuery.upsert).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        assignee_label: expect.anything(),
+      }),
+    )
+    expect(upsertQuery.upsert).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        role_id: expect.anything(),
+      }),
+    )
+  })
+
   it('supports comment CRUD through the fallback store when the table is not available yet', async () => {
     const listQuery = {
       select: jest.fn().mockReturnThis(),

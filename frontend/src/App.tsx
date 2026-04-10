@@ -1700,6 +1700,8 @@ function WorkspaceCanvasApp({
         activity_type: activity.activity_type,
         description: activity.description,
         notes: activity.notes,
+        assignee_label: activity.assignee_label ?? null,
+        role_id: activity.role_id ?? null,
         duration_minutes: activity.duration_minutes,
       })
       return

@@ -1,4 +1,4 @@
-﻿import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import {
   cleanupOrganizationsByNames,
   cleanupWorkspaces,
@@ -56,7 +56,7 @@ test.describe('subprocess entry', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('opens the subprocess menu reliably on a later activity in a dense workflow', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const workflowName = `Subprocess Entry ${suffix}`
     const createdWorkspaceIds: string[] = []
@@ -103,5 +103,6 @@ test.describe('subprocess entry', () => {
     }
   })
 })
+
 
 

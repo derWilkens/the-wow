@@ -126,8 +126,6 @@ export class ActivitiesService {
       id: dto.id ?? randomUUID(),
       workspace_id: workspaceId,
       owner_id: userId,
-      assignee_label: dto.assignee_label?.trim() ? dto.assignee_label.trim() : null,
-      role_id: dto.role_id ?? null,
       parent_id: dto.parent_id ?? null,
       node_type: dto.node_type,
       label: dto.label,
@@ -145,6 +143,10 @@ export class ActivitiesService {
       ...(dto.linked_workflow_purpose !== undefined ? { linked_workflow_purpose: dto.linked_workflow_purpose ?? null } : {}),
       ...(dto.linked_workflow_inputs !== undefined ? { linked_workflow_inputs: dto.linked_workflow_inputs } : {}),
       ...(dto.linked_workflow_outputs !== undefined ? { linked_workflow_outputs: dto.linked_workflow_outputs } : {}),
+      ...(dto.assignee_label !== undefined
+        ? { assignee_label: dto.assignee_label?.trim() ? dto.assignee_label.trim() : null }
+        : {}),
+      ...(dto.role_id !== undefined ? { role_id: dto.role_id ?? null } : {}),
     }
 
     let data

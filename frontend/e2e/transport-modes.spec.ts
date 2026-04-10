@@ -1,4 +1,4 @@
-﻿import { expect, type APIRequestContext, type Page, test } from '@playwright/test'
+import { expect, type APIRequestContext, type Page, test } from '@playwright/test'
 import {
   apiBaseUrl,
   cleanupOrganizationsByNames,
@@ -43,7 +43,7 @@ async function ensureWorkspaceList(page: Page, request: APIRequestContext, organ
 
 test.describe('transport mode settings', () => {
   test('creates a transport mode in settings and keeps it available after reopening the dialog', async ({ page, request }) => {
-    test.setTimeout(90_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const userEmail = `transport-mode-owner-${suffix}@example.com`
     const userPassword = 'CodexSaaS!2026'
@@ -86,7 +86,7 @@ test.describe('transport mode settings', () => {
   })
 
   test('keeps an already used inactive transport mode visible in edge details', async ({ page, request }) => {
-    test.setTimeout(90_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const userEmail = `transport-mode-inactive-${suffix}@example.com`
     const userPassword = 'CodexSaaS!2026'
@@ -135,5 +135,6 @@ test.describe('transport mode settings', () => {
     }
   })
 })
+
 
 

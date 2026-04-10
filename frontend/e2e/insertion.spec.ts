@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   createWorkflow,
@@ -15,7 +15,7 @@ test.describe('canvas insertion', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('inserts toolbar activity into the current viewport center without opening a popup', async ({ page, request }) => {
-    test.setTimeout(90_000)
+    test.setTimeout(60_000)
     const workspaceName = `Zentrierter Insert ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -53,7 +53,7 @@ test.describe('canvas insertion', () => {
   })
 
   test('keeps a freshly inserted activity stable when it is dragged immediately', async ({ page, request }) => {
-    test.setTimeout(90_000)
+    test.setTimeout(60_000)
     const workspaceName = `Drag Repro ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -86,5 +86,6 @@ test.describe('canvas insertion', () => {
     }
   })
 })
+
 
 

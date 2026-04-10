@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupITToolsByNames,
   cleanupWorkspaces,
@@ -9,6 +9,7 @@ import {
   login,
   openActivityDetail,
   closeActivityDetail,
+  reopenWorkflowAfterReload,
   requireCredentials,
   workspacesButton,
   testSuffix,
@@ -52,7 +53,7 @@ test.describe('it tools', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('creates a new IT tool from activity details and links it immediately', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workflowName = `IT Tool Neu ${testSuffix()}`
     const toolName = `SAP ${testSuffix()}`
     const toolDescription = 'Rechnungen und Buchungsdaten'
@@ -85,7 +86,7 @@ test.describe('it tools', () => {
   })
 
   test('links an existing IT tool from activity details and does not offer it again', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workflowName = `IT Tool Verlinken ${testSuffix()}`
     const toolName = `Outlook ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
@@ -158,7 +159,7 @@ test.describe('it tools', () => {
   })
 
   test('removes a linked IT tool from an activity', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workflowName = `IT Tool Entfernen ${testSuffix()}`
     const toolName = `Excel ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
@@ -192,7 +193,7 @@ test.describe('it tools', () => {
   })
 
   test('reuses the same IT tool across multiple activities without creating duplicates', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workflowName = `IT Tool Mehrfach ${testSuffix()}`
     const toolName = `Teams ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
@@ -217,9 +218,7 @@ test.describe('it tools', () => {
       await closeActivityDetail(page)
 
       await createSecondActivityViaApi(request, accessToken!, workflow.id)
-      await page.reload()
-      await expect(page.getByRole('heading', { name: /Arbeitsablauf ausw/i })).toBeVisible()
-      await page.getByTestId(`workspace-open-${workflow.id}`).click()
+      await reopenWorkflowAfterReload(page, workflow.id)
       await expect.poll(async () => (await getActivityNodeIds(page)).length, { timeout: 15_000 }).toBe(2)
       const secondActivityId = (await getActivityNodeIds(page)).find((id) => id !== firstActivityId)
       expect(secondActivityId).toBeTruthy()
@@ -244,7 +243,7 @@ test.describe('it tools', () => {
   })
 
   test('reuses the same IT tool across multiple workflows without creating duplicates', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const firstWorkflowName = `IT Tool Workflow A ${testSuffix()}`
     const secondWorkflowName = `IT Tool Workflow B ${testSuffix()}`
     const toolName = `DocuWare ${testSuffix()}`
@@ -289,7 +288,7 @@ test.describe('it tools', () => {
   })
 
   test('reopens activity details after reload and keeps linked IT tools visible', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const workflowName = `IT Tool Reload ${testSuffix()}`
     const toolName = `Jira ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
@@ -312,9 +311,7 @@ test.describe('it tools', () => {
       await page.getByTestId('activity-tool-select-create-submit').click()
       await expect(page.locator('[data-testid^="activity-tool-chip-"]')).toContainText(toolName)
 
-      await page.reload()
-      await expect(page.getByRole('heading', { name: /Arbeitsablauf ausw/i })).toBeVisible()
-      await page.getByTestId(`workspace-open-${workflow.id}`).click()
+      await reopenWorkflowAfterReload(page, workflow.id)
 
       await openActivityDetail(page, activityId)
       await expect(page.locator('[data-testid^="activity-tool-chip-"]')).toContainText(toolName)
@@ -324,6 +321,7 @@ test.describe('it tools', () => {
     }
   })
 })
+
 
 
 

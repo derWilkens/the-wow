@@ -44,7 +44,7 @@ async function createOrganizationForSession(page: Parameters<typeof test>[0]['pa
 
 test.describe('view preferences', () => {
   test('hides optional header controls by default and toggles them through settings', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
 
     const suffix = testSuffix()
     const organizationName = `View Pref Org ${suffix}`
@@ -115,3 +115,4 @@ test.describe('view preferences', () => {
     }
   })
 })
+

@@ -1,4 +1,4 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupOrganizationsByNames,
   createTestUser,
@@ -31,7 +31,7 @@ test.describe('organization landing', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('guides a fresh user from login to creating the first organization and workflow landing', async ({ page }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const userEmail = `org-landing-create-${suffix}@mailinator.com`
     const userPassword = 'CodexSaaS!2026'
@@ -64,7 +64,7 @@ test.describe('organization landing', () => {
   })
 
   test('lets a user choose an existing organization card and lands on the workflow overview', async ({ page }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const userEmail = `org-landing-select-${suffix}@mailinator.com`
     const userPassword = 'CodexSaaS!2026'
@@ -99,5 +99,6 @@ test.describe('organization landing', () => {
     }
   })
 })
+
 
 

@@ -1,13 +1,13 @@
-﻿import { expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import {
   cleanupWorkspaces,
   createWorkflow,
   getAccessToken,
   getEdgeCount,
   login,
+  reopenWorkflowAfterReload,
   requireCredentials,
   selectFirstEdge,
-  workflowSelectionHeading,
   testSuffix,
 } from './helpers'
 
@@ -15,7 +15,7 @@ test.describe('edge attributes', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('creates connections without forcing edge attributes and edits them afterwards', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Kantenattribute ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -53,7 +53,7 @@ test.describe('edge attributes', () => {
   })
 
   test('persists edge attributes across a full page reload', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Kantenattribute Reload ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -79,9 +79,7 @@ test.describe('edge attributes', () => {
       await selectFirstEdge(page)
       await expect(page.getByTestId('edge-notes')).toHaveValue('Zwischenspeicherung bis zur naechsten Bearbeitung.')
 
-      await page.reload()
-      await expect(page.getByText(workflowSelectionHeading)).toBeVisible()
-      await page.getByTestId(`workspace-open-${createdWorkflow.id}`).click()
+      await reopenWorkflowAfterReload(page, createdWorkflow.id)
 
       await expect.poll(async () => getEdgeCount(page), { timeout: 15_000 }).toBe(1)
       await selectFirstEdge(page)
@@ -93,6 +91,7 @@ test.describe('edge attributes', () => {
     }
   })
 })
+
 
 
 

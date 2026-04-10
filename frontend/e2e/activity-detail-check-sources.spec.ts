@@ -1,4 +1,4 @@
-﻿import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import {
   cleanupOrganizationsByNames,
   cleanupWorkspaces,
@@ -94,7 +94,7 @@ test.describe('activity detail check sources', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('shows check-source chips inside the activity detail dialog', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const workflowName = `Check Sources ${suffix}`
     const createdWorkspaceIds: string[] = []
@@ -147,5 +147,6 @@ test.describe('activity detail check sources', () => {
     }
   })
 })
+
 
 

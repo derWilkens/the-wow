@@ -17,7 +17,7 @@ test.describe('activity type quick change', () => {
     page,
     request,
   }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
     const workflowName = `Type Quick ${testSuffix()}`
@@ -85,3 +85,4 @@ test.describe('activity type quick change', () => {
     }
   })
 })
+

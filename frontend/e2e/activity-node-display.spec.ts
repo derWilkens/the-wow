@@ -15,7 +15,7 @@ test.describe('activity node display', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('shows the description only in a hover tooltip and toggles the subprocess marker state', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
     const workflowName = `Node Display ${testSuffix()}`
@@ -90,3 +90,4 @@ test.describe('activity node display', () => {
     }
   })
 })
+

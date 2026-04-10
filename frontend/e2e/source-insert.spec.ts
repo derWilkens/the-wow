@@ -5,7 +5,7 @@ test.describe('source insert chooser', () => {
   test.skip(requireCredentials(), 'E2E credentials are required')
 
   test('allows creating a new source and reusing an existing source name', async ({ page, request }) => {
-    test.setTimeout(120_000)
+    test.setTimeout(60_000)
     const workspaceName = `Datenspeicher ${testSuffix()}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
@@ -34,3 +34,4 @@ test.describe('source insert chooser', () => {
     }
   })
 })
+

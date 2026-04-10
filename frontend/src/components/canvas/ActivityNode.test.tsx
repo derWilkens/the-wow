@@ -345,6 +345,46 @@ describe('ActivityNode', () => {
     expect(onOpenDetail).not.toHaveBeenCalled()
   })
 
+  it('renders a stable hovered activity-type popover state for visual debugging', () => {
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity(),
+          hasChildren: false,
+          roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
+          assigneeLabel: 'Max Mustermann',
+          groupingMode: 'free',
+          onOpenDetail: vi.fn(),
+          onOpenSubprocessMenu: vi.fn(),
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+          onQuickChangeType: vi.fn(),
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('activity-type-trigger-activity-1'))
+    fireEvent.mouseEnter(screen.getByTestId('activity-type-option-activity-1-erstellen'))
+
+    const popover = screen.getByTestId('activity-type-popover-activity-1')
+    expect(popover).toBeInTheDocument()
+    expect(screen.getByTestId('activity-type-option-tooltip-activity-1')).toHaveTextContent('Erstellen')
+    expect(popover).toMatchSnapshot()
+  })
+
   it('closes the type popover via escape and outside click', () => {
     render(
       <div>

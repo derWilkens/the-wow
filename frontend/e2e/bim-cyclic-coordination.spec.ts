@@ -1,4 +1,4 @@
-﻿import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 import {
   addUserToOrganization,
   cleanupITToolsByNames,
@@ -396,7 +396,7 @@ test.describe('bim cyclic coordination', () => {
     page,
     request,
   }) => {
-    test.setTimeout(420_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const workflowName = `BIM zyklische Modellkoordination ${suffix}`
     const createdWorkspaceIds: string[] = []
@@ -762,7 +762,7 @@ test.describe('bim cyclic coordination', () => {
       const reviewActivities = await listActivitiesViaApi(request, accessToken!, reviewWorkflow.id)
       await updateActivityViaApi(request, accessToken!, reviewWorkflow.id, String(reviewActivities.find((entry) => entry.label === 'Pruefpaket an Fachspezialisten verteilen')?.id), {
         activity_type: 'weiterleiten_ablegen',
-        description: 'Der BIM-Koordinator verteilt die pruefrelevanten Unterlagen an die zustÃ¤ndigen Fachspezialisten.',
+        description: 'Der BIM-Koordinator verteilt die pruefrelevanten Unterlagen an die zuständigen Fachspezialisten.',
         notes: 'Jeder Fachspezialist muss genau die Unterlagen erhalten, die fuer sein Fachgebiet relevant sind.',
         assignee_user_id: seededUsers.bimCoordinator.userId,
         duration_minutes: 30,
@@ -928,7 +928,7 @@ test.describe('bim cyclic coordination', () => {
   })
 
   test('models an explicit merge gateway after parallel BIM review branches', async ({ page, request }) => {
-    test.setTimeout(180_000)
+    test.setTimeout(60_000)
     const suffix = testSuffix()
     const workflowName = `BIM Merge Koordination ${suffix}`
     const createdWorkspaceIds: string[] = []
@@ -998,5 +998,6 @@ test.describe('bim cyclic coordination', () => {
     }
   })
 })
+
 
 
