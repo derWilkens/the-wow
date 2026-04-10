@@ -174,6 +174,7 @@ function getDistanceToNodeBox(nodeElement: Element, clientX: number, clientY: nu
 }
 
 interface WorkflowCanvasProps {
+  workspaceId: string
   activities: Activity[]
   canvasObjects: CanvasObject[]
   canvasEdges: CanvasEdge[]
@@ -215,6 +216,7 @@ interface WorkflowCanvasProps {
 }
 
 export function WorkflowCanvas({
+  workspaceId,
   activities,
   canvasObjects,
   canvasEdges,
@@ -251,6 +253,7 @@ export function WorkflowCanvas({
   onAddExistingDataObjectToEdge,
 }: WorkflowCanvasProps) {
   const reactFlowRef = useRef<ReactFlowInstance | null>(null)
+  const lastFitWorkspaceRef = useRef<string | null>(null)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const pendingConnectionRef = useRef<{ nodeId: string; handleId: string | null; handleType: 'source' | 'target' | null } | null>(null)
   const connectionSucceededRef = useRef(false)
@@ -792,6 +795,26 @@ export function WorkflowCanvas({
     }, 425)
   }, [focusNodeId, renderNodes])
 
+  useEffect(() => {
+    const instance = reactFlowRef.current
+    if (!instance || renderNodes.length === 0) {
+      return
+    }
+    if (lastFitWorkspaceRef.current === workspaceId) {
+      return
+    }
+
+    lastFitWorkspaceRef.current = workspaceId
+    const frame = window.requestAnimationFrame(() => {
+      void instance.fitView?.({
+        padding: 0.18,
+        duration: 250,
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [renderNodes.length, workspaceId])
+
   useEffect(
     () => () => {
       if (focusAnimationTimeoutRef.current) {
@@ -937,6 +960,7 @@ export function WorkflowCanvas({
         deleteKeyCode={['Backspace', 'Delete']}
         onInit={(instance) => {
           reactFlowRef.current = instance
+          lastFitWorkspaceRef.current = null
           publishViewportCenter()
         }}
         onConnectStart={(_, params: OnConnectStartParams) => {

@@ -5,6 +5,7 @@ import { WorkflowCanvas } from './WorkflowCanvas'
 import type { Activity, CanvasEdge, CanvasGroupingMode, CanvasObject } from '../../types'
 
 const reactFlowSpy = vi.fn()
+const fitViewSpy = vi.fn()
 
 vi.mock('reactflow', async () => {
   const React = await import('react')
@@ -13,6 +14,16 @@ vi.mock('reactflow', async () => {
     __esModule: true,
     default: (props: Record<string, unknown>) => {
       reactFlowSpy(props)
+      React.useEffect(() => {
+        ;(props.onInit as undefined | ((instance: Record<string, unknown>) => void))?.({
+          fitView: fitViewSpy,
+          getZoom: () => 0.8,
+          setCenter: vi.fn(),
+          getViewport: () => ({ x: 0, y: 0, zoom: 0.8 }),
+          setViewport: vi.fn(),
+          screenToFlowPosition: (position: { x: number; y: number }) => position,
+        })
+      }, [props])
       const nodes = (props.nodes as Array<{ id: string; position: { x: number; y: number } }>) ?? []
       const onNodeDrag = props.onNodeDrag as undefined | ((event: unknown, node: { id: string; position: { x: number; y: number } }) => void)
       const onNodeDragStop = props.onNodeDragStop as undefined | ((event: unknown, node: { id: string; position: { x: number; y: number } }) => void)
@@ -146,6 +157,7 @@ function createSourceObject(overrides: Partial<Extract<CanvasObject, { object_ty
 }
 
 function renderCanvas({
+  workspaceId = 'workspace-1',
   activities = [createActivity()],
   canvasObjects = [] as CanvasObject[],
   canvasEdges = [] as CanvasEdge[],
@@ -160,6 +172,7 @@ function renderCanvas({
   const utils = render(
     <div style={{ width: 1200, height: 800 }}>
       <WorkflowCanvas
+        workspaceId={workspaceId}
         activities={activities}
         canvasObjects={canvasObjects}
         canvasEdges={canvasEdges}
@@ -204,12 +217,27 @@ function renderCanvas({
   }
 }
 
-describe('WorkflowCanvas', () => {
-  function getLatestReactFlowProps<T>() {
-    return reactFlowSpy.mock.calls[reactFlowSpy.mock.calls.length - 1]?.[0] as T
-  }
+  describe('WorkflowCanvas', () => {
+    function getLatestReactFlowProps<T>() {
+      return reactFlowSpy.mock.calls[reactFlowSpy.mock.calls.length - 1]?.[0] as T
+    }
 
-  it('renders role lanes and snaps activities into the matching lane when grouped by role', () => {
+    it('fits the loaded workflow into view once by default', async () => {
+      fitViewSpy.mockClear()
+
+      renderCanvas()
+
+      await waitFor(() => {
+        expect(fitViewSpy).toHaveBeenCalledTimes(1)
+      })
+
+      expect(fitViewSpy).toHaveBeenCalledWith({
+        padding: 0.18,
+        duration: 250,
+      })
+    })
+
+    it('renders role lanes and snaps activities into the matching lane when grouped by role', () => {
     renderCanvas({
       groupingMode: 'role_lanes',
       activities: [
@@ -356,6 +384,7 @@ describe('WorkflowCanvas', () => {
     render(
       <div style={{ width: 1200, height: 800 }}>
         <WorkflowCanvas
+          workspaceId="workspace-1"
           activities={[
             createActivity({ id: 'activity-1' }),
             createActivity({ id: 'activity-2', position_x: 520, position_y: 120 }),
@@ -412,6 +441,7 @@ describe('WorkflowCanvas', () => {
     render(
       <div style={{ width: 1200, height: 800 }}>
         <WorkflowCanvas
+          workspaceId="workspace-1"
           activities={[
             createActivity({ id: 'activity-1', position_x: 100, position_y: 120 }),
             createActivity({ id: 'activity-2', position_x: 460, position_y: 120 }),
@@ -487,6 +517,7 @@ describe('WorkflowCanvas', () => {
     render(
       <div style={{ width: 1200, height: 800 }}>
         <WorkflowCanvas
+          workspaceId="workspace-1"
           activities={[createActivity({ id: 'activity-1', position_x: 200, position_y: 120 })]}
           canvasObjects={[]}
           canvasEdges={[]}

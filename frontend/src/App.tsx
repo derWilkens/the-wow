@@ -2093,6 +2093,7 @@ function WorkspaceCanvasApp({
             {workflowViewMode === 'canvas' ? (
               <div className="h-full pl-24 sm:pl-28">
                 <WorkflowCanvas
+                  workspaceId={workspaceId}
                   activities={visibleActivities}
                   canvasObjects={visibleCanvasObjects}
                   canvasEdges={visibleCanvasEdges}
