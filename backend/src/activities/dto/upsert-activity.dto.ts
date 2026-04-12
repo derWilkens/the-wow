@@ -1,4 +1,4 @@
-﻿import { IsArray, IsIn, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator'
+import { IsArray, IsBoolean, IsIn, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator'
 
 export class UpsertActivityDto {
   @IsOptional()
@@ -78,4 +78,8 @@ export class UpsertActivityDto {
   @IsArray()
   @IsString({ each: true })
   linked_workflow_outputs?: string[]
+
+  @IsOptional()
+  @IsBoolean()
+  is_locked?: boolean
 }

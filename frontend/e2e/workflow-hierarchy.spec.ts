@@ -39,8 +39,8 @@ test.describe('workflow hierarchy', () => {
       const [seededActivityId] = await getActivityNodeIds(page)
       await expect(page.getByTestId(`subprocess-trigger-${seededActivityId}`)).toBeVisible()
       await page.getByTestId(`subprocess-trigger-${seededActivityId}`).click()
-      await expect(page.getByTestId('subprocess-menu')).toBeVisible()
-      await page.getByTestId('subprocess-menu-create').click()
+      await expect(page.getByTestId(`subprocess-create-popover-${seededActivityId}`)).toBeVisible()
+      await page.getByTestId(`subprocess-create-option-${seededActivityId}-new`).click()
 
       await expect(page.getByTestId('subprocess-wizard')).toBeVisible()
       await page.getByTestId('subprocess-name').fill(subprocessName)
@@ -56,10 +56,15 @@ test.describe('workflow hierarchy', () => {
       const createSubprocessPayload = (await (await createSubprocessResponse).json()) as { workspace: { id: string; name: string } }
       createdWorkspaceIds.push(createSubprocessPayload.workspace.id)
 
+      await expect(page.getByTestId('hierarchy-focus-overlay')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByTestId('hierarchy-focus-maximize')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByText(subprocessStepOne)).toBeVisible({ timeout: 15_000 })
+      await page.getByTestId('hierarchy-focus-maximize').click()
+
       await expect(page.getByTestId(`workspace-trail-${createSubprocessPayload.workspace.id}`)).toBeVisible({ timeout: 15_000 })
       await expect(page.getByText(subprocessStepOne)).toBeVisible({ timeout: 15_000 })
-
-      await page.getByTestId(`workspace-trail-${createdRootWorkflow.id}`).click({ force: true })
+      await expect(page.getByTestId('hierarchy-focus-overlay')).toBeVisible({ timeout: 15_000 })
+      await page.getByTestId('hierarchy-focus-minimize').click()
       await expect.poll(async () => (await getStartNodeIds(page)).length, { timeout: 15_000 }).toBe(1)
       await expect(page.getByTestId(`subprocess-trigger-${seededActivityId}`)).toHaveAttribute('data-subprocess-state', 'linked')
 
@@ -76,12 +81,14 @@ test.describe('workflow hierarchy', () => {
 
       await expect(page.getByTestId(`subprocess-trigger-${linkTargetActivityId!}`)).toBeVisible()
       await page.getByTestId(`subprocess-trigger-${linkTargetActivityId!}`).click()
-      await expect(page.getByTestId('subprocess-menu')).toBeVisible()
-      await page.getByTestId('subprocess-menu-link').click()
+      await expect(page.getByTestId(`subprocess-create-popover-${linkTargetActivityId!}`)).toBeVisible()
+      await page.getByTestId(`subprocess-create-option-${linkTargetActivityId!}-link`).click()
       await expect(page.getByTestId('link-workflow-modal')).toBeVisible()
       await page.getByTestId(`link-workflow-option-${createSubprocessPayload.workspace.id}`).click()
       await page.getByTestId('link-workflow-submit').click()
       await expect(page.getByTestId('link-workflow-modal')).toHaveCount(0, { timeout: 15_000 })
+      await expect(page.getByTestId('hierarchy-focus-overlay')).toBeVisible({ timeout: 15_000 })
+      await page.getByTestId('hierarchy-focus-maximize').click()
       await expect(page.getByText(subprocessStepOne)).toBeVisible({ timeout: 15_000 })
     } finally {
       await cleanupWorkspaces(request, createdWorkspaceIds, accessToken)
@@ -110,8 +117,8 @@ test.describe('workflow hierarchy', () => {
 
       await expect(page.getByTestId(`subprocess-trigger-${seededActivityId}`)).toBeVisible()
       await page.getByTestId(`subprocess-trigger-${seededActivityId}`).click()
-      await expect(page.getByTestId('subprocess-menu')).toBeVisible()
-      await page.getByTestId('subprocess-menu-create').click()
+      await expect(page.getByTestId(`subprocess-create-popover-${seededActivityId}`)).toBeVisible()
+      await page.getByTestId(`subprocess-create-option-${seededActivityId}-new`).click()
 
       await expect(page.getByTestId('subprocess-wizard')).toBeVisible()
       await page.getByTestId('subprocess-name').fill(childWorkflowName)
@@ -126,6 +133,10 @@ test.describe('workflow hierarchy', () => {
       await page.getByTestId('subprocess-submit').click()
       const createSubprocessPayload = (await (await createSubprocessResponse).json()) as { workspace: { id: string; name: string } }
       createdWorkspaceIds.push(createSubprocessPayload.workspace.id)
+
+      await expect(page.getByTestId('hierarchy-focus-overlay')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByText(childStepOne)).toBeVisible({ timeout: 15_000 })
+      await page.getByTestId('hierarchy-focus-maximize').click()
 
       await expect(page.getByTestId(`workspace-trail-${createSubprocessPayload.workspace.id}`)).toBeVisible({ timeout: 15_000 })
       await expect(page.getByText(childStepOne)).toBeVisible({ timeout: 15_000 })
@@ -142,14 +153,15 @@ test.describe('workflow hierarchy', () => {
       await expect(page.getByTestId(`subprocess-trigger-${seededActivityId}`)).toHaveAttribute('data-subprocess-state', 'linked')
 
       await page.getByTestId(`subprocess-trigger-${seededActivityId}`).click()
-      await expect(page.getByTestId('subprocess-menu-open')).toBeVisible({ timeout: 15_000 })
-      await page.getByTestId('subprocess-menu-open').click()
+      await expect(page.getByTestId('hierarchy-focus-overlay')).toBeVisible({ timeout: 15_000 })
+      await page.getByTestId('hierarchy-focus-maximize').click()
 
       await expect(page.getByTestId(`workspace-trail-${createdRootWorkflow.id}`)).toBeVisible({ timeout: 15_000 })
       await expect(page.getByTestId(`workspace-trail-${createSubprocessPayload.workspace.id}`)).toBeVisible({ timeout: 15_000 })
       await expect(page.getByText(childStepOne)).toBeVisible({ timeout: 15_000 })
 
-      await page.getByTestId(`workspace-trail-${createdRootWorkflow.id}`).click({ force: true })
+      await expect(page.getByTestId('hierarchy-focus-overlay')).toBeVisible({ timeout: 15_000 })
+      await page.getByTestId('hierarchy-focus-minimize').click()
       await expect(page.getByTestId(`activity-node-${seededActivityId}`)).toBeVisible({ timeout: 15_000 })
       await expect(page.getByTestId(`subprocess-trigger-${seededActivityId}`)).toHaveAttribute('data-subprocess-state', 'linked')
     } finally {

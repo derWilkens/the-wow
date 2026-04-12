@@ -7,6 +7,13 @@ import { UpsertCanvasObjectDto } from './dto/upsert-canvas-object.dto'
 export class CanvasObjectsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private normalizeLockState<T extends { is_locked?: boolean | null }>(record: T) {
+    return {
+      ...record,
+      is_locked: Boolean(record.is_locked),
+    }
+  }
+
   async list(userId: string, workspaceId: string, parentActivityId: string | null) {
     await this.databaseService.assertWorkspaceAccess(workspaceId, userId)
 
@@ -50,7 +57,7 @@ export class CanvasObjectsService {
     }
 
     return canvasObjects.map((item) => ({
-      ...item,
+      ...this.normalizeLockState(item),
       fields: (fields ?? []).filter((field) => field.object_id === item.id),
     }))
   }
@@ -69,6 +76,7 @@ export class CanvasObjectsService {
       parent_activity_id: dto.parent_activity_id ?? null,
       object_type: dto.object_type,
       name: dto.name,
+      ...(dto.is_locked !== undefined ? { is_locked: dto.is_locked } : {}),
       edge_id: dto.object_type === 'datenobjekt' ? dto.edge_id ?? null : null,
       edge_sort_order: dto.object_type === 'datenobjekt' ? dto.edge_sort_order ?? 0 : null,
       position_x: dto.object_type === 'quelle' ? dto.position_x ?? 0 : null,
@@ -107,11 +115,11 @@ export class CanvasObjectsService {
     const [fullObject] = await this.list(userId, workspaceId, dto.parent_activity_id ?? null)
     if (dto.parent_activity_id === null) {
       const objects = await this.list(userId, workspaceId, null)
-      return objects.find((item) => item.id === objectId) ?? { ...data, fields: [] }
+      return objects.find((item) => item.id === objectId) ?? { ...this.normalizeLockState(data), fields: [] }
     }
 
     const objects = await this.list(userId, workspaceId, dto.parent_activity_id ?? null)
-    return objects.find((item) => item.id === objectId) ?? fullObject ?? { ...data, fields: [] }
+    return objects.find((item) => item.id === objectId) ?? fullObject ?? { ...this.normalizeLockState(data), fields: [] }
   }
 
   async remove(userId: string, workspaceId: string, id: string) {

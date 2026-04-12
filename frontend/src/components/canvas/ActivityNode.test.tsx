@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { Position } from 'reactflow'
 import { ActivityNode } from './ActivityNode'
@@ -92,7 +92,10 @@ describe('ActivityNode', () => {
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
         }}
@@ -132,7 +135,10 @@ describe('ActivityNode', () => {
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'role_lanes',
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
         }}
@@ -168,7 +174,10 @@ describe('ActivityNode', () => {
           showHandles: true,
           isConnectionPreviewTarget: true,
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
         }}
@@ -202,7 +211,10 @@ describe('ActivityNode', () => {
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
         }}
@@ -241,7 +253,10 @@ describe('ActivityNode', () => {
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
         }}
@@ -277,7 +292,10 @@ describe('ActivityNode', () => {
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
         }}
@@ -314,7 +332,10 @@ describe('ActivityNode', () => {
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail,
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
           onQuickChangeType,
@@ -366,7 +387,10 @@ describe('ActivityNode', () => {
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
           onQuickChangeType: vi.fn(),
@@ -410,8 +434,11 @@ describe('ActivityNode', () => {
             assigneeLabel: 'Max Mustermann',
             groupingMode: 'free',
             onOpenDetail: vi.fn(),
-            onOpenSubprocessMenu: vi.fn(),
-            onOpenSubprocess: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
+          onOpenSubprocess: vi.fn(),
             onInlineRename: vi.fn(),
             onQuickChangeType: vi.fn(),
           }}
@@ -469,7 +496,10 @@ describe('ActivityNode', () => {
           assigneeLabel: null,
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
           onQuickChangeRole,
@@ -515,9 +545,9 @@ describe('ActivityNode', () => {
     })
   })
 
-  it('opens detail on double click, supports inline rename and uses the centered subprocess marker', async () => {
+  it('opens detail on double click, supports inline rename and opens the linked subprocess on click', async () => {
     const onOpenDetail = vi.fn()
-    const onOpenSubprocessMenu = vi.fn()
+    const onOpenSubprocess = vi.fn()
     const onInlineRename = vi.fn().mockResolvedValue(undefined)
 
     render(
@@ -540,8 +570,11 @@ describe('ActivityNode', () => {
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail,
-          onOpenSubprocessMenu,
-          onOpenSubprocess: vi.fn(),
+          onOpenSubprocess,
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onInlineRename,
         }}
         targetPosition={Position.Left}
@@ -561,18 +594,15 @@ describe('ActivityNode', () => {
     })
 
     fireEvent.click(screen.getByTestId('subprocess-trigger-activity-1'))
-    expect(onOpenSubprocessMenu).toHaveBeenCalledWith(
-      'activity-1',
-      expect.objectContaining({
-        x: expect.any(Number),
-        y: expect.any(Number),
-      }),
-    )
+    expect(onOpenSubprocess).toHaveBeenCalledWith('activity-1')
 
     expect(screen.getByTestId('subprocess-trigger-activity-1')).toHaveAttribute('data-subprocess-state', 'linked')
   })
 
-  it('renders a ghost subprocess marker when no linked workflow exists', () => {
+  it('opens the compact create/link popover for unlinked subprocesses', () => {
+    const onCreateSubprocess = vi.fn()
+    const onLinkSubprocess = vi.fn()
+
     render(
       <ActivityNode
         id="activity-1"
@@ -593,7 +623,10 @@ describe('ActivityNode', () => {
           assigneeLabel: 'Max Mustermann',
           groupingMode: 'free',
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
+          onCreateSubprocess,
+          onLinkSubprocess,
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
           onOpenSubprocess: vi.fn(),
           onInlineRename: vi.fn(),
         }}
@@ -602,6 +635,81 @@ describe('ActivityNode', () => {
       />,
     )
 
+    fireEvent.click(screen.getByTestId('subprocess-trigger-activity-1'))
+    expect(screen.getByTestId('subprocess-create-popover-activity-1')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('subprocess-create-option-activity-1-new'))
+    expect(onCreateSubprocess).toHaveBeenCalledWith('activity-1')
+
+    fireEvent.click(screen.getByTestId('subprocess-trigger-activity-1'))
+    fireEvent.click(screen.getByTestId('subprocess-create-option-activity-1-link'))
+    expect(onLinkSubprocess).toHaveBeenCalledWith('activity-1')
     expect(screen.getByTestId('subprocess-trigger-activity-1')).toHaveAttribute('data-subprocess-state', 'empty')
   })
+
+  it('opens the linked subprocess action popover on delayed hover and supports unlink/delete actions', () => {
+    vi.useFakeTimers()
+    const onUnlinkSubprocess = vi.fn()
+    const onDeleteLinkedSubprocess = vi.fn()
+
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity({ linked_workflow_id: 'workspace-2' }),
+          hasChildren: false,
+          roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
+          assigneeLabel: 'Max Mustermann',
+          groupingMode: 'free',
+          onOpenDetail: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess,
+          onDeleteLinkedSubprocess,
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    const trigger = screen.getByTestId('subprocess-trigger-activity-1')
+    const control = trigger.parentElement as HTMLElement
+
+    fireEvent.mouseEnter(control)
+    act(() => {
+      vi.advanceTimersByTime(249)
+    })
+    expect(screen.queryByTestId('subprocess-actions-popover-activity-1')).not.toBeInTheDocument()
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(screen.getByTestId('subprocess-actions-popover-activity-1')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('subprocess-action-activity-1-unlink'))
+    expect(onUnlinkSubprocess).toHaveBeenCalledWith('activity-1')
+
+    fireEvent.mouseEnter(control)
+    act(() => {
+      vi.advanceTimersByTime(250)
+    })
+    fireEvent.click(screen.getByTestId('subprocess-action-activity-1-delete'))
+    expect(screen.getByTestId('subprocess-delete-confirm-activity-1')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('subprocess-delete-confirm-button-activity-1'))
+    expect(onDeleteLinkedSubprocess).toHaveBeenCalledWith('activity-1')
+
+    vi.useRealTimers()
+  })
 })
+
+

@@ -35,6 +35,10 @@ export class UpsertCanvasObjectDto {
   name!: string
 
   @IsOptional()
+  @IsBoolean()
+  is_locked?: boolean
+
+  @IsOptional()
   @IsUUID()
   edge_id?: string | null
 

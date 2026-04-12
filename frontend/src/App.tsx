@@ -1,13 +1,13 @@
 ﻿import { Loader2 } from 'lucide-react'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import type { Connection } from 'reactflow'
-import { useActivities, useCreateSubprocess, useDeleteActivity, useLinkSubprocess, useUnlinkSubprocess, useUpsertActivity } from './api/activities'
+import { useActivities, useAggregateActivitiesToSubprocess, useCreateSubprocess, useDeleteActivity, useLinkSubprocess, useUnlinkSubprocess, useUpsertActivity } from './api/activities'
 import { useAcceptOrganizationInvitation, useCreateOrganization, useOrganizations, usePendingOrganizationInvitations } from './api/organizations'
 import { useCreateOrganizationRole, useOrganizationRoles } from './api/organizationRoles'
 import { useCanvasEdges, useDeleteCanvasEdge, useUpsertCanvasEdge } from './api/canvasEdges'
 import { useCanvasObjects, useDeleteCanvasObject, useUpsertCanvasObject } from './api/canvasObjects'
 import { useCreateTransportMode, useTransportModes } from './api/transportModes'
-import { useUpdateWorkspace, useWorkspaces } from './api/workspaces'
+import { useDeleteWorkspace, useUpdateWorkspace, useWorkspaces } from './api/workspaces'
 import { AuthScreen } from './components/auth/AuthScreen'
 import { ActivityDetailPopup, type ActivityDetailPopupHandle } from './components/canvas/ActivityDetailPopup'
 import { DataObjectPopup } from './components/canvas/DataObjectPopup'
@@ -16,11 +16,12 @@ import { FloatingCanvasToolbar } from './components/canvas/FloatingCanvasToolbar
 import { LinkWorkflowModal } from './components/canvas/LinkWorkflowModal'
 import { SourceInsertDialog } from './components/canvas/SourceInsertDialog'
 import { OrganizationAccessScreen } from './components/organization/OrganizationAccessScreen'
-import { SubprocessMenu } from './components/canvas/SubprocessMenu'
 import { SubprocessWizard } from './components/canvas/SubprocessWizard'
 import { WorkflowCanvas } from './components/canvas/WorkflowCanvas'
 import { WorkflowSipocTable } from './components/canvas/WorkflowSipocTable'
 import { deriveWorkflowSipocRows, getReusableDataObjectsForEdge } from './components/canvas/canvasData'
+import { HierarchyFocusOverlay } from './components/hierarchy/HierarchyFocusOverlay'
+import { deriveHierarchyFocusRects } from './components/hierarchy/hierarchyFocusGeometry'
 import { AppHeader } from './components/layout/AppHeader'
 import { SettingsDialog } from './components/settings/SettingsDialog'
 import { WorkspaceList } from './components/workspace/WorkspaceList'
@@ -40,6 +41,7 @@ import type {
   UpsertCanvasObjectInput,
   WorkflowViewMode,
   Workspace,
+  HierarchyFocusState,
 } from './types'
 
 const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
@@ -298,6 +300,16 @@ function getDefaultActivityDescription(_nodeType: Activity['node_type']) {
   return null
 }
 
+const HIERARCHY_FOCUS_TRANSITION_MS = 280
+
+function getHierarchyTransitionDuration() {
+  if (typeof window === 'undefined') {
+    return HIERARCHY_FOCUS_TRANSITION_MS
+  }
+
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : HIERARCHY_FOCUS_TRANSITION_MS
+}
+
 function WorkspaceCanvasApp({
   workspaceId,
   workspaceName,
@@ -321,17 +333,29 @@ function WorkspaceCanvasApp({
     organizationName,
     updateOrganizationName,
     updateWorkspaceName,
+    hierarchyFocusState,
+    hierarchyFocusSession,
+    startHierarchyFocus,
+    updateHierarchyFocusSession,
+    setHierarchyFocusState,
+    clearHierarchyFocus,
   } = useCanvasStore()
   const { data: workspaces = [] } = useWorkspaces(organizationId)
   const updateWorkspace = useUpdateWorkspace(organizationId)
+  const deleteWorkspace = useDeleteWorkspace(organizationId)
   const { data: organizationRoles = [] } = useOrganizationRoles(organizationId)
   const { data: activities = [], isLoading: activitiesLoading } = useActivities(workspaceId, parentActivityId)
   const { data: canvasObjects = [], isLoading: objectsLoading } = useCanvasObjects(workspaceId, parentActivityId)
   const { data: canvasEdges = [] } = useCanvasEdges(workspaceId, parentActivityId)
+  const previewWorkspaceId = hierarchyFocusSession?.childWorkspaceId ?? null
+  const { data: previewActivities = [] } = useActivities(previewWorkspaceId, null)
+  const { data: previewCanvasObjects = [] } = useCanvasObjects(previewWorkspaceId, null)
+  const { data: previewCanvasEdges = [] } = useCanvasEdges(previewWorkspaceId, null)
   const { data: transportModes = [] } = useTransportModes(organizationId)
   const createTransportMode = useCreateTransportMode(organizationId)
   const createOrganizationRole = useCreateOrganizationRole(organizationId)
   const upsertActivity = useUpsertActivity(workspaceId)
+  const aggregateActivitiesToSubprocess = useAggregateActivitiesToSubprocess(workspaceId)
   const createSubprocess = useCreateSubprocess(workspaceId)
   const linkSubprocess = useLinkSubprocess(workspaceId)
   const unlinkSubprocess = useUnlinkSubprocess(workspaceId)
@@ -347,6 +371,7 @@ function WorkspaceCanvasApp({
   const selectedCanvasNodeIdRef = useRef<string | null>(null)
   const selectedCanvasEdgeIdRef = useRef<string | null>(null)
   const activityDetailPopupRef = useRef<ActivityDetailPopupHandle | null>(null)
+  const canvasSectionRef = useRef<HTMLElement | null>(null)
 
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null)
   const [selectedDataObjectId, setSelectedDataObjectId] = useState<string | null>(null)
@@ -364,10 +389,13 @@ function WorkspaceCanvasApp({
   const [edgeAttributeOverrides, setEdgeAttributeOverrides] = useState<
     Record<string, { label: string | null; transport_mode_id: string | null; notes: string | null }>
   >({})
-  const [subprocessMenu, setSubprocessMenu] = useState<{ activity: Activity; position: { x: number; y: number } } | null>(null)
   const [wizardActivity, setWizardActivity] = useState<Activity | null>(null)
   const [linkActivity, setLinkActivity] = useState<Activity | null>(null)
-  const [viewportCenter, setViewportCenter] = useState({ x: 360, y: 260 })
+  const [viewportCenter, setViewportCenter] = useState({ x: 360, y: 260, zoom: 1 })
+  const [viewportRestoreRequest, setViewportRestoreRequest] = useState<{
+    workspaceId: string
+    center: { x: number; y: number; zoom: number }
+  } | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isWorkflowDetailOpen, setIsWorkflowDetailOpen] = useState(false)
   const [dataObjectActionError, setDataObjectActionError] = useState<string | null>(null)
@@ -376,6 +404,7 @@ function WorkspaceCanvasApp({
   const [focusedCanvasNodeId, setFocusedCanvasNodeId] = useState<string | null>(null)
   const [activeWorkspaceName, setActiveWorkspaceName] = useState(workspaceName)
   const [sourceInsertPosition, setSourceInsertPosition] = useState<{ x: number; y: number } | null>(null)
+  const autoCollapseHierarchyOnMinimizeRef = useRef(false)
 
   const currentSnapshot = useMemo<CanvasSnapshot>(
     () => cloneSnapshot({ activities, canvasObjects, canvasEdges }),
@@ -417,7 +446,6 @@ function WorkspaceCanvasApp({
     setSelectedCanvasEdgeId(null)
     selectedCanvasNodeIdRef.current = null
     selectedCanvasEdgeIdRef.current = null
-    setSubprocessMenu(null)
     setWizardActivity(null)
     setLinkActivity(null)
     pendingNodePositionRef.current = {}
@@ -1138,6 +1166,79 @@ function WorkspaceCanvasApp({
     leaveWorkspace()
   }
 
+  function getCanvasViewportSnapshot() {
+    const rect = canvasSectionRef.current?.getBoundingClientRect()
+    if (!rect) {
+      return {
+        x: 24,
+        y: 24,
+        width: Math.max(420, window.innerWidth - 48),
+        height: Math.max(320, window.innerHeight - 48),
+        zoom: viewportCenter.zoom,
+      }
+    }
+
+    return {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      zoom: viewportCenter.zoom,
+    }
+  }
+
+  function getActivityOriginRect(activityId: string) {
+    const node = document.querySelector(`[data-testid="activity-node-${activityId}"]`) as HTMLElement | null
+    const rect = node?.getBoundingClientRect()
+    if (!rect) {
+      const viewport = getCanvasViewportSnapshot()
+      return {
+        x: viewport.x + viewport.width / 2 - 110,
+        y: viewport.y + viewport.height / 2 - 70,
+        width: 220,
+        height: 140,
+      }
+    }
+
+    return {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+    }
+  }
+
+  function beginHierarchyPreview(activity: Activity, linkedWorkspace: Workspace, originRect?: { x: number; y: number; width: number; height: number }) {
+    autoCollapseHierarchyOnMinimizeRef.current = false
+    const viewport = getCanvasViewportSnapshot()
+    const derivedFocusRects = deriveHierarchyFocusRects({
+      viewport,
+      originRect: originRect ?? getActivityOriginRect(activity.id),
+      activities: [],
+      canvasObjects: [],
+    })
+
+    startHierarchyFocus(
+      {
+        originActivityId: activity.id,
+        originActivityLabel: activity.label,
+        originWorkspaceId: workspaceId,
+        originWorkspaceName: activeWorkspaceName,
+        originCanvasCenter: viewportCenter,
+        childWorkspaceId: linkedWorkspace.id,
+        childWorkspaceName: linkedWorkspace.name,
+        viewportSnapshot: viewport,
+        rects: {
+          originRect: derivedFocusRects.originRect,
+          previewRect: derivedFocusRects.previewRect,
+          maximizedRect: derivedFocusRects.maximizedRect,
+        },
+        previewLayout: derivedFocusRects.previewLayout,
+      },
+      'expanding',
+    )
+  }
+
   function openLinkedSubprocess(activity: Activity) {
     if (!activity.linked_workflow_id) {
       return
@@ -1148,8 +1249,7 @@ function WorkspaceCanvasApp({
       return
     }
 
-    openSubprocessWorkspace(linkedWorkspace.id, linkedWorkspace.name, activity.id, activity.label)
-    setSubprocessMenu(null)
+    beginHierarchyPreview(activity, linkedWorkspace)
   }
 
   async function handleCreateSubprocess(input: {
@@ -1169,8 +1269,7 @@ function WorkspaceCanvasApp({
     })
 
     setWizardActivity(null)
-    setSubprocessMenu(null)
-    openSubprocessWorkspace(result.workspace.id, result.workspace.name, wizardActivity.id, wizardActivity.label)
+    beginHierarchyPreview(wizardActivity, result.workspace)
   }
 
   async function handleLinkExistingSubprocess(input: {
@@ -1191,15 +1290,30 @@ function WorkspaceCanvasApp({
 
     const linkedWorkspace = workspacesById.get(input.linked_workflow_id)
     setLinkActivity(null)
-    setSubprocessMenu(null)
     if (linkedWorkspace) {
-      openSubprocessWorkspace(linkedWorkspace.id, linkedWorkspace.name, linkActivity.id, linkActivity.label)
+      beginHierarchyPreview(linkActivity, linkedWorkspace)
     }
   }
 
   async function handleUnlinkSubprocess(activity: Activity) {
     await unlinkSubprocess.mutateAsync(activity.id)
-    setSubprocessMenu(null)
+  }
+
+  async function handleDeleteLinkedSubprocess(activity: Activity) {
+    if (!activity.linked_workflow_id) {
+      return
+    }
+
+    await deleteWorkspace.mutateAsync(activity.linked_workflow_id)
+    await unlinkSubprocess.mutateAsync(activity.id)
+
+    if (hierarchyFocusSession?.childWorkspaceId === activity.linked_workflow_id) {
+      if (workspaceId === activity.linked_workflow_id) {
+        navigateToWorkspaceTrail(hierarchyFocusSession.originWorkspaceId)
+      }
+
+      clearHierarchyFocus()
+    }
   }
 
   async function insertActivity(nodeType: Activity['node_type'], options?: { position?: { x: number; y: number }; allowSmartInsert?: boolean }) {
@@ -1738,9 +1852,76 @@ function WorkspaceCanvasApp({
       parent_activity_id: canvasObject.parent_activity_id,
       object_type: canvasObject.object_type,
       name: canvasObject.name,
+      is_locked: canvasObject.is_locked,
       position_x: position.x,
       position_y: position.y,
     })
+  }
+
+  async function toggleLockedNodes(nodeIds: string[]) {
+    const selectedActivities = visibleActivities.filter((activity) => nodeIds.includes(activity.id))
+    const selectedSourceObjects = visibleSourceObjects.filter((canvasObject) => nodeIds.includes(canvasObject.id))
+
+    if (selectedActivities.length === 0 && selectedSourceObjects.length === 0) {
+      return
+    }
+
+    const shouldLock = [...selectedActivities, ...selectedSourceObjects].some((item) => !item.is_locked)
+    rememberSnapshot()
+
+    await Promise.all([
+      ...selectedActivities.map((activity) =>
+        upsertActivity.mutateAsync({
+          id: activity.id,
+          parent_id: activity.parent_id,
+          node_type: activity.node_type,
+          label: activity.label,
+          trigger_type: activity.trigger_type,
+          position_x: activity.position_x,
+          position_y: activity.position_y,
+          status: activity.status,
+          status_icon: activity.status_icon,
+          activity_type: activity.activity_type,
+          description: activity.description,
+          notes: activity.notes,
+          assignee_label: activity.assignee_label ?? null,
+          role_id: activity.role_id ?? null,
+          duration_minutes: activity.duration_minutes,
+          linked_workflow_id: activity.linked_workflow_id,
+          linked_workflow_mode: activity.linked_workflow_mode,
+          linked_workflow_purpose: activity.linked_workflow_purpose,
+          linked_workflow_inputs: activity.linked_workflow_inputs,
+          linked_workflow_outputs: activity.linked_workflow_outputs,
+          is_locked: shouldLock,
+        }),
+      ),
+      ...selectedSourceObjects.map((canvasObject) =>
+        upsertCanvasObject.mutateAsync({
+          id: canvasObject.id,
+          parent_activity_id: canvasObject.parent_activity_id,
+          object_type: canvasObject.object_type,
+          name: canvasObject.name,
+          is_locked: shouldLock,
+          position_x: canvasObject.position_x,
+          position_y: canvasObject.position_y,
+        }),
+      ),
+    ])
+  }
+
+  async function aggregateSelectedActivities(activityIds: string[]) {
+    if (activityIds.length < 2) {
+      return
+    }
+
+    rememberSnapshot()
+    const result = await aggregateActivitiesToSubprocess.mutateAsync({ activity_ids: activityIds })
+    setSelectedCanvasNodeId(result.activity.id)
+    setSelectedCanvasEdgeId(null)
+    setSelectedDataObjectId(null)
+    selectedCanvasNodeIdRef.current = result.activity.id
+    selectedCanvasEdgeIdRef.current = null
+    setFocusedCanvasNodeId(result.activity.id)
   }
 
   async function updateEdge(edgeId: string, input: { label?: string | null; transport_mode_id?: string | null; notes?: string | null }) {
@@ -2027,6 +2208,160 @@ function WorkspaceCanvasApp({
     setIsWorkflowDetailOpen(false)
   }
 
+  function handleHierarchyMaximize() {
+    if (!hierarchyFocusSession || hierarchyFocusState !== 'expanded') {
+      return
+    }
+
+    setHierarchyFocusState('maximizing')
+  }
+
+  function handleHierarchyCollapse() {
+    if (!hierarchyFocusSession || (hierarchyFocusState !== 'expanded' && hierarchyFocusState !== 'minimizing')) {
+      return
+    }
+
+    setHierarchyFocusState('collapsing')
+  }
+
+  function handleHierarchyMinimize() {
+    if (!hierarchyFocusSession || hierarchyFocusState !== 'maximized') {
+      return
+    }
+
+    autoCollapseHierarchyOnMinimizeRef.current = true
+    setViewportRestoreRequest({
+      workspaceId: hierarchyFocusSession.originWorkspaceId,
+      center: hierarchyFocusSession.originCanvasCenter,
+    })
+    navigateToWorkspaceTrail(hierarchyFocusSession.originWorkspaceId)
+    setHierarchyFocusState('minimizing')
+  }
+
+  function handleNavigateWorkspaceTrail(workspaceTrailId: string) {
+    if (
+      hierarchyFocusSession &&
+      hierarchyFocusState === 'maximized' &&
+      workspaceId === hierarchyFocusSession.childWorkspaceId &&
+      workspaceTrailId === hierarchyFocusSession.originWorkspaceId
+    ) {
+      autoCollapseHierarchyOnMinimizeRef.current = true
+      setViewportRestoreRequest({
+        workspaceId: hierarchyFocusSession.originWorkspaceId,
+        center: hierarchyFocusSession.originCanvasCenter,
+      })
+      navigateToWorkspaceTrail(workspaceTrailId)
+      setHierarchyFocusState('minimizing')
+      return
+    }
+
+    if (hierarchyFocusSession && workspaceTrailId !== hierarchyFocusSession.childWorkspaceId) {
+      clearHierarchyFocus()
+    }
+
+    navigateToWorkspaceTrail(workspaceTrailId)
+  }
+
+  function handleLeaveWorkspace() {
+    clearHierarchyFocus()
+    leaveWorkspace()
+  }
+
+  useEffect(() => {
+    if (!hierarchyFocusSession) {
+      return
+    }
+
+    if (hierarchyFocusSession.childWorkspaceId !== previewWorkspaceId) {
+      return
+    }
+
+    const viewport = getCanvasViewportSnapshot()
+    const nextRects = deriveHierarchyFocusRects({
+      viewport,
+      originRect: hierarchyFocusSession.rects.originRect,
+      activities: previewActivities,
+      canvasObjects: previewCanvasObjects,
+    })
+    const viewportChanged =
+      hierarchyFocusSession.viewportSnapshot.x !== viewport.x ||
+      hierarchyFocusSession.viewportSnapshot.y !== viewport.y ||
+      hierarchyFocusSession.viewportSnapshot.width !== viewport.width ||
+      hierarchyFocusSession.viewportSnapshot.height !== viewport.height
+    const rectsChanged =
+      hierarchyFocusSession.rects.previewRect.x !== nextRects.previewRect.x ||
+      hierarchyFocusSession.rects.previewRect.y !== nextRects.previewRect.y ||
+      hierarchyFocusSession.rects.previewRect.width !== nextRects.previewRect.width ||
+      hierarchyFocusSession.rects.previewRect.height !== nextRects.previewRect.height ||
+      hierarchyFocusSession.rects.maximizedRect.x !== nextRects.maximizedRect.x ||
+      hierarchyFocusSession.rects.maximizedRect.y !== nextRects.maximizedRect.y ||
+      hierarchyFocusSession.rects.maximizedRect.width !== nextRects.maximizedRect.width ||
+      hierarchyFocusSession.rects.maximizedRect.height !== nextRects.maximizedRect.height
+    const previewLayoutChanged =
+      hierarchyFocusSession.previewLayout.mode !== nextRects.previewLayout.mode ||
+      hierarchyFocusSession.previewLayout.zoom !== nextRects.previewLayout.zoom ||
+      hierarchyFocusSession.previewLayout.innerPadding !== nextRects.previewLayout.innerPadding
+
+    if (!viewportChanged && !rectsChanged && !previewLayoutChanged) {
+      return
+    }
+
+    updateHierarchyFocusSession((session) => ({
+      ...session,
+      viewportSnapshot: viewport,
+      rects: {
+        originRect: nextRects.originRect,
+        previewRect: nextRects.previewRect,
+        maximizedRect: nextRects.maximizedRect,
+      },
+      previewLayout: nextRects.previewLayout,
+    }))
+  }, [hierarchyFocusSession, previewActivities, previewCanvasObjects, previewWorkspaceId, updateHierarchyFocusSession, viewportCenter.zoom])
+
+  useEffect(() => {
+    if (!hierarchyFocusSession) {
+      return
+    }
+
+    const duration = getHierarchyTransitionDuration()
+
+    if (hierarchyFocusState === 'expanding') {
+      const timeout = window.setTimeout(() => setHierarchyFocusState('expanded'), duration)
+      return () => window.clearTimeout(timeout)
+    }
+
+    if (hierarchyFocusState === 'maximizing') {
+      const timeout = window.setTimeout(() => {
+        openSubprocessWorkspace(
+          hierarchyFocusSession.childWorkspaceId,
+          hierarchyFocusSession.childWorkspaceName,
+          hierarchyFocusSession.originActivityId,
+          hierarchyFocusSession.originActivityLabel,
+        )
+        setHierarchyFocusState('maximized')
+      }, duration)
+      return () => window.clearTimeout(timeout)
+    }
+
+    if (hierarchyFocusState === 'minimizing') {
+      const timeout = window.setTimeout(() => {
+        if (autoCollapseHierarchyOnMinimizeRef.current) {
+          autoCollapseHierarchyOnMinimizeRef.current = false
+          setHierarchyFocusState('collapsing')
+          return
+        }
+
+        setHierarchyFocusState('expanded')
+      }, duration)
+      return () => window.clearTimeout(timeout)
+    }
+
+    if (hierarchyFocusState === 'collapsing') {
+      const timeout = window.setTimeout(() => clearHierarchyFocus(), duration)
+      return () => window.clearTimeout(timeout)
+    }
+  }, [clearHierarchyFocus, hierarchyFocusSession, hierarchyFocusState, openSubprocessWorkspace, setHierarchyFocusState])
+
   return (
     <div className="h-screen w-full overflow-hidden px-4 py-4 md:px-6 print:h-auto print:px-0 print:py-0">
       <div className="flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/70 shadow-[0_40px_120px_rgba(3,8,12,0.55)] backdrop-blur-xl print:min-h-0 print:max-w-none print:rounded-none print:border-0 print:bg-white print:shadow-none">
@@ -2034,8 +2369,8 @@ function WorkspaceCanvasApp({
           workspaceName={activeWorkspaceName}
           workspaceTrail={workspaceTrail}
           onResetRoot={resetToRoot}
-          onNavigateWorkspaceTrail={navigateToWorkspaceTrail}
-          onLeaveWorkspace={leaveWorkspace}
+          onNavigateWorkspaceTrail={handleNavigateWorkspaceTrail}
+          onLeaveWorkspace={handleLeaveWorkspace}
           onSignOut={() => void signOut()}
           onOpenWorkflowDetails={() => setIsWorkflowDetailOpen(true)}
           onOpenSettings={
@@ -2057,7 +2392,10 @@ function WorkspaceCanvasApp({
         />
 
         <main className="grid min-h-0 flex-1 gap-4 p-4 print:block print:p-0">
-          <section className="relative min-h-0 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,20,31,0.92),rgba(6,14,22,0.96))] print:rounded-none print:border-0 print:bg-white">
+          <section
+            ref={canvasSectionRef}
+            className="relative min-h-0 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,20,31,0.92),rgba(6,14,22,0.96))] print:rounded-none print:border-0 print:bg-white"
+          >
             {workflowViewMode === 'canvas' ? (
               <FloatingCanvasToolbar
                 onInsertStart={() => void insertActivity('start_event')}
@@ -2094,6 +2432,9 @@ function WorkspaceCanvasApp({
               <div className="h-full pl-24 sm:pl-28">
                 <WorkflowCanvas
                   workspaceId={workspaceId}
+                  autoFitOnLoad={!hierarchyFocusSession && workspaceTrail.length === 1}
+                  viewportRestoreRequest={viewportRestoreRequest}
+                  onViewportRestoreApplied={() => setViewportRestoreRequest(null)}
                   activities={visibleActivities}
                   canvasObjects={visibleCanvasObjects}
                   canvasEdges={visibleCanvasEdges}
@@ -2161,19 +2502,28 @@ function WorkspaceCanvasApp({
                       void insertCanvasObject('quelle', { position: centeredPosition })
                     }
                   }}
-                  onOpenSubprocessMenu={(activity, position) => {
-                    setSubprocessMenu({ activity, position })
-                  }}
                   onOpenSubprocess={(activity) => {
                     openLinkedSubprocess(activity)
-                    }}
-                    onInlineRenameActivity={(activityId, nextLabel) => void renameActivityInline(activityId, nextLabel)}
-                    onQuickChangeActivityType={(activityId, nextType) => void quickChangeActivityType(activityId, nextType)}
-                    onQuickChangeActivityRole={(activityId, roleId) => void quickChangeActivityRole(activityId, roleId)}
-                    onCreateRole={(input) => createSipocRole(input)}
-                    onConnectEdge={(connection) => void connectCanvasNodes(connection)}
+                  }}
+                  onCreateSubprocess={(activity) => {
+                    setWizardActivity(activity)
+                    setLinkActivity(null)
+                  }}
+                  onLinkSubprocess={(activity) => {
+                    setLinkActivity(activity)
+                    setWizardActivity(null)
+                  }}
+                  onUnlinkSubprocess={(activity) => void handleUnlinkSubprocess(activity)}
+                  onDeleteLinkedSubprocess={(activity) => void handleDeleteLinkedSubprocess(activity)}
+                  onInlineRenameActivity={(activityId, nextLabel) => void renameActivityInline(activityId, nextLabel)}
+                  onQuickChangeActivityType={(activityId, nextType) => void quickChangeActivityType(activityId, nextType)}
+                  onQuickChangeActivityRole={(activityId, roleId) => void quickChangeActivityRole(activityId, roleId)}
+                  onCreateRole={(input) => createSipocRole(input)}
+                  onConnectEdge={(connection) => void connectCanvasNodes(connection)}
                   onCreateActivityFromConnectionDrop={(input) => void createActivityFromConnectionDrop(input)}
                   onMoveNode={(nodeId, position) => void persistNodePosition(nodeId, position)}
+                  onToggleLockSelection={(nodeIds) => void toggleLockedNodes(nodeIds)}
+                  onAggregateActivities={(activityIds) => void aggregateSelectedActivities(activityIds)}
                   onDeleteEdges={(edgeIds) => void removeEdges(edgeIds)}
                   onDeleteDataObject={(id) => void removeDataObject(id)}
                   onDeleteSelection={(selection) => void removeSelection(selection)}
@@ -2291,23 +2641,16 @@ function WorkspaceCanvasApp({
             onClose={() => setIsWorkflowDetailOpen(false)}
             onSave={saveWorkflowDetails}
           />
-          {subprocessMenu ? (
-              <SubprocessMenu
-                activity={subprocessMenu.activity}
-                position={subprocessMenu.position}
-                onCreateNew={() => {
-                  setWizardActivity(subprocessMenu.activity)
-                  setLinkActivity(null)
-                  setSubprocessMenu(null)
-                }}
-                onLinkExisting={() => {
-                  setLinkActivity(subprocessMenu.activity)
-                  setWizardActivity(null)
-                  setSubprocessMenu(null)
-                }}
-                onOpenLinked={() => openLinkedSubprocess(subprocessMenu.activity)}
-                onUnlink={() => void handleUnlinkSubprocess(subprocessMenu.activity)}
-                onClose={() => setSubprocessMenu(null)}
+            {hierarchyFocusSession ? (
+              <HierarchyFocusOverlay
+                session={hierarchyFocusSession}
+                phase={hierarchyFocusState}
+                activities={previewActivities}
+                canvasObjects={previewCanvasObjects}
+                canvasEdges={previewCanvasEdges}
+                onMaximize={handleHierarchyMaximize}
+                onMinimize={handleHierarchyMinimize}
+                onCollapse={handleHierarchyCollapse}
               />
             ) : null}
             {wizardActivity ? (

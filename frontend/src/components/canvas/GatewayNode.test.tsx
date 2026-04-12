@@ -46,8 +46,11 @@ describe('GatewayNode', () => {
           activity: createGateway('gateway_decision', 'Freigabe?'),
           hasChildren: false,
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
           onOpenSubprocess: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
         }}
         selected={false}
         xPos={0}
@@ -71,8 +74,11 @@ describe('GatewayNode', () => {
           activity: createGateway('gateway_merge', 'Pfad zusammenführen'),
           hasChildren: false,
           onOpenDetail: vi.fn(),
-          onOpenSubprocessMenu: vi.fn(),
           onOpenSubprocess: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
         }}
         selected={false}
         xPos={0}

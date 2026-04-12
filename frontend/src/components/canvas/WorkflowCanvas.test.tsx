@@ -6,6 +6,7 @@ import type { Activity, CanvasEdge, CanvasGroupingMode, CanvasObject } from '../
 
 const reactFlowSpy = vi.fn()
 const fitViewSpy = vi.fn()
+const setCenterSpy = vi.fn()
 
 vi.mock('reactflow', async () => {
   const React = await import('react')
@@ -18,7 +19,7 @@ vi.mock('reactflow', async () => {
         ;(props.onInit as undefined | ((instance: Record<string, unknown>) => void))?.({
           fitView: fitViewSpy,
           getZoom: () => 0.8,
-          setCenter: vi.fn(),
+          setCenter: setCenterSpy,
           getViewport: () => ({ x: 0, y: 0, zoom: 0.8 }),
           setViewport: vi.fn(),
           screenToFlowPosition: (position: { x: number; y: number }) => position,
@@ -158,6 +159,8 @@ function createSourceObject(overrides: Partial<Extract<CanvasObject, { object_ty
 
 function renderCanvas({
   workspaceId = 'workspace-1',
+  autoFitOnLoad = true,
+  viewportRestoreRequest = null as { workspaceId: string; center: { x: number; y: number; zoom: number } } | null,
   activities = [createActivity()],
   canvasObjects = [] as CanvasObject[],
   canvasEdges = [] as CanvasEdge[],
@@ -173,6 +176,9 @@ function renderCanvas({
     <div style={{ width: 1200, height: 800 }}>
       <WorkflowCanvas
         workspaceId={workspaceId}
+        autoFitOnLoad={autoFitOnLoad}
+        viewportRestoreRequest={viewportRestoreRequest}
+        onViewportRestoreApplied={vi.fn()}
         activities={activities}
         canvasObjects={canvasObjects}
         canvasEdges={canvasEdges}
@@ -193,8 +199,11 @@ function renderCanvas({
         onToolbarDrop={vi.fn()}
         onSelectActivity={vi.fn()}
         onOpenDataObject={vi.fn()}
-        onOpenSubprocessMenu={vi.fn()}
         onOpenSubprocess={vi.fn()}
+        onCreateSubprocess={vi.fn()}
+        onLinkSubprocess={vi.fn()}
+        onUnlinkSubprocess={vi.fn()}
+        onDeleteLinkedSubprocess={vi.fn()}
         onInlineRenameActivity={vi.fn()}
         onQuickChangeActivityType={vi.fn()}
         onQuickChangeActivityRole={vi.fn()}
@@ -222,7 +231,7 @@ function renderCanvas({
       return reactFlowSpy.mock.calls[reactFlowSpy.mock.calls.length - 1]?.[0] as T
     }
 
-    it('fits the loaded workflow into view once by default', async () => {
+  it('fits the loaded workflow into view once by default', async () => {
       fitViewSpy.mockClear()
 
       renderCanvas()
@@ -256,6 +265,37 @@ function renderCanvas({
     expect(screen.getByTestId('rf-node-activity-1')).toHaveAttribute('data-y', '126')
     expect(screen.getByTestId('rf-node-activity-2')).toHaveAttribute('data-y', '326')
     expect(screen.getByTestId('rf-node-source-1')).toHaveAttribute('data-y', '320')
+  })
+
+  it('does not auto-fit when fit on load is disabled', async () => {
+    fitViewSpy.mockClear()
+
+    renderCanvas({ autoFitOnLoad: false })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('react-flow')).toBeInTheDocument()
+    })
+
+    expect(fitViewSpy).not.toHaveBeenCalled()
+  })
+
+  it('restores the requested viewport center and zoom for the matching workspace', async () => {
+    setCenterSpy.mockClear()
+
+    renderCanvas({
+      autoFitOnLoad: false,
+      viewportRestoreRequest: {
+        workspaceId: 'workspace-1',
+        center: { x: 720, y: 410, zoom: 1.25 },
+      },
+    })
+
+    await waitFor(() => {
+      expect(setCenterSpy).toHaveBeenCalledWith(720, 410, {
+        zoom: 1.25,
+        duration: 0,
+      })
+    })
   })
 
   it('passes snap to grid preferences through to React Flow', () => {
@@ -406,8 +446,11 @@ function renderCanvas({
           onToolbarDrop={vi.fn()}
           onSelectActivity={vi.fn()}
           onOpenDataObject={vi.fn()}
-          onOpenSubprocessMenu={vi.fn()}
           onOpenSubprocess={vi.fn()}
+          onCreateSubprocess={vi.fn()}
+          onLinkSubprocess={vi.fn()}
+          onUnlinkSubprocess={vi.fn()}
+          onDeleteLinkedSubprocess={vi.fn()}
           onInlineRenameActivity={vi.fn()}
           onQuickChangeActivityType={vi.fn()}
           onQuickChangeActivityRole={vi.fn()}
@@ -464,8 +507,11 @@ function renderCanvas({
           onToolbarDrop={vi.fn()}
           onSelectActivity={vi.fn()}
           onOpenDataObject={vi.fn()}
-          onOpenSubprocessMenu={vi.fn()}
           onOpenSubprocess={vi.fn()}
+          onCreateSubprocess={vi.fn()}
+          onLinkSubprocess={vi.fn()}
+          onUnlinkSubprocess={vi.fn()}
+          onDeleteLinkedSubprocess={vi.fn()}
           onInlineRenameActivity={vi.fn()}
           onQuickChangeActivityType={vi.fn()}
           onQuickChangeActivityRole={vi.fn()}
@@ -536,8 +582,11 @@ function renderCanvas({
           onToolbarDrop={vi.fn()}
           onSelectActivity={vi.fn()}
           onOpenDataObject={vi.fn()}
-          onOpenSubprocessMenu={vi.fn()}
           onOpenSubprocess={vi.fn()}
+          onCreateSubprocess={vi.fn()}
+          onLinkSubprocess={vi.fn()}
+          onUnlinkSubprocess={vi.fn()}
+          onDeleteLinkedSubprocess={vi.fn()}
           onInlineRenameActivity={vi.fn()}
           onQuickChangeActivityType={vi.fn()}
           onQuickChangeActivityRole={vi.fn()}

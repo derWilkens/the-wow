@@ -42,7 +42,7 @@ export function SubprocessMenu({
         <MenuButton testId="subprocess-menu-link" icon={<Link2 className="h-4 w-4" />} label="Bestehenden Arbeitsablauf verlinken" description="Einen vorhandenen Ablauf für diesen Schritt wiederverwenden." onClick={onLinkExisting} />
         {hasLinkedSubprocess ? (
           <>
-            <MenuButton testId="subprocess-menu-open" icon={<PlusSquare className="h-4 w-4" />} label="Arbeitsablauf öffnen" description="In den verknüpften Detailablauf wechseln." onClick={onOpenLinked} />
+            <MenuButton testId="subprocess-menu-open" icon={<PlusSquare className="h-4 w-4" />} label="Vorschau öffnen" description="Den verknüpften Detailablauf zuerst als fokussierte Vorschau öffnen." onClick={onOpenLinked} />
             <MenuButton testId="subprocess-menu-unlink" icon={<Unlink2 className="h-4 w-4" />} label="Verknüpfung lösen" description="Die Aktivität wieder ohne Detailablauf nutzen." onClick={onUnlink} destructive />
           </>
         ) : null}

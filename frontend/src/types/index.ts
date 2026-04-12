@@ -99,6 +99,7 @@ interface CanvasObjectBase {
   workspace_id: string
   parent_activity_id: string | null
   name: string
+  is_locked: boolean
   updated_at: string
   fields?: ObjectField[]
 }
@@ -140,6 +141,7 @@ export interface Activity {
   linked_workflow_purpose: string | null
   linked_workflow_inputs: string[]
   linked_workflow_outputs: string[]
+  is_locked: boolean
   updated_at: string
 }
 
@@ -259,6 +261,7 @@ export interface UpsertActivityInput {
   linked_workflow_purpose?: string | null
   linked_workflow_inputs?: string[]
   linked_workflow_outputs?: string[]
+  is_locked?: boolean
 }
 
 export interface CreateWorkspaceInput {
@@ -299,6 +302,7 @@ export interface UpsertCanvasObjectInput {
   parent_activity_id: string | null
   object_type: CanvasObjectType
   name: string
+  is_locked?: boolean
   edge_id?: string | null
   edge_sort_order?: number | null
   position_x?: number
@@ -341,8 +345,11 @@ export interface ActivityNodeData {
   onQuickChangeType?: (id: string, nextType: ActivityType) => Promise<void> | void
   onQuickChangeRole?: (id: string, roleId: string | null) => Promise<void> | void
   onCreateRole?: (input: { label: string; acronym?: string | null; description: string }) => Promise<CatalogRole | void> | CatalogRole | void
-  onOpenSubprocessMenu: (activityId: string, position: { x: number; y: number }) => void
   onOpenSubprocess: (activityId: string) => void
+  onCreateSubprocess?: (activityId: string) => void
+  onLinkSubprocess?: (activityId: string) => void
+  onUnlinkSubprocess?: (activityId: string) => void
+  onDeleteLinkedSubprocess?: (activityId: string) => void
 }
 
 export interface CanvasObjectNodeData {
@@ -350,4 +357,42 @@ export interface CanvasObjectNodeData {
   showHandles?: boolean
   isConnectionPreviewTarget?: boolean
   onOpenPopup: (id: string) => void
+}
+
+export interface AggregateActivitiesToSubprocessInput {
+  activity_ids: string[]
+}
+
+export type HierarchyFocusState =
+  | 'collapsed'
+  | 'expanding'
+  | 'expanded'
+  | 'maximizing'
+  | 'maximized'
+  | 'minimizing'
+  | 'collapsing'
+
+export interface HierarchyFocusRects {
+  originRect: { x: number; y: number; width: number; height: number }
+  previewRect: { x: number; y: number; width: number; height: number }
+  maximizedRect: { x: number; y: number; width: number; height: number }
+}
+
+export interface HierarchyFocusPreviewLayout {
+  mode: 'origin_zoom' | 'fit_view'
+  zoom: number
+  innerPadding: number
+}
+
+export interface HierarchyFocusSession {
+  originActivityId: string
+  originActivityLabel: string
+  originWorkspaceId: string
+  originWorkspaceName: string
+  originCanvasCenter: { x: number; y: number; zoom: number }
+  childWorkspaceId: string
+  childWorkspaceName: string
+  viewportSnapshot: { x: number; y: number; width: number; height: number; zoom: number }
+  rects: HierarchyFocusRects
+  previewLayout: HierarchyFocusPreviewLayout
 }

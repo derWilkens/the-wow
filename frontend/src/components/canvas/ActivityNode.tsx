@@ -1,13 +1,16 @@
 import { memo, type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import type { NodeProps } from 'reactflow'
 import {
+  ArrowUpRight,
   CheckCheck,
   CircleDashed,
   CircleHelp,
   Clock3,
-  Minus,
+  Link2,
   Plus,
+  Trash2,
   ShieldAlert,
+  Unlink2,
   UserRound,
 } from 'lucide-react'
 import type { ActivityNodeData, ActivityType, StatusIcon } from '../../types'
@@ -59,6 +62,9 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
   const [newRoleLabel, setNewRoleLabel] = useState('')
   const [newRoleAcronym, setNewRoleAcronym] = useState('')
   const [newRoleDescription, setNewRoleDescription] = useState('')
+  const [isSubprocessCreatePopoverOpen, setIsSubprocessCreatePopoverOpen] = useState(false)
+  const [isSubprocessActionsOpen, setIsSubprocessActionsOpen] = useState(false)
+  const [isSubprocessDeleteConfirmOpen, setIsSubprocessDeleteConfirmOpen] = useState(false)
   const [optimisticRoleBadge, setOptimisticRoleBadge] = useState<{
     roleId: string | null
     acronym: string | null
@@ -68,6 +74,9 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
   const inputRef = useRef<HTMLInputElement | null>(null)
   const typePopoverRef = useRef<HTMLDivElement | null>(null)
   const rolePopoverRef = useRef<HTMLDivElement | null>(null)
+  const subprocessControlRef = useRef<HTMLDivElement | null>(null)
+  const subprocessHoverOpenTimeoutRef = useRef<number | null>(null)
+  const subprocessHoverCloseTimeoutRef = useRef<number | null>(null)
   const activeType = activity.activity_type ?? 'unbestimmt'
   const TypeIcon = activityTypeOptionsByValue[activeType].icon
   const hasSubprocess = Boolean(activity.linked_workflow_id)
@@ -171,6 +180,63 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
     }
   }, [isRolePopoverOpen])
 
+  useEffect(() => {
+    function clearSubprocessHoverTimers() {
+      if (subprocessHoverOpenTimeoutRef.current) {
+        window.clearTimeout(subprocessHoverOpenTimeoutRef.current)
+        subprocessHoverOpenTimeoutRef.current = null
+      }
+
+      if (subprocessHoverCloseTimeoutRef.current) {
+        window.clearTimeout(subprocessHoverCloseTimeoutRef.current)
+        subprocessHoverCloseTimeoutRef.current = null
+      }
+    }
+
+    return () => clearSubprocessHoverTimers()
+  }, [])
+
+  useEffect(() => {
+    if (hasSubprocess) {
+      setIsSubprocessCreatePopoverOpen(false)
+      return
+    }
+
+    setIsSubprocessActionsOpen(false)
+    setIsSubprocessDeleteConfirmOpen(false)
+  }, [hasSubprocess])
+
+  useEffect(() => {
+    if (!isSubprocessCreatePopoverOpen && !isSubprocessActionsOpen && !isSubprocessDeleteConfirmOpen) {
+      return
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (subprocessControlRef.current?.contains(event.target as Node)) {
+        return
+      }
+
+      setIsSubprocessCreatePopoverOpen(false)
+      setIsSubprocessActionsOpen(false)
+      setIsSubprocessDeleteConfirmOpen(false)
+    }
+
+    function handleEscape(event: globalThis.KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsSubprocessCreatePopoverOpen(false)
+        setIsSubprocessActionsOpen(false)
+        setIsSubprocessDeleteConfirmOpen(false)
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isSubprocessActionsOpen, isSubprocessCreatePopoverOpen, isSubprocessDeleteConfirmOpen])
+
   async function saveInlineLabel() {
     const nextLabel = draftLabel.trim()
     setIsEditingTitle(false)
@@ -262,6 +328,59 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
 
     setIsRolePopoverOpen(false)
     setIsRoleCreateOpen(false)
+  }
+
+  function clearSubprocessHoverTimers() {
+    if (subprocessHoverOpenTimeoutRef.current) {
+      window.clearTimeout(subprocessHoverOpenTimeoutRef.current)
+      subprocessHoverOpenTimeoutRef.current = null
+    }
+
+    if (subprocessHoverCloseTimeoutRef.current) {
+      window.clearTimeout(subprocessHoverCloseTimeoutRef.current)
+      subprocessHoverCloseTimeoutRef.current = null
+    }
+  }
+
+  function scheduleSubprocessActionsOpen() {
+    if (!hasSubprocess) {
+      return
+    }
+
+    if (subprocessHoverCloseTimeoutRef.current) {
+      window.clearTimeout(subprocessHoverCloseTimeoutRef.current)
+      subprocessHoverCloseTimeoutRef.current = null
+    }
+
+    if (isSubprocessActionsOpen || subprocessHoverOpenTimeoutRef.current) {
+      return
+    }
+
+    subprocessHoverOpenTimeoutRef.current = window.setTimeout(() => {
+      setIsSubprocessActionsOpen(true)
+      subprocessHoverOpenTimeoutRef.current = null
+    }, 250)
+  }
+
+  function scheduleSubprocessActionsClose() {
+    if (!hasSubprocess) {
+      return
+    }
+
+    if (subprocessHoverOpenTimeoutRef.current) {
+      window.clearTimeout(subprocessHoverOpenTimeoutRef.current)
+      subprocessHoverOpenTimeoutRef.current = null
+    }
+
+    if (subprocessHoverCloseTimeoutRef.current) {
+      window.clearTimeout(subprocessHoverCloseTimeoutRef.current)
+    }
+
+    subprocessHoverCloseTimeoutRef.current = window.setTimeout(() => {
+      setIsSubprocessActionsOpen(false)
+      setIsSubprocessDeleteConfirmOpen(false)
+      subprocessHoverCloseTimeoutRef.current = null
+    }, 150)
   }
 
   return (
@@ -521,29 +640,172 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
             </span>
           ) : null}
         </div>
-        <button
-          type="button"
-          title={hasSubprocess ? 'Detailablauf verwalten' : 'Detailablauf anlegen'}
-          aria-label={hasSubprocess ? 'Detailablauf verwalten' : 'Detailablauf anlegen'}
-          data-testid={`subprocess-trigger-${activity.id}`}
-          data-subprocess-state={hasSubprocess ? 'linked' : 'empty'}
-          className={`wow-activity-node__subprocess-marker wow-activity-node__subprocess-marker--${
-            hasSubprocess ? 'linked' : 'empty'
-          } nodrag nopan`}
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation()
-            data.onOpenSubprocessMenu(activity.id, {
-              x: event.clientX,
-              y: event.clientY,
-            })
+        <div
+          ref={subprocessControlRef}
+          className="wow-activity-node__subprocess-control"
+          onMouseEnter={() => {
+            if (hasSubprocess) {
+              scheduleSubprocessActionsOpen()
+            }
+          }}
+          onMouseLeave={() => {
+            if (hasSubprocess) {
+              scheduleSubprocessActionsClose()
+            }
           }}
         >
-          <span className="wow-activity-node__subprocess-icon" aria-hidden="true">
-            <Plus className="wow-activity-node__subprocess-plus" />
-            {!hasSubprocess ? <Minus className="wow-activity-node__subprocess-dash" /> : null}
-          </span>
-        </button>
+          <button
+            type="button"
+            title={hasSubprocess ? 'Detailablauf oeffnen' : 'Detailablauf festlegen'}
+            aria-label={hasSubprocess ? 'Detailablauf oeffnen' : 'Detailablauf festlegen'}
+            data-testid={`subprocess-trigger-${activity.id}`}
+            data-subprocess-state={hasSubprocess ? 'linked' : 'empty'}
+            className={`wow-activity-node__subprocess-marker wow-activity-node__subprocess-marker--${
+              hasSubprocess ? 'linked' : 'empty'
+            } nodrag nopan`}
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation()
+              if (hasSubprocess) {
+                data.onOpenSubprocess(activity.id)
+                return
+              }
+
+              setIsSubprocessCreatePopoverOpen((current) => !current)
+            }}
+            onFocus={() => {
+              if (hasSubprocess) {
+                clearSubprocessHoverTimers()
+                setIsSubprocessActionsOpen(true)
+              }
+            }}
+            onBlur={() => {
+              if (hasSubprocess) {
+                scheduleSubprocessActionsClose()
+              }
+            }}
+          >
+            {hasSubprocess ? <ArrowUpRight className="wow-activity-node__subprocess-plus" /> : <Plus className="wow-activity-node__subprocess-plus" />}
+          </button>
+          {!hasSubprocess && isSubprocessCreatePopoverOpen ? (
+            <div
+              data-testid={`subprocess-create-popover-${activity.id}`}
+              className="wow-activity-node__subprocess-popover"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                aria-label="Neuen Unterablauf anlegen"
+                data-testid={`subprocess-create-option-${activity.id}-new`}
+                className="wow-activity-node__subprocess-option"
+                onClick={() => {
+                  data.onCreateSubprocess?.(activity.id)
+                  setIsSubprocessCreatePopoverOpen(false)
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Bestehenden Unterablauf verlinken"
+                data-testid={`subprocess-create-option-${activity.id}-link`}
+                className="wow-activity-node__subprocess-option"
+                onClick={() => {
+                  data.onLinkSubprocess?.(activity.id)
+                  setIsSubprocessCreatePopoverOpen(false)
+                }}
+              >
+                <Link2 className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+          {hasSubprocess && isSubprocessActionsOpen ? (
+            <div
+              data-testid={`subprocess-actions-popover-${activity.id}`}
+              className="wow-activity-node__subprocess-popover"
+              onMouseEnter={() => {
+                clearSubprocessHoverTimers()
+                setIsSubprocessActionsOpen(true)
+              }}
+              onMouseLeave={() => scheduleSubprocessActionsClose()}
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                aria-label="Unterablauf oeffnen"
+                data-testid={`subprocess-action-${activity.id}-open`}
+                className="wow-activity-node__subprocess-option"
+                onClick={() => {
+                  data.onOpenSubprocess(activity.id)
+                  setIsSubprocessActionsOpen(false)
+                }}
+              >
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Unterablauf entkoppeln"
+                data-testid={`subprocess-action-${activity.id}-unlink`}
+                className="wow-activity-node__subprocess-option"
+                onClick={() => {
+                  void data.onUnlinkSubprocess?.(activity.id)
+                  setIsSubprocessActionsOpen(false)
+                  setIsSubprocessDeleteConfirmOpen(false)
+                }}
+              >
+                <Unlink2 className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Unterablauf loeschen"
+                data-testid={`subprocess-action-${activity.id}-delete`}
+                className="wow-activity-node__subprocess-option wow-activity-node__subprocess-option--danger"
+                onClick={() => setIsSubprocessDeleteConfirmOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+          {hasSubprocess && isSubprocessDeleteConfirmOpen ? (
+            <div
+              data-testid={`subprocess-delete-confirm-${activity.id}`}
+              className="wow-activity-node__subprocess-confirm wow-surface-dialog"
+              onMouseEnter={() => {
+                clearSubprocessHoverTimers()
+                setIsSubprocessActionsOpen(true)
+              }}
+              onMouseLeave={() => scheduleSubprocessActionsClose()}
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <p className="text-sm text-slate-100">Verlinkten Unterablauf loeschen?</p>
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  data-testid={`subprocess-delete-cancel-${activity.id}`}
+                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-200"
+                  onClick={() => setIsSubprocessDeleteConfirmOpen(false)}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  data-testid={`subprocess-delete-confirm-button-${activity.id}`}
+                  className="rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1.5 text-xs text-rose-100"
+                  onClick={() => {
+                    void data.onDeleteLinkedSubprocess?.(activity.id)
+                    setIsSubprocessDeleteConfirmOpen(false)
+                    setIsSubprocessActionsOpen(false)
+                  }}
+                >
+                  Loeschen
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
       {activity.status_icon && <div className={statusClassMap[activity.status_icon]}>{statusIconMap[activity.status_icon]}</div>}
       <CanvasHandles

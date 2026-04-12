@@ -402,6 +402,7 @@ select {
   align-items: center;
   justify-content: flex-start;
   min-height: 2.75rem;
+  padding-right: 2.6rem;
 }
 
 .wow-activity-node__type {
@@ -416,12 +417,8 @@ select {
 }
 
 .wow-activity-node__subprocess-marker {
-  position: absolute;
-  left: 50%;
-  bottom: 0.95rem;
-  transform: translateX(-50%);
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   height: 1.8rem;
   width: 1.8rem;
   align-items: center;
@@ -432,6 +429,14 @@ select {
     background-color 120ms ease,
     color 120ms ease,
     box-shadow 120ms ease;
+}
+
+.wow-activity-node__subprocess-control {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 4;
+  flex-shrink: 0;
 }
 
 .wow-activity-node__subprocess-marker--empty {
@@ -478,6 +483,67 @@ select {
   transform: translate(-50%, -50%);
   stroke-dasharray: 1.6 1.6;
   stroke-width: 1.9;
+}
+
+.wow-activity-node__subprocess-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.45rem);
+  z-index: 30;
+  display: flex;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(159, 231, 255, 0.16);
+  background: var(--surface-popover);
+  padding: 0.35rem;
+  box-shadow: 0 20px 45px rgba(2, 8, 12, 0.48);
+}
+
+.wow-activity-node__subprocess-option {
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d7eef8;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.wow-activity-node__subprocess-option:hover,
+.wow-activity-node__subprocess-option:focus-visible {
+  outline: none;
+  border-color: rgba(159, 231, 255, 0.38);
+  background: rgba(159, 231, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.wow-activity-node__subprocess-option--danger {
+  color: #ffd7df;
+}
+
+.wow-activity-node__subprocess-option--danger:hover,
+.wow-activity-node__subprocess-option--danger:focus-visible {
+  border-color: rgba(251, 113, 133, 0.42);
+  background: rgba(251, 113, 133, 0.16);
+}
+
+.wow-activity-node__subprocess-confirm {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 2.95rem);
+  z-index: 35;
+  width: 15rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.85rem;
+  box-shadow: 0 20px 45px rgba(2, 8, 12, 0.48);
 }
 
 .wow-activity-node__status {
@@ -1044,4 +1110,206 @@ select {
 
 .wow-node--connection-preview-target .wow-gateway-node__diamond {
   border-color: rgba(159, 231, 255, 0.72);
+}
+
+.wow-hierarchy-focus-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  pointer-events: none;
+}
+
+.wow-hierarchy-focus-overlay--maximized {
+  pointer-events: none;
+}
+
+.wow-hierarchy-focus-overlay__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 10, 16, 0.64);
+  transition: opacity 280ms ease;
+}
+
+.wow-hierarchy-focus-overlay__scrim--blurred {
+  backdrop-filter: blur(8px);
+}
+
+.wow-hierarchy-focus-card {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(159, 231, 255, 0.18);
+  border-radius: 28px;
+  background: rgba(6, 14, 22, 0.96);
+  box-shadow: 0 40px 120px rgba(2, 8, 12, 0.58);
+  backdrop-filter: blur(14px);
+  transition:
+    left 280ms ease,
+    top 280ms ease,
+    width 280ms ease,
+    height 280ms ease,
+    border-radius 280ms ease,
+    box-shadow 280ms ease;
+}
+
+.wow-hierarchy-focus-card--interactive {
+  pointer-events: auto;
+}
+
+.wow-hierarchy-focus-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0.5rem;
+}
+
+.wow-hierarchy-focus-card__eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(143, 216, 255, 0.8);
+}
+
+.wow-hierarchy-focus-card__title {
+  margin: 0.25rem 0 0;
+  font-size: 1.25rem;
+  color: #eefbff;
+}
+
+.wow-hierarchy-focus-card__subtitle {
+  margin: 0.2rem 0 0;
+  color: rgba(191, 213, 227, 0.8);
+  font-size: 0.92rem;
+}
+
+.wow-hierarchy-focus-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wow-hierarchy-focus-card__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.65rem 0.95rem;
+  font-size: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wow-hierarchy-focus-card__button--primary {
+  background: #9fe7ff;
+  color: #071119;
+}
+
+.wow-hierarchy-focus-card__button--secondary {
+  background: rgba(255, 255, 255, 0.04);
+  color: #d6e8f2;
+}
+
+.wow-hierarchy-focus-card__phase {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(159, 231, 255, 0.16);
+  color: rgba(159, 231, 255, 0.88);
+  background: rgba(159, 231, 255, 0.08);
+}
+
+.wow-hierarchy-focus-card__body {
+  min-height: 0;
+  flex: 1;
+  padding: 1rem;
+}
+
+.wow-hierarchy-preview-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(58, 127, 163, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(8, 18, 27, 0.95), rgba(6, 13, 20, 0.98));
+}
+
+.wow-hierarchy-preview-canvas__stage {
+  position: absolute;
+  inset: 0 auto auto 0;
+}
+
+.wow-hierarchy-preview-canvas__edges,
+.wow-hierarchy-preview-canvas__nodes {
+  position: absolute;
+  inset: 0;
+}
+
+.wow-hierarchy-preview-canvas__node {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 18px;
+  border: 1px solid rgba(159, 231, 255, 0.18);
+  background: rgba(12, 24, 35, 0.88);
+  color: #eefbff;
+  text-align: center;
+  overflow: hidden;
+}
+
+.wow-hierarchy-preview-canvas__node--gateway_decision,
+.wow-hierarchy-preview-canvas__node--gateway_merge {
+  border-radius: 24px;
+}
+
+.wow-hierarchy-preview-canvas__node--start_event,
+.wow-hierarchy-preview-canvas__node--end_event {
+  border-radius: 999px;
+}
+
+.wow-hierarchy-preview-canvas__node--quelle {
+  border-style: dashed;
+}
+
+.wow-hierarchy-preview-canvas__label {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.wow-hierarchy-focus-floating-button {
+  pointer-events: auto;
+  position: fixed;
+  right: 2rem;
+  top: 2rem;
+  z-index: 70;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(159, 231, 255, 0.18);
+  background: var(--surface-popover);
+  padding: 0.7rem 1rem;
+  color: #e9faff;
+  box-shadow: 0 20px 45px rgba(2, 8, 12, 0.48);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wow-hierarchy-focus-overlay__scrim,
+  .wow-hierarchy-focus-card {
+    transition-duration: 80ms;
+  }
 }

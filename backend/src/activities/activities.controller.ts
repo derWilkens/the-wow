@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@n
 import { CurrentUser } from '../auth/current-user.decorator'
 import { AuthGuard, type AuthenticatedUser } from '../auth/auth.guard'
 import { ActivitiesService } from './activities.service'
+import { AggregateActivitiesToSubprocessDto } from './dto/aggregate-activities-to-subprocess.dto'
 import { CreateSubprocessDto } from './dto/create-subprocess.dto'
 import { LinkSubprocessDto } from './dto/link-subprocess.dto'
 import { UpsertActivityDto } from './dto/upsert-activity.dto'
@@ -27,6 +28,15 @@ export class ActivitiesController {
     @Body() dto: UpsertActivityDto,
   ) {
     return this.activitiesService.upsert(user.id, workspaceId, dto)
+  }
+
+  @Post('aggregate-to-subprocess')
+  aggregateToSubprocess(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: AggregateActivitiesToSubprocessDto,
+  ) {
+    return this.activitiesService.aggregateToSubprocess(user.id, workspaceId, dto)
   }
 
   @Post(':activityId/subprocess')

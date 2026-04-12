@@ -3,6 +3,7 @@ import ReactFlow, {
   Background,
   Controls,
   MarkerType,
+  SelectionMode,
   applyNodeChanges,
   type Connection,
   type Edge,
@@ -13,6 +14,7 @@ import ReactFlow, {
   type ReactFlowInstance,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
+import { Group, Lock, Workflow } from 'lucide-react'
 import { ActivityNode } from './ActivityNode'
 import { EndNode } from './EndNode'
 import { GatewayNode } from './GatewayNode'
@@ -175,6 +177,9 @@ function getDistanceToNodeBox(nodeElement: Element, clientX: number, clientY: nu
 
 interface WorkflowCanvasProps {
   workspaceId: string
+  autoFitOnLoad?: boolean
+  viewportRestoreRequest?: { workspaceId: string; center: { x: number; y: number; zoom: number } } | null
+  onViewportRestoreApplied?: () => void
   activities: Activity[]
   canvasObjects: CanvasObject[]
   canvasEdges: CanvasEdge[]
@@ -190,13 +195,16 @@ interface WorkflowCanvasProps {
   activityAssigneesById: Record<string, string | null>
   focusNodeId: string | null
   onInterruptFocusAnimation?: () => void
-  onViewportCenterChange: (position: { x: number; y: number }) => void
+  onViewportCenterChange: (position: { x: number; y: number; zoom: number }) => void
   onSelectionChange: (selection: { nodeId: string | null; edgeId: string | null; dataObjectId: string | null }) => void
   onToolbarDrop: (input: { kind: 'start' | 'activity' | 'decision' | 'merge' | 'end' | 'quelle'; position: { x: number; y: number } }) => void
   onSelectActivity: (activity: Activity) => void
   onOpenDataObject: (object: EdgeDataObject | CanvasObject) => void
-  onOpenSubprocessMenu: (activity: Activity, position: { x: number; y: number }) => void
   onOpenSubprocess: (activity: Activity) => void
+  onCreateSubprocess: (activity: Activity) => void
+  onLinkSubprocess: (activity: Activity) => void
+  onUnlinkSubprocess: (activity: Activity) => void
+  onDeleteLinkedSubprocess: (activity: Activity) => void
   onInlineRenameActivity: (activityId: string, label: string) => Promise<void> | void
   onQuickChangeActivityType: (activityId: string, nextType: ActivityType) => Promise<void> | void
   onQuickChangeActivityRole: (activityId: string, roleId: string | null) => Promise<void> | void
@@ -208,6 +216,8 @@ interface WorkflowCanvasProps {
     position: { x: number; y: number }
   }) => void
   onMoveNode: (nodeId: string, position: { x: number; y: number }) => void
+  onToggleLockSelection: (nodeIds: string[]) => Promise<void> | void
+  onAggregateActivities: (activityIds: string[]) => Promise<void> | void
   onDeleteEdges: (edgeIds: string[]) => void
   onDeleteDataObject: (id: string) => void
   onDeleteSelection: (selection: { nodeIds: string[]; edgeIds: string[] }) => void
@@ -217,6 +227,9 @@ interface WorkflowCanvasProps {
 
 export function WorkflowCanvas({
   workspaceId,
+  autoFitOnLoad = true,
+  viewportRestoreRequest = null,
+  onViewportRestoreApplied,
   activities,
   canvasObjects,
   canvasEdges,
@@ -237,8 +250,11 @@ export function WorkflowCanvas({
   onToolbarDrop,
   onSelectActivity,
   onOpenDataObject,
-  onOpenSubprocessMenu,
   onOpenSubprocess,
+  onCreateSubprocess,
+  onLinkSubprocess,
+  onUnlinkSubprocess,
+  onDeleteLinkedSubprocess,
   onInlineRenameActivity,
   onQuickChangeActivityType,
   onQuickChangeActivityRole,
@@ -246,6 +262,8 @@ export function WorkflowCanvas({
   onConnectEdge,
   onCreateActivityFromConnectionDrop,
   onMoveNode,
+  onToggleLockSelection,
+  onAggregateActivities,
   onDeleteEdges,
   onDeleteDataObject,
   onDeleteSelection,
@@ -267,8 +285,10 @@ export function WorkflowCanvas({
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([])
   const [liveNodePositions, setLiveNodePositions] = useState<Record<string, { x: number; y: number }>>({})
   const [openEdgePopoverId, setOpenEdgePopoverId] = useState<string | null>(null)
+  const [selectionActionMenu, setSelectionActionMenu] = useState<{ left: number; top: number } | null>(null)
   const focusAnimationTimeoutRef = useRef<number | null>(null)
   const isFocusAnimationActiveRef = useRef(false)
+  const isLassoSelectionRef = useRef(false)
 
   const interruptFocusAnimation = useMemo(
     () => () => {
@@ -352,7 +372,11 @@ export function WorkflowCanvas({
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
       })
-      onViewportCenterChange(center)
+      const zoom = typeof instance.getZoom === 'function' ? instance.getZoom() : 1
+      onViewportCenterChange({
+        ...center,
+        zoom,
+      })
     },
     [onViewportCenterChange],
   )
@@ -397,6 +421,14 @@ export function WorkflowCanvas({
 
   const handleNodeDragStop = useMemo(
     () => (_event: MouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
+      if ('activity' in node.data && node.data.activity.is_locked) {
+        return
+      }
+
+      if ('canvasObject' in node.data && node.data.canvasObject.is_locked) {
+        return
+      }
+
       const activity = activities.find((item) => item.id === node.id)
       const persistedDraggedPosition =
         groupingMode === 'role_lanes' && activity
@@ -510,6 +542,14 @@ export function WorkflowCanvas({
 
   const handleNodeDrag = useMemo(
     () => (_event: MouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
+      if ('activity' in node.data && node.data.activity.is_locked) {
+        return
+      }
+
+      if ('canvasObject' in node.data && node.data.canvasObject.is_locked) {
+        return
+      }
+
       interruptFocusAnimation()
       const activity = activities.find((item) => item.id === node.id)
       if (groupingMode === 'role_lanes' && activity) {
@@ -661,6 +701,34 @@ export function WorkflowCanvas({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onDeleteDataObject, onDeleteEdges, onSelectionChange, selectedDataObjectId, selectedEdgeIds])
 
+  useEffect(() => {
+    if (!selectionActionMenu) {
+      return
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as HTMLElement | null
+      if (target?.closest('[data-testid="canvas-selection-actions"]')) {
+        return
+      }
+
+      setSelectionActionMenu(null)
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setSelectionActionMenu(null)
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [selectionActionMenu])
+
   const nodes = useMemo<Array<Node<ActivityNodeData | CanvasObjectNodeData>>>(() => {
     const childrenByParent = new Set(activities.map((activity) => activity.parent_id).filter(Boolean))
 
@@ -685,6 +753,7 @@ export function WorkflowCanvas({
             ? { x: freePosition.x, y: laneDisplayY }
             : freePosition,
         selected: isSelected,
+        draggable: !activity.is_locked,
           data: {
             activity,
             hasChildren: childrenByParent.has(activity.id),
@@ -701,22 +770,40 @@ export function WorkflowCanvas({
               onSelectActivity(selected)
             }
           },
-          onOpenSubprocessMenu: (id, position) => {
-            const selected = activities.find((entry) => entry.id === id)
-            if (selected) {
-              onOpenSubprocessMenu(selected, position)
-            }
-          },
           onOpenSubprocess: (id) => {
             const selected = activities.find((entry) => entry.id === id)
             if (selected) {
               onOpenSubprocess(selected)
             }
-            },
-            onInlineRename: (id, nextLabel) => onInlineRenameActivity(id, nextLabel),
-            onQuickChangeType: (id, nextType) => onQuickChangeActivityType(id, nextType),
-            onQuickChangeRole: (id, roleId) => onQuickChangeActivityRole(id, roleId),
-            onCreateRole,
+          },
+          onCreateSubprocess: (id) => {
+            const selected = activities.find((entry) => entry.id === id)
+            if (selected) {
+              onCreateSubprocess(selected)
+            }
+          },
+          onLinkSubprocess: (id) => {
+            const selected = activities.find((entry) => entry.id === id)
+            if (selected) {
+              onLinkSubprocess(selected)
+            }
+          },
+          onUnlinkSubprocess: (id) => {
+            const selected = activities.find((entry) => entry.id === id)
+            if (selected) {
+              onUnlinkSubprocess(selected)
+            }
+          },
+          onDeleteLinkedSubprocess: (id) => {
+            const selected = activities.find((entry) => entry.id === id)
+            if (selected) {
+              onDeleteLinkedSubprocess(selected)
+            }
+          },
+          onInlineRename: (id, nextLabel) => onInlineRenameActivity(id, nextLabel),
+          onQuickChangeType: (id, nextType) => onQuickChangeActivityType(id, nextType),
+          onQuickChangeRole: (id, roleId) => onQuickChangeActivityRole(id, roleId),
+          onCreateRole,
           },
       }
     })
@@ -726,6 +813,7 @@ export function WorkflowCanvas({
       type: 'sourceNode',
       position: liveNodePositions[canvasObject.id] ?? { x: canvasObject.position_x, y: canvasObject.position_y },
       selected: selectedNodeIds.includes(canvasObject.id),
+      draggable: !canvasObject.is_locked,
       data: {
         canvasObject,
         showHandles:
@@ -741,7 +829,7 @@ export function WorkflowCanvas({
     }))
 
     return [...activityNodes, ...objectNodes]
-  }, [activities, activityAssigneesById, activityRoleAcronymsById, activityRolesById, groupingMode, hoveredConnectionTargetNodeId, liveNodePositions, onCreateRole, onInlineRenameActivity, onOpenDataObject, onOpenSubprocess, onOpenSubprocessMenu, onQuickChangeActivityRole, onQuickChangeActivityType, onSelectActivity, organizationRoles, roleLanes, selectedNodeIds, sourceObjects])
+  }, [activities, activityAssigneesById, activityRoleAcronymsById, activityRolesById, groupingMode, hoveredConnectionTargetNodeId, liveNodePositions, onCreateRole, onCreateSubprocess, onDeleteLinkedSubprocess, onInlineRenameActivity, onLinkSubprocess, onOpenDataObject, onOpenSubprocess, onQuickChangeActivityRole, onQuickChangeActivityType, onSelectActivity, onUnlinkSubprocess, organizationRoles, roleLanes, selectedNodeIds, sourceObjects])
 
   const [renderNodes, setRenderNodes] = useState<Array<Node<ActivityNodeData | CanvasObjectNodeData>>>([])
 
@@ -797,7 +885,7 @@ export function WorkflowCanvas({
 
   useEffect(() => {
     const instance = reactFlowRef.current
-    if (!instance || renderNodes.length === 0) {
+    if (!autoFitOnLoad || !instance || renderNodes.length === 0) {
       return
     }
     if (lastFitWorkspaceRef.current === workspaceId) {
@@ -813,7 +901,65 @@ export function WorkflowCanvas({
     })
 
     return () => window.cancelAnimationFrame(frame)
-  }, [renderNodes.length, workspaceId])
+  }, [autoFitOnLoad, renderNodes.length, workspaceId])
+
+  useEffect(() => {
+    const instance = reactFlowRef.current
+    if (!instance || !viewportRestoreRequest || viewportRestoreRequest.workspaceId !== workspaceId) {
+      return
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      void instance.setCenter?.(viewportRestoreRequest.center.x, viewportRestoreRequest.center.y, {
+        zoom: viewportRestoreRequest.center.zoom,
+        duration: 0,
+      })
+      publishViewportCenter()
+      onViewportRestoreApplied?.()
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [onViewportRestoreApplied, publishViewportCenter, viewportRestoreRequest, workspaceId])
+
+  const selectedRegularActivityIds = useMemo(
+    () =>
+      selectedNodeIds.filter((nodeId) => {
+        const activity = activities.find((entry) => entry.id === nodeId)
+        return activity?.node_type === 'activity'
+      }),
+    [activities, selectedNodeIds],
+  )
+
+  const canAggregateSelection =
+    selectedNodeIds.length >= 2 &&
+    selectedRegularActivityIds.length === selectedNodeIds.length &&
+    selectedRegularActivityIds.length >= 2
+
+  function getSelectionActionMenuPosition(nodeIds: string[]) {
+    const wrapper = wrapperRef.current
+    if (!wrapper || nodeIds.length === 0) {
+      return null
+    }
+
+    const wrapperRect = wrapper.getBoundingClientRect()
+    const nodeRects = nodeIds
+      .map((nodeId) => wrapper.querySelector(`.react-flow__node[data-id="${nodeId}"]`))
+      .filter((node): node is Element => Boolean(node))
+      .map((node) => node.getBoundingClientRect())
+
+    if (nodeRects.length === 0) {
+      return null
+    }
+
+    const left = Math.min(...nodeRects.map((rect) => rect.left))
+    const right = Math.max(...nodeRects.map((rect) => rect.right))
+    const bottom = Math.max(...nodeRects.map((rect) => rect.bottom))
+
+    return {
+      left: left - wrapperRect.left + (right - left) / 2,
+      top: bottom - wrapperRect.top + 14,
+    }
+  }
 
   useEffect(
     () => () => {
@@ -955,6 +1101,9 @@ export function WorkflowCanvas({
         defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
         snapToGrid={snapToGridEnabled}
         snapGrid={[28, 28]}
+        selectionOnDrag
+        selectionMode={SelectionMode.Partial}
+        panOnDrag={[1, 2]}
         nodeDragThreshold={0}
         defaultEdgeOptions={{ animated: false }}
         deleteKeyCode={['Backspace', 'Delete']}
@@ -982,6 +1131,37 @@ export function WorkflowCanvas({
         }}
         onMoveStart={interruptFocusAnimation}
         onMove={publishViewportCenter}
+        onSelectionStart={() => {
+          isLassoSelectionRef.current = true
+          setSelectionActionMenu(null)
+        }}
+        onSelectionChange={({ nodes: nextNodes, edges: nextEdges }) => {
+          const nextNodeIds = nextNodes.map((node) => node.id)
+          const nextEdgeIds = nextEdges.map((edge) => edge.id)
+          setSelectedNodeIds(nextNodeIds)
+          setSelectedEdgeIds(nextEdgeIds)
+          setOpenEdgePopoverId(null)
+
+          if (nextNodeIds.length === 1 && nextEdgeIds.length === 0) {
+            onSelectionChange({ nodeId: nextNodeIds[0], edgeId: null, dataObjectId: null })
+            return
+          }
+
+          if (nextNodeIds.length === 0 && nextEdgeIds.length === 1) {
+            onSelectionChange({ nodeId: null, edgeId: nextEdgeIds[0], dataObjectId: null })
+            return
+          }
+
+          onSelectionChange({ nodeId: null, edgeId: null, dataObjectId: null })
+        }}
+        onSelectionEnd={() => {
+          if (!isLassoSelectionRef.current) {
+            return
+          }
+
+          isLassoSelectionRef.current = false
+          setSelectionActionMenu(getSelectionActionMenuPosition(selectedNodeIds))
+        }}
         onConnectEnd={handleConnectEnd}
         onNodesChange={(changes: NodeChange[]) => {
           setRenderNodes((current) => applyNodeChanges(changes, current))
@@ -992,12 +1172,14 @@ export function WorkflowCanvas({
           setSelectedNodeIds([])
           setSelectedEdgeIds([edge.id])
           setOpenEdgePopoverId(null)
+          setSelectionActionMenu(null)
           onSelectionChange({ nodeId: null, edgeId: edge.id, dataObjectId: null })
         }}
         onNodeClick={(_, node) => {
           setSelectedEdgeIds([])
           setSelectedNodeIds([node.id])
           setOpenEdgePopoverId(null)
+          setSelectionActionMenu(null)
           onSelectionChange({ nodeId: node.id, edgeId: null, dataObjectId: null })
         }}
         onPaneClick={() => {
@@ -1005,6 +1187,7 @@ export function WorkflowCanvas({
           setSelectedNodeIds([])
           setSelectedEdgeIds([])
           setOpenEdgePopoverId(null)
+          setSelectionActionMenu(null)
           onSelectionChange({ nodeId: null, edgeId: null, dataObjectId: null })
         }}
         onNodesDelete={(deletedNodes) => {

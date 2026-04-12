@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { HierarchyFocusSession, HierarchyFocusState } from '../types'
 
 const ORGANIZATION_STORAGE_KEY = 'wow-active-organization-id'
 
@@ -44,6 +45,8 @@ interface CanvasStore {
   parentActivityId: string | null
   breadcrumb: BreadcrumbItem[]
   workspaceTrail: WorkspaceTrailItem[]
+  hierarchyFocusState: HierarchyFocusState
+  hierarchyFocusSession: HierarchyFocusSession | null
   selectOrganization: (organizationId: string, organizationName: string, organizationRole: 'owner' | 'admin' | 'member') => void
   updateOrganizationName: (organizationName: string) => void
   updateWorkspaceName: (workspaceName: string) => void
@@ -61,6 +64,10 @@ interface CanvasStore {
   drillInto: (id: string, label: string) => void
   navigateToBreadcrumb: (activityId: string | null) => void
   resetToRoot: () => void
+  startHierarchyFocus: (session: HierarchyFocusSession, state?: Exclude<HierarchyFocusState, 'collapsed' | 'maximized'>) => void
+  updateHierarchyFocusSession: (updater: (session: HierarchyFocusSession) => HierarchyFocusSession) => void
+  setHierarchyFocusState: (state: HierarchyFocusState) => void
+  clearHierarchyFocus: () => void
 }
 
 export const useCanvasStore = create<CanvasStore>((set) => ({
@@ -72,6 +79,8 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
   parentActivityId: null,
   breadcrumb: [],
   workspaceTrail: [],
+  hierarchyFocusState: 'collapsed',
+  hierarchyFocusSession: null,
   selectOrganization: (organizationId, organizationName, organizationRole) =>
     set(() => {
       writeStoredOrganizationId(organizationId)
@@ -84,6 +93,8 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
         parentActivityId: null,
         breadcrumb: [],
         workspaceTrail: [],
+        hierarchyFocusState: 'collapsed',
+        hierarchyFocusSession: null,
       }
     }),
   updateOrganizationName: (organizationName) => set(() => ({ organizationName })),
@@ -114,6 +125,8 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
         parentActivityId: null,
         breadcrumb: [],
         workspaceTrail: [],
+        hierarchyFocusState: 'collapsed',
+        hierarchyFocusSession: null,
       }
     }),
   openWorkspace: (workspaceId, workspaceName) =>
@@ -159,7 +172,15 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
       }
     }),
   leaveWorkspace: () =>
-    set({ workspaceId: null, workspaceName: null, parentActivityId: null, breadcrumb: [], workspaceTrail: [] }),
+    set({
+      workspaceId: null,
+      workspaceName: null,
+      parentActivityId: null,
+      breadcrumb: [],
+      workspaceTrail: [],
+      hierarchyFocusState: 'collapsed',
+      hierarchyFocusSession: null,
+    }),
   drillInto: (id, label) =>
     set((state) => ({
       parentActivityId: id,
@@ -171,4 +192,15 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
       breadcrumb: activityId ? state.breadcrumb.slice(0, state.breadcrumb.findIndex((item) => item.id === activityId) + 1) : [],
     })),
   resetToRoot: () => set({ parentActivityId: null, breadcrumb: [] }),
+  startHierarchyFocus: (session, state = 'expanding') =>
+    set({
+      hierarchyFocusSession: session,
+      hierarchyFocusState: state,
+    }),
+  updateHierarchyFocusSession: (updater) =>
+    set((state) => ({
+      hierarchyFocusSession: state.hierarchyFocusSession ? updater(state.hierarchyFocusSession) : null,
+    })),
+  setHierarchyFocusState: (state) => set({ hierarchyFocusState: state }),
+  clearHierarchyFocus: () => set({ hierarchyFocusState: 'collapsed', hierarchyFocusSession: null }),
 }))

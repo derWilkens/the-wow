@@ -1,6 +1,7 @@
 ﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequest } from '../lib/api-client'
 import type {
+  AggregateActivitiesToSubprocessInput,
   Activity,
   ActivityComment,
   CreateSubprocessInput,
@@ -62,6 +63,23 @@ export function useCreateSubprocess(workspaceId: string | null) {
       void queryClient.invalidateQueries({ queryKey: ['activities', workspaceId] })
       void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
       void queryClient.invalidateQueries({ queryKey: ['canvasEdges', workspaceId] })
+    },
+  })
+}
+
+export function useAggregateActivitiesToSubprocess(workspaceId: string | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: AggregateActivitiesToSubprocessInput) =>
+      apiRequest<{ workspace: Workspace; activity: Activity }>(`/workspaces/${workspaceId}/activities/aggregate-to-subprocess`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['activities', workspaceId] })
+      void queryClient.invalidateQueries({ queryKey: ['canvasObjects', workspaceId] })
+      void queryClient.invalidateQueries({ queryKey: ['canvasEdges', workspaceId] })
+      void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
     },
   })
 }
