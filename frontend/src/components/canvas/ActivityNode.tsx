@@ -7,6 +7,7 @@ import {
   CircleHelp,
   Clock3,
   Link2,
+  Lock,
   Plus,
   Trash2,
   ShieldAlert,
@@ -387,7 +388,9 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
     <div
       data-testid={`activity-node-${activity.id}`}
       onDoubleClick={() => data.onOpenDetail(activity.id)}
-      className={`wow-node wow-node--activity ${showHandles ? 'wow-node--handles-visible' : ''} ${
+      className={`wow-node wow-node--activity ${activity.is_locked ? 'wow-node--locked' : ''} ${
+        showHandles ? 'wow-node--handles-visible' : ''
+      } ${
         isConnectionPreviewTarget ? 'wow-node--connection-preview-target' : ''
       }`}
     >
@@ -807,6 +810,16 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
           ) : null}
         </div>
       </div>
+      {activity.is_locked ? (
+        <div
+          data-testid={`activity-lock-indicator-${activity.id}`}
+          className="wow-node__lock-indicator"
+          aria-label="Gesperrt"
+          title="Gesperrt"
+        >
+          <Lock className="h-3.5 w-3.5" />
+        </div>
+      ) : null}
       {activity.status_icon && <div className={statusClassMap[activity.status_icon]}>{statusIconMap[activity.status_icon]}</div>}
       <CanvasHandles
         targetClassName="wow-handle wow-handle--activity-target"

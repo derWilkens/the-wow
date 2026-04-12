@@ -99,7 +99,7 @@ interface CanvasObjectBase {
   workspace_id: string
   parent_activity_id: string | null
   name: string
-  is_locked: boolean
+  is_locked?: boolean
   updated_at: string
   fields?: ObjectField[]
 }
@@ -141,7 +141,7 @@ export interface Activity {
   linked_workflow_purpose: string | null
   linked_workflow_inputs: string[]
   linked_workflow_outputs: string[]
-  is_locked: boolean
+  is_locked?: boolean
   updated_at: string
 }
 

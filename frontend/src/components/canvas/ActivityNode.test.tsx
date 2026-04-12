@@ -190,6 +190,43 @@ describe('ActivityNode', () => {
     expect(screen.getByTestId('activity-node-activity-1')).toHaveClass('wow-node--connection-preview-target')
   })
 
+  it('shows a lock indicator and locked node class when the activity is locked', () => {
+    render(
+      <ActivityNode
+        id="activity-1"
+        type="activity"
+        zIndex={1}
+        selected={false}
+        isConnectable
+        xPos={100}
+        yPos={100}
+        dragging={false}
+        dragHandle={undefined}
+        data={{
+          activity: createActivity({ is_locked: true }),
+          hasChildren: false,
+          roleLabel: 'Sachbearbeitung',
+          roleAcronym: 'SB',
+          availableRoles,
+          assigneeLabel: 'Max Mustermann',
+          groupingMode: 'free',
+          onOpenDetail: vi.fn(),
+          onCreateSubprocess: vi.fn(),
+          onLinkSubprocess: vi.fn(),
+          onUnlinkSubprocess: vi.fn(),
+          onDeleteLinkedSubprocess: vi.fn(),
+          onOpenSubprocess: vi.fn(),
+          onInlineRename: vi.fn(),
+        }}
+        targetPosition={Position.Left}
+        sourcePosition={Position.Right}
+      />,
+    )
+
+    expect(screen.getByTestId('activity-node-activity-1')).toHaveClass('wow-node--locked')
+    expect(screen.getByTestId('activity-lock-indicator-activity-1')).toBeVisible()
+  })
+
   it('shows a custom description tooltip only on hover or focus of the name', () => {
     render(
       <ActivityNode

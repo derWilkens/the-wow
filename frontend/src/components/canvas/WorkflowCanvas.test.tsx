@@ -102,6 +102,7 @@ vi.mock('reactflow', async () => {
     Background: () => <div data-testid="rf-background" />,
     Controls: ({ position }: { position: string }) => <div data-testid="rf-controls" data-position={position} />,
     MarkerType: { ArrowClosed: 'arrowclosed' },
+    SelectionMode: { Partial: 'partial' },
     applyNodeChanges: (_changes: unknown, nodes: unknown) => nodes,
     Position: {
       Left: 'left',
@@ -171,6 +172,8 @@ function renderCanvas({
   activityRoleAcronymsById = {} as Record<string, string | null>,
   activityAssigneesById = {} as Record<string, string | null>,
   onMoveNode = vi.fn(),
+  onToggleLockSelection = vi.fn(),
+  onAggregateActivities = vi.fn(),
 } = {}) {
   const utils = render(
     <div style={{ width: 1200, height: 800 }}>
@@ -211,6 +214,8 @@ function renderCanvas({
         onConnectEdge={vi.fn()}
         onCreateActivityFromConnectionDrop={vi.fn()}
         onMoveNode={onMoveNode}
+        onToggleLockSelection={onToggleLockSelection}
+        onAggregateActivities={onAggregateActivities}
         onDeleteEdges={vi.fn()}
         onDeleteDataObject={vi.fn()}
         onDeleteSelection={vi.fn()}
@@ -223,6 +228,8 @@ function renderCanvas({
   return {
     ...utils,
     onMoveNode,
+    onToggleLockSelection,
+    onAggregateActivities,
   }
 }
 
@@ -458,6 +465,8 @@ function renderCanvas({
           onConnectEdge={onConnectEdge}
           onCreateActivityFromConnectionDrop={vi.fn()}
           onMoveNode={vi.fn()}
+          onToggleLockSelection={vi.fn()}
+          onAggregateActivities={vi.fn()}
           onDeleteEdges={vi.fn()}
           onDeleteDataObject={vi.fn()}
           onDeleteSelection={vi.fn()}
@@ -519,6 +528,8 @@ function renderCanvas({
           onConnectEdge={vi.fn()}
           onCreateActivityFromConnectionDrop={vi.fn()}
           onMoveNode={vi.fn()}
+          onToggleLockSelection={vi.fn()}
+          onAggregateActivities={vi.fn()}
           onDeleteEdges={vi.fn()}
           onDeleteDataObject={vi.fn()}
           onDeleteSelection={vi.fn()}
@@ -594,6 +605,8 @@ function renderCanvas({
           onConnectEdge={vi.fn()}
           onCreateActivityFromConnectionDrop={vi.fn()}
           onMoveNode={vi.fn()}
+          onToggleLockSelection={vi.fn()}
+          onAggregateActivities={vi.fn()}
           onDeleteEdges={vi.fn()}
           onDeleteDataObject={vi.fn()}
           onDeleteSelection={vi.fn()}
@@ -607,5 +620,92 @@ function renderCanvas({
     fireEvent.click(screen.getByTestId('workflow-canvas'))
 
     expect(onInterruptFocusAnimation).toHaveBeenCalled()
+  })
+
+  it('shows the multi-selection action popover and locks the selected nodes', async () => {
+    const onToggleLockSelection = vi.fn()
+
+    renderCanvas({
+      activities: [
+        createActivity({ id: 'activity-1', position_x: 200, position_y: 120 }),
+        createActivity({ id: 'activity-2', position_x: 520, position_y: 120 }),
+      ],
+      onToggleLockSelection,
+    })
+
+    const latestProps = getLatestReactFlowProps<{
+      onSelectionStart?: () => void
+      onSelectionChange?: (params: { nodes: Array<{ id: string }>; edges: Array<{ id: string }> }) => void
+      onSelectionEnd?: () => void
+    }>()
+
+    act(() => {
+      latestProps.onSelectionStart?.()
+      latestProps.onSelectionChange?.({
+        nodes: [{ id: 'activity-1' }, { id: 'activity-2' }],
+        edges: [],
+      })
+      latestProps.onSelectionEnd?.()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('canvas-selection-actions')).toBeVisible()
+    })
+
+    fireEvent.click(screen.getByTestId('canvas-selection-action-lock'))
+
+    expect(onToggleLockSelection).toHaveBeenCalledWith(['activity-1', 'activity-2'])
+    await waitFor(() => {
+      expect(screen.queryByTestId('canvas-selection-actions')).not.toBeInTheDocument()
+    })
+  })
+
+  it('enables aggregation only for selections with at least two regular activities', async () => {
+    const onAggregateActivities = vi.fn()
+
+    renderCanvas({
+      activities: [
+        createActivity({ id: 'activity-1', position_x: 200, position_y: 120 }),
+        createActivity({ id: 'activity-2', position_x: 520, position_y: 120 }),
+      ],
+      canvasObjects: [createSourceObject({ id: 'source-1', position_x: 840, position_y: 120 })],
+      onAggregateActivities,
+    })
+
+    let latestProps = getLatestReactFlowProps<{
+      onSelectionStart?: () => void
+      onSelectionChange?: (params: { nodes: Array<{ id: string }>; edges: Array<{ id: string }> }) => void
+      onSelectionEnd?: () => void
+    }>()
+
+    act(() => {
+      latestProps.onSelectionStart?.()
+      latestProps.onSelectionChange?.({
+        nodes: [{ id: 'activity-1' }, { id: 'source-1' }],
+        edges: [],
+      })
+      latestProps.onSelectionEnd?.()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('canvas-selection-action-aggregate')).toBeDisabled()
+    })
+
+    act(() => {
+      latestProps = getLatestReactFlowProps()
+      latestProps.onSelectionStart?.()
+      latestProps.onSelectionChange?.({
+        nodes: [{ id: 'activity-1' }, { id: 'activity-2' }],
+        edges: [],
+      })
+      latestProps.onSelectionEnd?.()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('canvas-selection-action-aggregate')).toBeEnabled()
+    })
+
+    fireEvent.click(screen.getByTestId('canvas-selection-action-aggregate'))
+    expect(onAggregateActivities).toHaveBeenCalledWith(['activity-1', 'activity-2'])
   })
 })

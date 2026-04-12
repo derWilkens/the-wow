@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import ReactFlow, {
   Background,
   Controls,
@@ -289,6 +289,7 @@ export function WorkflowCanvas({
   const focusAnimationTimeoutRef = useRef<number | null>(null)
   const isFocusAnimationActiveRef = useRef(false)
   const isLassoSelectionRef = useRef(false)
+  const selectedNodeIdsRef = useRef<string[]>([])
 
   const interruptFocusAnimation = useMemo(
     () => () => {
@@ -342,6 +343,10 @@ export function WorkflowCanvas({
   useEffect(() => {
     setSelectedNodeIds(selectedNodeId ? [selectedNodeId] : [])
   }, [selectedNodeId])
+
+  useEffect(() => {
+    selectedNodeIdsRef.current = selectedNodeIds
+  }, [selectedNodeIds])
 
   useEffect(() => {
     setSelectedEdgeIds(selectedEdgeId ? [selectedEdgeId] : [])
@@ -420,12 +425,12 @@ export function WorkflowCanvas({
   )
 
   const handleNodeDragStop = useMemo(
-    () => (_event: MouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
-      if ('activity' in node.data && node.data.activity.is_locked) {
+    () => (_event: ReactMouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
+      if (node.data && 'activity' in node.data && node.data.activity.is_locked) {
         return
       }
 
-      if ('canvasObject' in node.data && node.data.canvasObject.is_locked) {
+      if (node.data && 'canvasObject' in node.data && node.data.canvasObject.is_locked) {
         return
       }
 
@@ -541,12 +546,12 @@ export function WorkflowCanvas({
   )
 
   const handleNodeDrag = useMemo(
-    () => (_event: MouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
-      if ('activity' in node.data && node.data.activity.is_locked) {
+    () => (_event: ReactMouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
+      if (node.data && 'activity' in node.data && node.data.activity.is_locked) {
         return
       }
 
-      if ('canvasObject' in node.data && node.data.canvasObject.is_locked) {
+      if (node.data && 'canvasObject' in node.data && node.data.canvasObject.is_locked) {
         return
       }
 
@@ -706,7 +711,7 @@ export function WorkflowCanvas({
       return
     }
 
-    function handlePointerDown(event: MouseEvent) {
+    function handlePointerDown(event: globalThis.MouseEvent) {
       const target = event.target as HTMLElement | null
       if (target?.closest('[data-testid="canvas-selection-actions"]')) {
         return
@@ -1093,6 +1098,58 @@ export function WorkflowCanvas({
           ))}
         </div>
       ) : null}
+      {selectionActionMenu && selectedNodeIds.length > 1 ? (
+        <div
+          data-testid="canvas-selection-actions"
+          className="wow-canvas-selection-actions wow-surface-popover"
+          style={{
+            left: `${selectionActionMenu.left}px`,
+            top: `${selectionActionMenu.top}px`,
+          }}
+        >
+          <button
+            type="button"
+            className="wow-canvas-selection-actions__button"
+            data-testid="canvas-selection-action-lock"
+            onClick={() => {
+              void onToggleLockSelection(selectedNodeIds)
+              setSelectionActionMenu(null)
+            }}
+            aria-label="Sperren"
+            title="Sperren"
+          >
+            <Lock className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className="wow-canvas-selection-actions__button wow-canvas-selection-actions__button--disabled"
+            data-testid="canvas-selection-action-group"
+            aria-label="Gruppieren"
+            title="Gruppieren"
+            disabled
+          >
+            <Group className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className="wow-canvas-selection-actions__button"
+            data-testid="canvas-selection-action-aggregate"
+            onClick={() => {
+              if (!canAggregateSelection) {
+                return
+              }
+
+              void onAggregateActivities(selectedRegularActivityIds)
+              setSelectionActionMenu(null)
+            }}
+            aria-label="Zu Subprozess aggregieren"
+            title="Zu Subprozess aggregieren"
+            disabled={!canAggregateSelection}
+          >
+            <Workflow className="h-4 w-4" />
+          </button>
+        </div>
+      ) : null}
       <ReactFlow
         nodes={renderNodes}
         edges={edges}
@@ -1160,7 +1217,9 @@ export function WorkflowCanvas({
           }
 
           isLassoSelectionRef.current = false
-          setSelectionActionMenu(getSelectionActionMenuPosition(selectedNodeIds))
+          window.requestAnimationFrame(() => {
+            setSelectionActionMenu(getSelectionActionMenuPosition(selectedNodeIdsRef.current))
+          })
         }}
         onConnectEnd={handleConnectEnd}
         onNodesChange={(changes: NodeChange[]) => {

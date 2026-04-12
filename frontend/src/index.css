@@ -214,6 +214,46 @@ select {
   backdrop-filter: blur(18px);
 }
 
+.wow-canvas-selection-actions {
+  position: absolute;
+  z-index: 35;
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.45rem;
+  border: 1px solid rgba(159, 231, 255, 0.16);
+  border-radius: 9999px;
+  box-shadow: 0 20px 44px rgba(2, 8, 12, 0.34);
+  transform: translateX(-50%);
+}
+
+.wow-canvas-selection-actions__button {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(159, 231, 255, 0.14);
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(223, 244, 255, 0.92);
+  background: rgba(255, 255, 255, 0.02);
+  transition: transform 120ms ease, border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.wow-canvas-selection-actions__button:hover:not(:disabled),
+.wow-canvas-selection-actions__button:focus-visible:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(159, 231, 255, 0.32);
+  background: rgba(105, 204, 255, 0.1);
+  color: rgba(245, 252, 255, 0.98);
+}
+
+.wow-canvas-selection-actions__button:disabled,
+.wow-canvas-selection-actions__button--disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
 .wow-overlay-scrim {
   background: var(--surface-overlay);
   backdrop-filter: blur(8px);
@@ -314,6 +354,27 @@ select {
     border-color 0.2s ease,
     background-color 0.2s ease,
     box-shadow 0.2s ease;
+}
+
+.wow-node--locked {
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.22);
+}
+
+.wow-node__lock-indicator {
+  position: absolute;
+  left: 0.8rem;
+  bottom: 0.78rem;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  background: rgba(120, 53, 15, 0.88);
+  color: rgba(254, 243, 199, 0.96);
+  box-shadow: 0 8px 18px rgba(2, 8, 12, 0.22);
 }
 
 .wow-node--activity {
