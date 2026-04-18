@@ -5,6 +5,7 @@ import { useActivities, useAggregateActivitiesToSubprocess, useCreateSubprocess,
 import { useAcceptOrganizationInvitation, useCreateOrganization, useOrganizations, usePendingOrganizationInvitations } from './api/organizations'
 import { useCreateOrganizationRole, useOrganizationRoles } from './api/organizationRoles'
 import { useCanvasEdges, useDeleteCanvasEdge, useUpsertCanvasEdge } from './api/canvasEdges'
+import { useCanvasGroups, useDeleteCanvasGroup, useUpsertCanvasGroup } from './api/canvasGroups'
 import { useCanvasObjects, useDeleteCanvasObject, useUpsertCanvasObject } from './api/canvasObjects'
 import { useCreateTransportMode, useTransportModes } from './api/transportModes'
 import { useDeleteWorkspace, useUpdateWorkspace, useWorkspaces } from './api/workspaces'
@@ -32,6 +33,7 @@ import { useCanvasStore } from './store/canvasStore'
 import type {
   Activity,
   CanvasEdge,
+  CanvasGroup,
   CanvasGroupingMode,
   CanvasObject,
   EdgeDataObject,
@@ -48,7 +50,15 @@ const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
 
 function readUiPreferences(): UiPreferences {
   if (typeof window === 'undefined') {
-    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false, enable_node_collision_avoidance: true }
+    return {
+      default_grouping_mode: 'free',
+      snap_to_grid: true,
+      enable_table_view: false,
+      enable_swimlane_view: false,
+      enable_node_collision_avoidance: true,
+      enable_alignment_guides: true,
+      enable_magnetic_connection_targets: true,
+    }
   }
 
   try {
@@ -59,9 +69,20 @@ function readUiPreferences(): UiPreferences {
       enable_table_view: typeof parsed.enable_table_view === 'boolean' ? parsed.enable_table_view : false,
       enable_swimlane_view: typeof parsed.enable_swimlane_view === 'boolean' ? parsed.enable_swimlane_view : false,
       enable_node_collision_avoidance: typeof parsed.enable_node_collision_avoidance === 'boolean' ? parsed.enable_node_collision_avoidance : true,
+      enable_alignment_guides: typeof parsed.enable_alignment_guides === 'boolean' ? parsed.enable_alignment_guides : true,
+      enable_magnetic_connection_targets:
+        typeof parsed.enable_magnetic_connection_targets === 'boolean' ? parsed.enable_magnetic_connection_targets : true,
     }
   } catch {
-    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false, enable_node_collision_avoidance: true }
+    return {
+      default_grouping_mode: 'free',
+      snap_to_grid: true,
+      enable_table_view: false,
+      enable_swimlane_view: false,
+      enable_node_collision_avoidance: true,
+      enable_alignment_guides: true,
+      enable_magnetic_connection_targets: true,
+    }
   }
 }
 
@@ -255,6 +276,69 @@ const DEFAULT_NODE_SIZES = {
   datenobjekt: { width: 220, height: 116 },
 } as const
 const SMART_INSERT_GAP = 120
+const GROUP_CONTENT_PADDING = 28
+
+export function getCanvasItemBounds(
+  item:
+    | Activity
+    | Extract<CanvasObject, { object_type: 'quelle' }>
+    | Pick<CanvasGroup, 'position_x' | 'position_y' | 'width' | 'height'>
+    | { position_x: number; position_y: number; width: number; height: number },
+) {
+  if ('node_type' in item) {
+    return {
+      left: item.position_x,
+      top: item.position_y,
+      right: item.position_x + DEFAULT_NODE_SIZES[item.node_type].width,
+      bottom: item.position_y + DEFAULT_NODE_SIZES[item.node_type].height,
+      width: DEFAULT_NODE_SIZES[item.node_type].width,
+      height: DEFAULT_NODE_SIZES[item.node_type].height,
+    }
+  }
+
+  if ('object_type' in item) {
+    return {
+      left: item.position_x,
+      top: item.position_y,
+      right: item.position_x + DEFAULT_NODE_SIZES.quelle.width,
+      bottom: item.position_y + DEFAULT_NODE_SIZES.quelle.height,
+      width: DEFAULT_NODE_SIZES.quelle.width,
+      height: DEFAULT_NODE_SIZES.quelle.height,
+    }
+  }
+
+  return {
+    left: item.position_x,
+    top: item.position_y,
+    right: item.position_x + item.width,
+    bottom: item.position_y + item.height,
+    width: item.width,
+    height: item.height,
+  }
+}
+
+export function findContainingCanvasGroupId(
+  bounds: ReturnType<typeof getCanvasItemBounds>,
+  canvasGroups: CanvasGroup[],
+  excludeGroupId?: string | null,
+) {
+  const centerX = bounds.left + bounds.width / 2
+  const centerY = bounds.top + bounds.height / 2
+
+  const matchingGroups = canvasGroups
+    .filter((canvasGroup) => canvasGroup.id !== excludeGroupId)
+    .filter((canvasGroup) => {
+      const innerLeft = canvasGroup.position_x + GROUP_CONTENT_PADDING
+      const innerTop = canvasGroup.position_y + GROUP_CONTENT_PADDING
+      const innerRight = canvasGroup.position_x + canvasGroup.width - GROUP_CONTENT_PADDING
+      const innerBottom = canvasGroup.position_y + canvasGroup.height - GROUP_CONTENT_PADDING
+
+      return centerX >= innerLeft && centerX <= innerRight && centerY >= innerTop && centerY <= innerBottom
+    })
+    .sort((left, right) => (left.width * left.height) - (right.width * right.height))
+
+  return matchingGroups[0]?.id ?? null
+}
 
 function getNewActivityPositionForDrop(position: { x: number; y: number }, targetHandleId: string) {
   const { width, height } = DEFAULT_ACTIVITY_NODE_SIZE
@@ -310,6 +394,10 @@ function getHierarchyTransitionDuration() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : HIERARCHY_FOCUS_TRANSITION_MS
 }
 
+function isHierarchyPreviewPhase(state: HierarchyFocusState) {
+  return state === 'expanding' || state === 'expanded'
+}
+
 function WorkspaceCanvasApp({
   workspaceId,
   workspaceName,
@@ -345,6 +433,7 @@ function WorkspaceCanvasApp({
   const deleteWorkspace = useDeleteWorkspace(organizationId)
   const { data: organizationRoles = [] } = useOrganizationRoles(organizationId)
   const { data: activities = [], isLoading: activitiesLoading } = useActivities(workspaceId, parentActivityId)
+  const { data: canvasGroups = [] } = useCanvasGroups(workspaceId, parentActivityId)
   const { data: canvasObjects = [], isLoading: objectsLoading } = useCanvasObjects(workspaceId, parentActivityId)
   const { data: canvasEdges = [] } = useCanvasEdges(workspaceId, parentActivityId)
   const previewWorkspaceId = hierarchyFocusSession?.childWorkspaceId ?? null
@@ -355,6 +444,8 @@ function WorkspaceCanvasApp({
   const createTransportMode = useCreateTransportMode(organizationId)
   const createOrganizationRole = useCreateOrganizationRole(organizationId)
   const upsertActivity = useUpsertActivity(workspaceId)
+  const upsertCanvasGroup = useUpsertCanvasGroup(workspaceId)
+  const deleteCanvasGroup = useDeleteCanvasGroup(workspaceId)
   const aggregateActivitiesToSubprocess = useAggregateActivitiesToSubprocess(workspaceId)
   const createSubprocess = useCreateSubprocess(workspaceId)
   const linkSubprocess = useLinkSubprocess(workspaceId)
@@ -372,6 +463,7 @@ function WorkspaceCanvasApp({
   const selectedCanvasEdgeIdRef = useRef<string | null>(null)
   const activityDetailPopupRef = useRef<ActivityDetailPopupHandle | null>(null)
   const canvasSectionRef = useRef<HTMLElement | null>(null)
+  const collapseFromMaximizedRef = useRef(false)
 
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null)
   const [selectedDataObjectId, setSelectedDataObjectId] = useState<string | null>(null)
@@ -577,9 +669,20 @@ function WorkspaceCanvasApp({
     [activeWorkspaceName, currentUserId, organizationId, workspaceId, workspaces],
   )
 
+  const visibleCanvasGroups = useMemo<CanvasGroup[]>(
+    () => canvasGroups.slice().sort((left, right) => (left.z_index ?? 0) - (right.z_index ?? 0)),
+    [canvasGroups],
+  )
+  const collapsedGroupIds = useMemo(
+    () => new Set(visibleCanvasGroups.filter((canvasGroup) => canvasGroup.collapsed).map((canvasGroup) => canvasGroup.id)),
+    [visibleCanvasGroups],
+  )
   const visibleActivities = useMemo(
-    () => uniqueById([...activities, ...optimisticActivities]).filter((activity) => !optimisticHiddenNodeIds.includes(activity.id)),
-    [activities, optimisticActivities, optimisticHiddenNodeIds],
+    () =>
+      uniqueById([...activities, ...optimisticActivities]).filter(
+        (activity) => !optimisticHiddenNodeIds.includes(activity.id) && !collapsedGroupIds.has(activity.group_id ?? ''),
+      ),
+    [activities, collapsedGroupIds, optimisticActivities, optimisticHiddenNodeIds],
   )
   const handleActivityDetailSelectionChange = useCallback(async (selection: { nodeId: string | null; edgeId: string | null; dataObjectId: string | null }) => {
     if (!isActivityPopupOpen || !selectedActivity) {
@@ -636,8 +739,12 @@ function WorkspaceCanvasApp({
   }, [isActivityPopupOpen, selectedActivity, visibleActivities])
 
   const visibleCanvasObjects = useMemo(
-    () => uniqueById([...canvasObjects, ...optimisticCanvasObjects]).filter((canvasObject) => !optimisticHiddenNodeIds.includes(canvasObject.id)),
-    [canvasObjects, optimisticCanvasObjects, optimisticHiddenNodeIds],
+    () =>
+      uniqueById([...canvasObjects, ...optimisticCanvasObjects]).filter(
+        (canvasObject) =>
+          !optimisticHiddenNodeIds.includes(canvasObject.id) && !collapsedGroupIds.has(canvasObject.group_id ?? ''),
+      ),
+    [canvasObjects, collapsedGroupIds, optimisticCanvasObjects, optimisticHiddenNodeIds],
   )
   const visibleSourceObjects = useMemo(
     () => visibleCanvasObjects.filter((canvasObject) => canvasObject.object_type === 'quelle'),
@@ -666,9 +773,13 @@ function WorkspaceCanvasApp({
           (edge) =>
             !optimisticHiddenEdgeIds.includes(edge.id) &&
             !optimisticHiddenNodeIds.includes(edge.from_node_id) &&
-            !optimisticHiddenNodeIds.includes(edge.to_node_id),
+            !optimisticHiddenNodeIds.includes(edge.to_node_id) &&
+            !collapsedGroupIds.has(visibleActivities.find((activity) => activity.id === edge.from_node_id)?.group_id ?? '') &&
+            !collapsedGroupIds.has(visibleActivities.find((activity) => activity.id === edge.to_node_id)?.group_id ?? '') &&
+            !collapsedGroupIds.has(visibleCanvasObjects.find((canvasObject) => canvasObject.id === edge.from_node_id)?.group_id ?? '') &&
+            !collapsedGroupIds.has(visibleCanvasObjects.find((canvasObject) => canvasObject.id === edge.to_node_id)?.group_id ?? ''),
         ),
-    [canvasEdges, edgeAttributeOverrides, optimisticEdges, optimisticHiddenEdgeIds, optimisticHiddenNodeIds, transportModes],
+    [canvasEdges, collapsedGroupIds, edgeAttributeOverrides, optimisticEdges, optimisticHiddenEdgeIds, optimisticHiddenNodeIds, transportModes, visibleActivities, visibleCanvasObjects],
   )
 
   const hasStart = visibleActivities.some((activity) => activity.node_type === 'start_event')
@@ -1210,6 +1321,7 @@ function WorkspaceCanvasApp({
 
   function beginHierarchyPreview(activity: Activity, linkedWorkspace: Workspace, originRect?: { x: number; y: number; width: number; height: number }) {
     autoCollapseHierarchyOnMinimizeRef.current = false
+    collapseFromMaximizedRef.current = false
     const viewport = getCanvasViewportSnapshot()
     const derivedFocusRects = deriveHierarchyFocusRects({
       viewport,
@@ -1779,12 +1891,23 @@ function WorkspaceCanvasApp({
   async function persistNodePosition(nodeId: string, position: { x: number; y: number }) {
     const optimisticActivity = optimisticActivities.find((entry) => entry.id === nodeId)
     if (optimisticActivity) {
+      const nextGroupId = findContainingCanvasGroupId(
+        getCanvasItemBounds({
+          position_x: position.x,
+          position_y: position.y,
+          width: DEFAULT_NODE_SIZES[optimisticActivity.node_type].width,
+          height: DEFAULT_NODE_SIZES[optimisticActivity.node_type].height,
+        }),
+        visibleCanvasGroups,
+        optimisticActivity.group_id ?? null,
+      )
       pendingNodePositionRef.current[nodeId] = position
       setOptimisticActivities((current) =>
         current.map((activity) =>
           activity.id === nodeId
             ? {
                 ...activity,
+                group_id: nextGroupId,
                 position_x: position.x,
                 position_y: position.y,
               }
@@ -1796,7 +1919,18 @@ function WorkspaceCanvasApp({
 
     const activity = activities.find((entry) => entry.id === nodeId)
     if (activity) {
-      if (activity.position_x === position.x && activity.position_y === position.y) {
+      const nextGroupId = findContainingCanvasGroupId(
+        getCanvasItemBounds({
+          position_x: position.x,
+          position_y: position.y,
+          width: DEFAULT_NODE_SIZES[activity.node_type].width,
+          height: DEFAULT_NODE_SIZES[activity.node_type].height,
+        }),
+        visibleCanvasGroups,
+        activity.group_id ?? null,
+      )
+
+      if (activity.position_x === position.x && activity.position_y === position.y && (activity.group_id ?? null) === nextGroupId) {
         return
       }
 
@@ -1804,6 +1938,7 @@ function WorkspaceCanvasApp({
       await upsertActivity.mutateAsync({
         id: activity.id,
         parent_id: activity.parent_id,
+        group_id: nextGroupId,
         node_type: activity.node_type,
         label: activity.label,
         trigger_type: activity.trigger_type,
@@ -1823,12 +1958,23 @@ function WorkspaceCanvasApp({
 
     const optimisticCanvasObject = optimisticCanvasObjects.find((entry) => entry.id === nodeId)
     if (optimisticCanvasObject?.object_type === 'quelle') {
+      const nextGroupId = findContainingCanvasGroupId(
+        getCanvasItemBounds({
+          position_x: position.x,
+          position_y: position.y,
+          width: DEFAULT_NODE_SIZES.quelle.width,
+          height: DEFAULT_NODE_SIZES.quelle.height,
+        }),
+        visibleCanvasGroups,
+        optimisticCanvasObject.group_id ?? null,
+      )
       pendingNodePositionRef.current[nodeId] = position
       setOptimisticCanvasObjects((current) =>
         current.map((canvasObject) =>
           canvasObject.id === nodeId
             ? {
                 ...canvasObject,
+                group_id: nextGroupId,
                 position_x: position.x,
                 position_y: position.y,
               }
@@ -1842,7 +1988,17 @@ function WorkspaceCanvasApp({
     if (!canvasObject || canvasObject.object_type !== 'quelle') {
       return
     }
-    if (canvasObject.position_x === position.x && canvasObject.position_y === position.y) {
+    const nextGroupId = findContainingCanvasGroupId(
+      getCanvasItemBounds({
+        position_x: position.x,
+        position_y: position.y,
+        width: DEFAULT_NODE_SIZES.quelle.width,
+        height: DEFAULT_NODE_SIZES.quelle.height,
+      }),
+      visibleCanvasGroups,
+      canvasObject.group_id ?? null,
+    )
+    if (canvasObject.position_x === position.x && canvasObject.position_y === position.y && (canvasObject.group_id ?? null) === nextGroupId) {
       return
     }
 
@@ -1850,6 +2006,7 @@ function WorkspaceCanvasApp({
     await upsertCanvasObject.mutateAsync({
       id: canvasObject.id,
       parent_activity_id: canvasObject.parent_activity_id,
+      group_id: nextGroupId,
       object_type: canvasObject.object_type,
       name: canvasObject.name,
       is_locked: canvasObject.is_locked,
@@ -1861,19 +2018,34 @@ function WorkspaceCanvasApp({
   async function toggleLockedNodes(nodeIds: string[]) {
     const selectedActivities = visibleActivities.filter((activity) => nodeIds.includes(activity.id))
     const selectedSourceObjects = visibleSourceObjects.filter((canvasObject) => nodeIds.includes(canvasObject.id))
+    const selectedGroups = visibleCanvasGroups.filter((canvasGroup) => nodeIds.includes(canvasGroup.id))
 
-    if (selectedActivities.length === 0 && selectedSourceObjects.length === 0) {
+    if (selectedActivities.length === 0 && selectedSourceObjects.length === 0 && selectedGroups.length === 0) {
       return
     }
 
-    const shouldLock = [...selectedActivities, ...selectedSourceObjects].some((item) => !item.is_locked)
+    const shouldLock = [...selectedActivities, ...selectedSourceObjects].some((item) => !item.is_locked) || selectedGroups.some((group) => !group.locked)
     rememberSnapshot()
 
     await Promise.all([
+      ...selectedGroups.map((canvasGroup) =>
+        upsertCanvasGroup.mutateAsync({
+          id: canvasGroup.id,
+          parent_activity_id: canvasGroup.parent_activity_id,
+          label: canvasGroup.label,
+          position_x: canvasGroup.position_x,
+          position_y: canvasGroup.position_y,
+          width: canvasGroup.width,
+          height: canvasGroup.height,
+          locked: shouldLock,
+          z_index: canvasGroup.z_index ?? 0,
+        }),
+      ),
       ...selectedActivities.map((activity) =>
         upsertActivity.mutateAsync({
           id: activity.id,
           parent_id: activity.parent_id,
+          group_id: activity.group_id ?? null,
           node_type: activity.node_type,
           label: activity.label,
           trigger_type: activity.trigger_type,
@@ -1899,11 +2071,437 @@ function WorkspaceCanvasApp({
         upsertCanvasObject.mutateAsync({
           id: canvasObject.id,
           parent_activity_id: canvasObject.parent_activity_id,
+          group_id: canvasObject.group_id ?? null,
           object_type: canvasObject.object_type,
           name: canvasObject.name,
           is_locked: shouldLock,
           position_x: canvasObject.position_x,
           position_y: canvasObject.position_y,
+        }),
+      ),
+    ])
+  }
+
+  async function duplicateSelectedNodes(nodeIds: string[]) {
+    const selectedActivities = visibleActivities.filter((activity) => nodeIds.includes(activity.id))
+    const selectedSourceObjects = visibleSourceObjects.filter((canvasObject) => nodeIds.includes(canvasObject.id))
+
+    if (selectedActivities.length === 0 && selectedSourceObjects.length === 0) {
+      return
+    }
+
+    const duplicateOffset = 56
+    rememberSnapshot()
+
+    await Promise.all([
+      ...selectedActivities.map((activity) =>
+        upsertActivity.mutateAsync({
+          parent_id: activity.parent_id,
+          node_type: activity.node_type,
+          label: `${activity.label} Kopie`,
+          trigger_type: activity.trigger_type,
+          position_x: activity.position_x + duplicateOffset,
+          position_y: activity.position_y + duplicateOffset,
+          status: activity.status,
+          status_icon: activity.status_icon,
+          activity_type: activity.activity_type,
+          description: activity.description,
+          notes: activity.notes,
+          assignee_label: activity.assignee_label ?? null,
+          role_id: activity.role_id ?? null,
+          duration_minutes: activity.duration_minutes,
+          linked_workflow_id: activity.linked_workflow_id,
+          linked_workflow_mode: activity.linked_workflow_mode,
+          linked_workflow_purpose: activity.linked_workflow_purpose,
+          linked_workflow_inputs: activity.linked_workflow_inputs,
+          linked_workflow_outputs: activity.linked_workflow_outputs,
+          is_locked: activity.is_locked ?? false,
+        }),
+      ),
+      ...selectedSourceObjects.map((canvasObject) =>
+        upsertCanvasObject.mutateAsync({
+          parent_activity_id: canvasObject.parent_activity_id,
+          object_type: canvasObject.object_type,
+          name: `${canvasObject.name} Kopie`,
+          is_locked: canvasObject.is_locked ?? false,
+          position_x: canvasObject.position_x + duplicateOffset,
+          position_y: canvasObject.position_y + duplicateOffset,
+        }),
+      ),
+    ])
+  }
+
+  async function nudgeSelectedNodes(nodeIds: string[], delta: { x: number; y: number }) {
+    const selectedActivities = visibleActivities.filter((activity) => nodeIds.includes(activity.id))
+    const selectedSourceObjects = visibleSourceObjects.filter((canvasObject) => nodeIds.includes(canvasObject.id))
+
+    if (selectedActivities.length === 0 && selectedSourceObjects.length === 0) {
+      return
+    }
+
+    rememberSnapshot()
+
+    await Promise.all([
+      ...selectedActivities.map((activity) =>
+        upsertActivity.mutateAsync({
+          id: activity.id,
+          parent_id: activity.parent_id,
+          node_type: activity.node_type,
+          label: activity.label,
+          trigger_type: activity.trigger_type,
+          position_x: activity.position_x + delta.x,
+          position_y:
+            uiPreferences.default_grouping_mode === 'role_lanes'
+              ? activity.position_y
+              : activity.position_y + delta.y,
+          status: activity.status,
+          status_icon: activity.status_icon,
+          activity_type: activity.activity_type,
+          description: activity.description,
+          notes: activity.notes,
+          assignee_label: activity.assignee_label ?? null,
+          role_id: activity.role_id ?? null,
+          duration_minutes: activity.duration_minutes,
+          linked_workflow_id: activity.linked_workflow_id,
+          linked_workflow_mode: activity.linked_workflow_mode,
+          linked_workflow_purpose: activity.linked_workflow_purpose,
+          linked_workflow_inputs: activity.linked_workflow_inputs,
+          linked_workflow_outputs: activity.linked_workflow_outputs,
+          is_locked: activity.is_locked ?? false,
+        }),
+      ),
+      ...selectedSourceObjects.map((canvasObject) =>
+        upsertCanvasObject.mutateAsync({
+          id: canvasObject.id,
+          parent_activity_id: canvasObject.parent_activity_id,
+          object_type: canvasObject.object_type,
+          name: canvasObject.name,
+          is_locked: canvasObject.is_locked ?? false,
+          position_x: canvasObject.position_x + delta.x,
+          position_y: canvasObject.position_y + delta.y,
+        }),
+      ),
+    ])
+  }
+
+  async function alignSelectedNodes(
+    nodeIds: string[],
+    operation: 'left' | 'top' | 'horizontal_distribute' | 'vertical_distribute',
+  ) {
+    const selectedActivities = visibleActivities.filter((activity) => nodeIds.includes(activity.id) && activity.node_type === 'activity')
+    const selectedSourceObjects = visibleSourceObjects.filter((canvasObject) => nodeIds.includes(canvasObject.id))
+
+    const alignableNodes = [
+      ...selectedActivities.map((activity) => ({
+        id: activity.id,
+        kind: 'activity' as const,
+        position_x: activity.position_x,
+        position_y: activity.position_y,
+        activity,
+      })),
+      ...selectedSourceObjects.map((canvasObject) => ({
+        id: canvasObject.id,
+        kind: 'source' as const,
+        position_x: canvasObject.position_x,
+        position_y: canvasObject.position_y,
+        canvasObject,
+      })),
+    ]
+
+    if (alignableNodes.length < 2) {
+      return
+    }
+
+    rememberSnapshot()
+
+    const nextPositions = new Map<string, { x: number; y: number }>()
+
+    if (operation === 'left') {
+      const targetX = Math.min(...alignableNodes.map((node) => node.position_x))
+      for (const node of alignableNodes) {
+        nextPositions.set(node.id, { x: targetX, y: node.position_y })
+      }
+    }
+
+    if (operation === 'top') {
+      const targetY = Math.min(...alignableNodes.map((node) => node.position_y))
+      for (const node of alignableNodes) {
+        nextPositions.set(node.id, {
+          x: node.position_x,
+          y: uiPreferences.default_grouping_mode === 'role_lanes' && node.kind === 'activity' ? node.position_y : targetY,
+        })
+      }
+    }
+
+    if (operation === 'horizontal_distribute') {
+      const sorted = alignableNodes.slice().sort((left, right) => left.position_x - right.position_x)
+      const leftMost = sorted[0]
+      const rightMost = sorted[sorted.length - 1]
+      const step = sorted.length > 1 ? (rightMost.position_x - leftMost.position_x) / (sorted.length - 1) : 0
+
+      sorted.forEach((node, index) => {
+        nextPositions.set(node.id, {
+          x: Math.round(leftMost.position_x + step * index),
+          y: node.position_y,
+        })
+      })
+    }
+
+    if (operation === 'vertical_distribute') {
+      const sorted = alignableNodes.slice().sort((left, right) => left.position_y - right.position_y)
+      const topMost = sorted[0]
+      const bottomMost = sorted[sorted.length - 1]
+      const step = sorted.length > 1 ? (bottomMost.position_y - topMost.position_y) / (sorted.length - 1) : 0
+
+      sorted.forEach((node, index) => {
+        nextPositions.set(node.id, {
+          x: node.position_x,
+          y:
+            uiPreferences.default_grouping_mode === 'role_lanes' && node.kind === 'activity'
+              ? node.position_y
+              : Math.round(topMost.position_y + step * index),
+        })
+      })
+    }
+
+    await Promise.all([
+      ...selectedActivities.map((activity) => {
+        const nextPosition = nextPositions.get(activity.id)
+        if (!nextPosition) {
+          return Promise.resolve()
+        }
+
+        return upsertActivity.mutateAsync({
+          id: activity.id,
+          parent_id: activity.parent_id,
+          node_type: activity.node_type,
+          label: activity.label,
+          trigger_type: activity.trigger_type,
+          position_x: nextPosition.x,
+          position_y: nextPosition.y,
+          status: activity.status,
+          status_icon: activity.status_icon,
+          activity_type: activity.activity_type,
+          description: activity.description,
+          notes: activity.notes,
+          assignee_label: activity.assignee_label ?? null,
+          role_id: activity.role_id ?? null,
+          duration_minutes: activity.duration_minutes,
+          linked_workflow_id: activity.linked_workflow_id,
+          linked_workflow_mode: activity.linked_workflow_mode,
+          linked_workflow_purpose: activity.linked_workflow_purpose,
+          linked_workflow_inputs: activity.linked_workflow_inputs,
+          linked_workflow_outputs: activity.linked_workflow_outputs,
+          is_locked: activity.is_locked ?? false,
+        })
+      }),
+      ...selectedSourceObjects.map((canvasObject) => {
+        const nextPosition = nextPositions.get(canvasObject.id)
+        if (!nextPosition) {
+          return Promise.resolve()
+        }
+
+        return upsertCanvasObject.mutateAsync({
+          id: canvasObject.id,
+          parent_activity_id: canvasObject.parent_activity_id,
+          object_type: canvasObject.object_type,
+          name: canvasObject.name,
+          is_locked: canvasObject.is_locked ?? false,
+          position_x: nextPosition.x,
+          position_y: nextPosition.y,
+        })
+      }),
+    ])
+  }
+
+  async function createGroupFromSelection(nodeIds: string[]) {
+    const selectedActivities = visibleActivities.filter((activity) => nodeIds.includes(activity.id))
+    const selectedSourceObjects = visibleSourceObjects.filter((canvasObject) => nodeIds.includes(canvasObject.id))
+    const selectedNodes = [
+      ...selectedActivities.map((activity) => ({
+        id: activity.id,
+        kind: 'activity' as const,
+        position_x: activity.position_x,
+        position_y: activity.position_y,
+        width: DEFAULT_NODE_SIZES[activity.node_type].width,
+        height: DEFAULT_NODE_SIZES[activity.node_type].height,
+        activity,
+      })),
+      ...selectedSourceObjects.map((canvasObject) => ({
+        id: canvasObject.id,
+        kind: 'source' as const,
+        position_x: canvasObject.position_x,
+        position_y: canvasObject.position_y,
+        width: DEFAULT_NODE_SIZES.quelle.width,
+        height: DEFAULT_NODE_SIZES.quelle.height,
+        canvasObject,
+      })),
+    ]
+
+    if (selectedNodes.length < 2) {
+      return
+    }
+
+    const padding = 28
+    const left = Math.min(...selectedNodes.map((node) => node.position_x))
+    const top = Math.min(...selectedNodes.map((node) => node.position_y))
+    const right = Math.max(...selectedNodes.map((node) => node.position_x + node.width))
+    const bottom = Math.max(...selectedNodes.map((node) => node.position_y + node.height))
+
+    rememberSnapshot()
+
+    const createdGroup = await upsertCanvasGroup.mutateAsync({
+      parent_activity_id: parentActivityId,
+      label: `Gruppe ${visibleCanvasGroups.length + 1}`,
+      position_x: left - padding,
+      position_y: top - padding,
+      width: right - left + padding * 2,
+      height: bottom - top + padding * 2,
+      z_index: visibleCanvasGroups.length,
+    })
+
+    await Promise.all([
+      ...selectedActivities.map((activity) =>
+        upsertActivity.mutateAsync({
+          id: activity.id,
+          parent_id: activity.parent_id,
+          group_id: createdGroup.id,
+          node_type: activity.node_type,
+          label: activity.label,
+          trigger_type: activity.trigger_type,
+          position_x: activity.position_x,
+          position_y: activity.position_y,
+          status: activity.status,
+          status_icon: activity.status_icon,
+          activity_type: activity.activity_type,
+          description: activity.description,
+          notes: activity.notes,
+          assignee_label: activity.assignee_label ?? null,
+          role_id: activity.role_id ?? null,
+          duration_minutes: activity.duration_minutes,
+          linked_workflow_id: activity.linked_workflow_id,
+          linked_workflow_mode: activity.linked_workflow_mode,
+          linked_workflow_purpose: activity.linked_workflow_purpose,
+          linked_workflow_inputs: activity.linked_workflow_inputs,
+          linked_workflow_outputs: activity.linked_workflow_outputs,
+          is_locked: activity.is_locked ?? false,
+        }),
+      ),
+      ...selectedSourceObjects.map((canvasObject) =>
+        upsertCanvasObject.mutateAsync({
+          id: canvasObject.id,
+          parent_activity_id: canvasObject.parent_activity_id,
+          group_id: createdGroup.id,
+          object_type: canvasObject.object_type,
+          name: canvasObject.name,
+          is_locked: canvasObject.is_locked ?? false,
+          position_x: canvasObject.position_x,
+          position_y: canvasObject.position_y,
+        }),
+      ),
+    ])
+  }
+
+  async function saveCanvasGroup(
+    group: CanvasGroup,
+    overrides: Partial<Pick<CanvasGroup, 'label' | 'position_x' | 'position_y' | 'width' | 'height' | 'locked' | 'collapsed' | 'z_index'>>,
+  ) {
+    return upsertCanvasGroup.mutateAsync({
+      id: group.id,
+      parent_activity_id: group.parent_activity_id,
+      label: overrides.label ?? group.label,
+      position_x: overrides.position_x ?? group.position_x,
+      position_y: overrides.position_y ?? group.position_y,
+      width: overrides.width ?? group.width,
+      height: overrides.height ?? group.height,
+      locked: overrides.locked ?? group.locked ?? false,
+      collapsed: overrides.collapsed ?? group.collapsed ?? false,
+      z_index: overrides.z_index ?? group.z_index ?? 0,
+    })
+  }
+
+  async function renameCanvasGroup(groupId: string, label: string) {
+    const group = visibleCanvasGroups.find((entry) => entry.id === groupId)
+    const nextLabel = label.trim()
+    if (!group || !nextLabel || nextLabel === group.label) {
+      return
+    }
+
+    rememberSnapshot()
+    await saveCanvasGroup(group, { label: nextLabel })
+  }
+
+  async function toggleCanvasGroupCollapsed(groupId: string) {
+    const group = visibleCanvasGroups.find((entry) => entry.id === groupId)
+    if (!group) {
+      return
+    }
+
+    rememberSnapshot()
+    await saveCanvasGroup(group, { collapsed: !(group.collapsed ?? false) })
+  }
+
+  async function moveCanvasGroup(groupId: string, position: { x: number; y: number }) {
+    const group = visibleCanvasGroups.find((entry) => entry.id === groupId)
+    if (!group) {
+      return
+    }
+    if (group.locked) {
+      return
+    }
+
+    const deltaX = position.x - group.position_x
+    const deltaY = position.y - group.position_y
+    if (deltaX === 0 && deltaY === 0) {
+      return
+    }
+
+    const groupedActivities = visibleActivities.filter((activity) => activity.group_id === groupId)
+    const groupedSourceObjects = visibleSourceObjects.filter((canvasObject) => canvasObject.group_id === groupId)
+
+    rememberSnapshot()
+
+    await Promise.all([
+      saveCanvasGroup(group, {
+        position_x: position.x,
+        position_y: position.y,
+      }),
+      ...groupedActivities.map((activity) =>
+        upsertActivity.mutateAsync({
+          id: activity.id,
+          parent_id: activity.parent_id,
+          group_id: groupId,
+          node_type: activity.node_type,
+          label: activity.label,
+          trigger_type: activity.trigger_type,
+          position_x: activity.position_x + deltaX,
+          position_y: activity.position_y + deltaY,
+          status: activity.status,
+          status_icon: activity.status_icon,
+          activity_type: activity.activity_type,
+          description: activity.description,
+          notes: activity.notes,
+          assignee_label: activity.assignee_label ?? null,
+          role_id: activity.role_id ?? null,
+          duration_minutes: activity.duration_minutes,
+          linked_workflow_id: activity.linked_workflow_id,
+          linked_workflow_mode: activity.linked_workflow_mode,
+          linked_workflow_purpose: activity.linked_workflow_purpose,
+          linked_workflow_inputs: activity.linked_workflow_inputs,
+          linked_workflow_outputs: activity.linked_workflow_outputs,
+          is_locked: activity.is_locked ?? false,
+        }),
+      ),
+      ...groupedSourceObjects.map((canvasObject) =>
+        upsertCanvasObject.mutateAsync({
+          id: canvasObject.id,
+          parent_activity_id: canvasObject.parent_activity_id,
+          group_id: groupId,
+          object_type: canvasObject.object_type,
+          name: canvasObject.name,
+          is_locked: canvasObject.is_locked ?? false,
+          position_x: canvasObject.position_x + deltaX,
+          position_y: canvasObject.position_y + deltaY,
         }),
       ),
     ])
@@ -2148,6 +2746,7 @@ function WorkspaceCanvasApp({
 
     const selectedActivities = activities.filter((activity) => selection.nodeIds.includes(activity.id))
     const selectedObjects = canvasObjects.filter((canvasObject) => selection.nodeIds.includes(canvasObject.id))
+    const selectedGroups = canvasGroups.filter((canvasGroup) => selection.nodeIds.includes(canvasGroup.id))
 
     rememberSnapshot()
 
@@ -2165,6 +2764,7 @@ function WorkspaceCanvasApp({
         ...hiddenEdgeIds.map((edgeId) => deleteCanvasEdge.mutateAsync(edgeId)),
         ...selectedObjects.map((canvasObject) => deleteCanvasObject.mutateAsync(canvasObject.id)),
         ...selectedActivities.map((activity) => deleteActivity.mutateAsync(activity.id)),
+        ...selectedGroups.map((canvasGroup) => deleteCanvasGroup.mutateAsync(canvasGroup.id)),
       ])
 
       if (selectedActivityId && selection.nodeIds.includes(selectedActivityId)) {
@@ -2217,10 +2817,11 @@ function WorkspaceCanvasApp({
   }
 
   function handleHierarchyCollapse() {
-    if (!hierarchyFocusSession || (hierarchyFocusState !== 'expanded' && hierarchyFocusState !== 'minimizing')) {
+    if (!hierarchyFocusSession || hierarchyFocusState !== 'expanded') {
       return
     }
 
+    collapseFromMaximizedRef.current = false
     setHierarchyFocusState('collapsing')
   }
 
@@ -2235,7 +2836,8 @@ function WorkspaceCanvasApp({
       center: hierarchyFocusSession.originCanvasCenter,
     })
     navigateToWorkspaceTrail(hierarchyFocusSession.originWorkspaceId)
-    setHierarchyFocusState('minimizing')
+    collapseFromMaximizedRef.current = true
+    setHierarchyFocusState('collapsing')
   }
 
   function handleNavigateWorkspaceTrail(workspaceTrailId: string) {
@@ -2251,7 +2853,8 @@ function WorkspaceCanvasApp({
         center: hierarchyFocusSession.originCanvasCenter,
       })
       navigateToWorkspaceTrail(workspaceTrailId)
-      setHierarchyFocusState('minimizing')
+      collapseFromMaximizedRef.current = true
+      setHierarchyFocusState('collapsing')
       return
     }
 
@@ -2269,6 +2872,10 @@ function WorkspaceCanvasApp({
 
   useEffect(() => {
     if (!hierarchyFocusSession) {
+      return
+    }
+
+    if (!isHierarchyPreviewPhase(hierarchyFocusState)) {
       return
     }
 
@@ -2316,7 +2923,7 @@ function WorkspaceCanvasApp({
       },
       previewLayout: nextRects.previewLayout,
     }))
-  }, [hierarchyFocusSession, previewActivities, previewCanvasObjects, previewWorkspaceId, updateHierarchyFocusSession, viewportCenter.zoom])
+  }, [hierarchyFocusSession, hierarchyFocusState, previewActivities, previewCanvasObjects, previewWorkspaceId, updateHierarchyFocusSession, viewportCenter.zoom])
 
   useEffect(() => {
     if (!hierarchyFocusSession) {
@@ -2345,19 +2952,17 @@ function WorkspaceCanvasApp({
 
     if (hierarchyFocusState === 'minimizing') {
       const timeout = window.setTimeout(() => {
-        if (autoCollapseHierarchyOnMinimizeRef.current) {
-          autoCollapseHierarchyOnMinimizeRef.current = false
-          setHierarchyFocusState('collapsing')
-          return
-        }
-
-        setHierarchyFocusState('expanded')
+        autoCollapseHierarchyOnMinimizeRef.current = false
+        setHierarchyFocusState('collapsing')
       }, duration)
       return () => window.clearTimeout(timeout)
     }
 
     if (hierarchyFocusState === 'collapsing') {
-      const timeout = window.setTimeout(() => clearHierarchyFocus(), duration)
+      const timeout = window.setTimeout(() => {
+        collapseFromMaximizedRef.current = false
+        clearHierarchyFocus()
+      }, duration)
       return () => window.clearTimeout(timeout)
     }
   }, [clearHierarchyFocus, hierarchyFocusSession, hierarchyFocusState, openSubprocessWorkspace, setHierarchyFocusState])
@@ -2432,10 +3037,11 @@ function WorkspaceCanvasApp({
               <div className="h-full pl-24 sm:pl-28">
                 <WorkflowCanvas
                   workspaceId={workspaceId}
-                  autoFitOnLoad={!hierarchyFocusSession && workspaceTrail.length === 1}
+                  autoFitOnLoad
                   viewportRestoreRequest={viewportRestoreRequest}
                   onViewportRestoreApplied={() => setViewportRestoreRequest(null)}
                   activities={visibleActivities}
+                  canvasGroups={visibleCanvasGroups}
                   canvasObjects={visibleCanvasObjects}
                   canvasEdges={visibleCanvasEdges}
                   selectedNodeId={selectedCanvasNodeId}
@@ -2444,6 +3050,8 @@ function WorkspaceCanvasApp({
                     groupingMode={uiPreferences.default_grouping_mode}
                     snapToGridEnabled={uiPreferences.snap_to_grid}
                     collisionAvoidanceEnabled={uiPreferences.enable_node_collision_avoidance}
+                    alignmentGuidesEnabled={uiPreferences.enable_alignment_guides}
+                    magneticConnectionTargetsEnabled={uiPreferences.enable_magnetic_connection_targets}
                     activityRolesById={activityRolesById}
                     activityRoleAcronymsById={activityRoleAcronymsById}
                     organizationRoles={organizationRoles}
@@ -2523,6 +3131,13 @@ function WorkspaceCanvasApp({
                   onCreateActivityFromConnectionDrop={(input) => void createActivityFromConnectionDrop(input)}
                   onMoveNode={(nodeId, position) => void persistNodePosition(nodeId, position)}
                   onToggleLockSelection={(nodeIds) => void toggleLockedNodes(nodeIds)}
+                  onDuplicateSelection={(nodeIds) => void duplicateSelectedNodes(nodeIds)}
+                  onNudgeSelection={(nodeIds, delta) => void nudgeSelectedNodes(nodeIds, delta)}
+                  onAlignSelection={(nodeIds, operation) => void alignSelectedNodes(nodeIds, operation)}
+                  onCreateGroup={(nodeIds) => void createGroupFromSelection(nodeIds)}
+                  onMoveGroup={(groupId, position) => void moveCanvasGroup(groupId, position)}
+                  onRenameGroup={(groupId, label) => void renameCanvasGroup(groupId, label)}
+                  onToggleCollapseGroup={(groupId) => void toggleCanvasGroupCollapsed(groupId)}
                   onAggregateActivities={(activityIds) => void aggregateSelectedActivities(activityIds)}
                   onDeleteEdges={(edgeIds) => void removeEdges(edgeIds)}
                   onDeleteDataObject={(id) => void removeDataObject(id)}
@@ -2647,12 +3262,13 @@ function WorkspaceCanvasApp({
                 phase={hierarchyFocusState}
                 activities={previewActivities}
                 canvasObjects={previewCanvasObjects}
-                canvasEdges={previewCanvasEdges}
-                onMaximize={handleHierarchyMaximize}
-                onMinimize={handleHierarchyMinimize}
-                onCollapse={handleHierarchyCollapse}
-              />
-            ) : null}
+              canvasEdges={previewCanvasEdges}
+              onMaximize={handleHierarchyMaximize}
+              onMinimize={handleHierarchyMinimize}
+              onCollapse={handleHierarchyCollapse}
+              collapseFromMaximized={collapseFromMaximizedRef.current}
+            />
+          ) : null}
             {wizardActivity ? (
               <SubprocessWizard
                 activityLabel={wizardActivity.label}

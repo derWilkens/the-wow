@@ -51,6 +51,8 @@ export interface UiPreferences {
   enable_table_view: boolean
   enable_swimlane_view: boolean
   enable_node_collision_avoidance: boolean
+  enable_alignment_guides: boolean
+  enable_magnetic_connection_targets: boolean
 }
 
 export interface OrganizationMember {
@@ -94,10 +96,27 @@ export interface Workspace {
   expected_outputs: string[]
 }
 
+export interface CanvasGroup {
+  id: string
+  workspace_id: string
+  parent_activity_id: string | null
+  label: string
+  position_x: number
+  position_y: number
+  width: number
+  height: number
+  locked?: boolean
+  collapsed?: boolean
+  z_index?: number
+  created_at: string
+  created_by: string | null
+}
+
 interface CanvasObjectBase {
   id: string
   workspace_id: string
   parent_activity_id: string | null
+  group_id?: string | null
   name: string
   is_locked?: boolean
   updated_at: string
@@ -122,6 +141,7 @@ export interface Activity {
   id: string
   workspace_id: string
   parent_id: string | null
+  group_id?: string | null
   owner_id: string
   assignee_label?: string | null
   role_id?: string | null
@@ -243,6 +263,7 @@ export interface ActivityCheckSource {
 export interface UpsertActivityInput {
   id?: string
   parent_id: string | null
+  group_id?: string | null
   node_type: NodeType
   label: string
   trigger_type?: TriggerType | null
@@ -300,6 +321,7 @@ export interface LinkSubprocessInput {
 export interface UpsertCanvasObjectInput {
   id?: string
   parent_activity_id: string | null
+  group_id?: string | null
   object_type: CanvasObjectType
   name: string
   is_locked?: boolean
@@ -357,6 +379,28 @@ export interface CanvasObjectNodeData {
   showHandles?: boolean
   isConnectionPreviewTarget?: boolean
   onOpenPopup: (id: string) => void
+}
+
+export interface CanvasGroupNodeData {
+  canvasGroup: CanvasGroup
+  memberCount?: number
+  onRename?: (groupId: string, label: string) => Promise<void> | void
+  onToggleCollapsed?: (groupId: string) => void
+  onToggleLock?: (groupId: string) => void
+  onDelete?: (groupId: string) => void
+}
+
+export interface UpsertCanvasGroupInput {
+  id?: string
+  parent_activity_id: string | null
+  label: string
+  position_x: number
+  position_y: number
+  width: number
+  height: number
+  locked?: boolean
+  collapsed?: boolean
+  z_index?: number
 }
 
 export interface AggregateActivitiesToSubprocessInput {

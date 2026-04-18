@@ -65,6 +65,7 @@ describe('HierarchyFocusOverlay', () => {
         onMaximize={vi.fn()}
         onMinimize={vi.fn()}
         onCollapse={vi.fn()}
+        collapseFromMaximized={false}
       />,
     )
 
@@ -86,9 +87,50 @@ describe('HierarchyFocusOverlay', () => {
         onMaximize={vi.fn()}
         onMinimize={vi.fn()}
         onCollapse={vi.fn()}
+        collapseFromMaximized={false}
       />,
     )
 
     expect(screen.getByTestId('hierarchy-focus-minimize')).toBeInTheDocument()
+  })
+
+  it('keeps rendering the focus card during minimizing without showing expanded actions', () => {
+    render(
+      <HierarchyFocusOverlay
+        session={session}
+        phase="minimizing"
+        activities={[createActivity()]}
+        canvasObjects={[]}
+        canvasEdges={[]}
+        onMaximize={vi.fn()}
+        onMinimize={vi.fn()}
+        onCollapse={vi.fn()}
+        collapseFromMaximized={false}
+      />,
+    )
+
+    expect(screen.getByTestId('hierarchy-focus-card')).toBeInTheDocument()
+    expect(screen.queryByTestId('hierarchy-focus-maximize')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('hierarchy-focus-collapse')).not.toBeInTheDocument()
+  })
+
+  it('collapses directly from the maximized rect when the return path starts in maximized', () => {
+    render(
+      <HierarchyFocusOverlay
+        session={session}
+        phase="collapsing"
+        activities={[createActivity()]}
+        canvasObjects={[]}
+        canvasEdges={[]}
+        onMaximize={vi.fn()}
+        onMinimize={vi.fn()}
+        onCollapse={vi.fn()}
+        collapseFromMaximized
+      />,
+    )
+
+    const card = screen.getByTestId('hierarchy-focus-card') as HTMLDivElement
+    expect(card.style.width).toBe(`${session.rects.maximizedRect.width}px`)
+    expect(card.style.height).toBe(`${session.rects.maximizedRect.height}px`)
   })
 })

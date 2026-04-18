@@ -143,6 +143,7 @@ export class ActivitiesService {
       workspace_id: workspaceId,
       owner_id: userId,
       parent_id: dto.parent_id ?? null,
+      ...(dto.group_id !== undefined ? { group_id: dto.group_id ?? null } : {}),
       node_type: dto.node_type,
       label: dto.label,
       trigger_type: dto.trigger_type ?? null,

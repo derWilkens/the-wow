@@ -3,7 +3,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { HierarchyPreviewCanvas } from './HierarchyPreviewCanvas'
 import type { Activity, CanvasEdge, CanvasObject, HierarchyFocusSession, HierarchyFocusState } from '../../types'
 
-function getRectForState(session: HierarchyFocusSession, phase: HierarchyFocusState) {
+function getRectForState(session: HierarchyFocusSession, phase: HierarchyFocusState, collapseFromMaximized: boolean) {
   if (phase === 'expanding') {
     return session.rects.originRect
   }
@@ -14,7 +14,7 @@ function getRectForState(session: HierarchyFocusSession, phase: HierarchyFocusSt
     return session.rects.maximizedRect
   }
   if (phase === 'collapsing') {
-    return session.rects.previewRect
+    return collapseFromMaximized ? session.rects.maximizedRect : session.rects.previewRect
   }
   if (phase === 'maximized') {
     return session.rects.maximizedRect
@@ -50,6 +50,7 @@ export function HierarchyFocusOverlay({
   onMaximize,
   onMinimize,
   onCollapse,
+  collapseFromMaximized = false,
 }: {
   session: HierarchyFocusSession
   phase: HierarchyFocusState
@@ -59,6 +60,7 @@ export function HierarchyFocusOverlay({
   onMaximize: () => void
   onMinimize: () => void
   onCollapse: () => void
+  collapseFromMaximized?: boolean
 }) {
   if (phase === 'collapsed') {
     return null
@@ -81,7 +83,7 @@ export function HierarchyFocusOverlay({
   }
 
   const rect = getTargetRectForState(session, phase)
-  const initialRect = getRectForState(session, phase)
+  const initialRect = getRectForState(session, phase, collapseFromMaximized)
   const [displayRect, setDisplayRect] = useState(initialRect)
   const isInteractive = phase === 'expanded'
   const isExpanded = phase === 'expanded'

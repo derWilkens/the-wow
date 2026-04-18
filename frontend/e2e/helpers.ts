@@ -494,6 +494,7 @@ export async function reopenWorkflowAfterReload(
   const createModeBlank = page.getByTestId('workspace-create-mode-blank')
   const workspaceNameInput = page.getByPlaceholder(/Name des Arbeitsablaufs|New workspace name/i)
   const organizationSelect = page.locator('select')
+  const currentWorkflowTrail = page.getByTestId(`workspace-trail-${workflowId}`)
 
   let matchingOrganizationId: string | null = preferredOrganizationId
   const organizations = await listOrganizationsViaApi(page)
@@ -512,11 +513,21 @@ export async function reopenWorkflowAfterReload(
       workflowOpenButton.waitFor({ state: 'visible', timeout: 20_000 }),
       workspaceTreeOpenButton.waitFor({ state: 'visible', timeout: 20_000 }),
       workspaceNameInput.waitFor({ state: 'visible', timeout: 20_000 }),
+      toolbarActivity.waitFor({ state: 'visible', timeout: 20_000 }),
+      currentWorkflowTrail.waitFor({ state: 'visible', timeout: 20_000 }),
     ])
   }
 
   const openWorkflowFromCurrentLanding = async (timeout = 20_000) => {
     await waitForWorkspaceOverview()
+
+    if (await toolbarActivity.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      return true
+    }
+
+    if (await currentWorkflowTrail.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      return true
+    }
 
     if (await workflowOpenButton.isVisible({ timeout }).catch(() => false)) {
       await workflowOpenButton.click()

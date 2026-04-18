@@ -14,10 +14,11 @@ import ReactFlow, {
   type ReactFlowInstance,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { Group, Lock, Workflow } from 'lucide-react'
+import { ArrowLeftToLine, ArrowUpToLine, Columns3, Group, Loader2, Lock, Rows3, Workflow } from 'lucide-react'
 import { ActivityNode } from './ActivityNode'
 import { EndNode } from './EndNode'
 import { GatewayNode } from './GatewayNode'
+import { GroupNode } from './GroupNode'
 import { SourceNode } from './SourceNode'
 import { StartNode } from './StartNode'
 import { WorkflowEdge } from './WorkflowEdge'
@@ -26,6 +27,8 @@ import type {
   ActivityType,
   ActivityNodeData,
   CatalogRole,
+  CanvasGroup,
+  CanvasGroupNodeData,
   CanvasGroupingMode,
   CanvasEdge,
   CanvasObject,
@@ -36,6 +39,7 @@ import type {
 const nodeTypes = {
   activity: ActivityNode,
   gatewayNode: GatewayNode,
+  groupNode: GroupNode,
   startNode: StartNode,
   endNode: EndNode,
   sourceNode: SourceNode,
@@ -175,12 +179,21 @@ function getDistanceToNodeBox(nodeElement: Element, clientX: number, clientY: nu
   return Math.hypot(dx, dy)
 }
 
+function isTypingTarget(target: EventTarget | null) {
+  const element = target as HTMLElement | null
+  return Boolean(
+    element &&
+      (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT' || element.isContentEditable),
+  )
+}
+
 interface WorkflowCanvasProps {
   workspaceId: string
   autoFitOnLoad?: boolean
   viewportRestoreRequest?: { workspaceId: string; center: { x: number; y: number; zoom: number } } | null
   onViewportRestoreApplied?: () => void
   activities: Activity[]
+  canvasGroups?: CanvasGroup[]
   canvasObjects: CanvasObject[]
   canvasEdges: CanvasEdge[]
   selectedNodeId: string | null
@@ -189,6 +202,8 @@ interface WorkflowCanvasProps {
   groupingMode: CanvasGroupingMode
   snapToGridEnabled?: boolean
   collisionAvoidanceEnabled?: boolean
+  alignmentGuidesEnabled?: boolean
+  magneticConnectionTargetsEnabled?: boolean
   activityRolesById: Record<string, string>
   activityRoleAcronymsById: Record<string, string | null>
   organizationRoles: CatalogRole[]
@@ -217,6 +232,16 @@ interface WorkflowCanvasProps {
   }) => void
   onMoveNode: (nodeId: string, position: { x: number; y: number }) => void
   onToggleLockSelection: (nodeIds: string[]) => Promise<void> | void
+  onDuplicateSelection?: (nodeIds: string[]) => Promise<void> | void
+  onNudgeSelection?: (nodeIds: string[], delta: { x: number; y: number }) => Promise<void> | void
+  onAlignSelection?: (
+    nodeIds: string[],
+    operation: 'left' | 'top' | 'horizontal_distribute' | 'vertical_distribute',
+  ) => Promise<void> | void
+  onCreateGroup?: (nodeIds: string[]) => Promise<void> | void
+  onMoveGroup?: (groupId: string, position: { x: number; y: number }) => Promise<void> | void
+  onRenameGroup?: (groupId: string, label: string) => Promise<void> | void
+  onToggleCollapseGroup?: (groupId: string) => Promise<void> | void
   onAggregateActivities: (activityIds: string[]) => Promise<void> | void
   onDeleteEdges: (edgeIds: string[]) => void
   onDeleteDataObject: (id: string) => void
@@ -231,6 +256,7 @@ export function WorkflowCanvas({
   viewportRestoreRequest = null,
   onViewportRestoreApplied,
   activities,
+  canvasGroups = [],
   canvasObjects,
   canvasEdges,
   selectedNodeId,
@@ -239,6 +265,8 @@ export function WorkflowCanvas({
   groupingMode,
   snapToGridEnabled = true,
   collisionAvoidanceEnabled = true,
+  alignmentGuidesEnabled = true,
+  magneticConnectionTargetsEnabled = true,
   activityRolesById,
   activityRoleAcronymsById,
   organizationRoles,
@@ -263,6 +291,13 @@ export function WorkflowCanvas({
   onCreateActivityFromConnectionDrop,
   onMoveNode,
   onToggleLockSelection,
+  onDuplicateSelection = () => {},
+  onNudgeSelection = () => {},
+  onAlignSelection = () => {},
+  onCreateGroup = () => {},
+  onMoveGroup = () => {},
+  onRenameGroup = () => {},
+  onToggleCollapseGroup = () => {},
   onAggregateActivities,
   onDeleteEdges,
   onDeleteDataObject,
@@ -284,8 +319,16 @@ export function WorkflowCanvas({
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([])
   const [liveNodePositions, setLiveNodePositions] = useState<Record<string, { x: number; y: number }>>({})
+  const [liveGroupPositions, setLiveGroupPositions] = useState<Record<string, { x: number; y: number }>>({})
   const [openEdgePopoverId, setOpenEdgePopoverId] = useState<string | null>(null)
   const [selectionActionMenu, setSelectionActionMenu] = useState<{ left: number; top: number } | null>(null)
+  const [selectionActionPending, setSelectionActionPending] = useState<'lock' | 'align' | 'group' | 'aggregate' | null>(null)
+  const [selectionActionError, setSelectionActionError] = useState<string | null>(null)
+  const [isPanKeyPressed, setIsPanKeyPressed] = useState(false)
+  const [alignmentGuides, setAlignmentGuides] = useState<{ vertical: number | null; horizontal: number | null }>({
+    vertical: null,
+    horizontal: null,
+  })
   const focusAnimationTimeoutRef = useRef<number | null>(null)
   const isFocusAnimationActiveRef = useRef(false)
   const isLassoSelectionRef = useRef(false)
@@ -389,7 +432,7 @@ export function WorkflowCanvas({
   const updateHoveredConnectionTarget = useMemo(
     () => (clientX: number, clientY: number) => {
       const pendingConnection = pendingConnectionRef.current
-      if (!pendingConnection || pendingConnection.handleType !== 'source') {
+      if (!magneticConnectionTargetsEnabled || !pendingConnection || pendingConnection.handleType !== 'source') {
         setHoveredConnectionTargetNodeId(null)
         return
       }
@@ -407,7 +450,7 @@ export function WorkflowCanvas({
           }
 
           const distance = getDistanceToNodeBox(nodeElement, clientX, clientY)
-          if (distance > CONNECTOR_PREVIEW_PROXIMITY_PX) {
+          if (distance > CONNECTOR_PREVIEW_PROXIMITY_PX + 12) {
             return null
           }
 
@@ -421,11 +464,25 @@ export function WorkflowCanvas({
 
       setHoveredConnectionTargetNodeId(candidates[0]?.nodeId ?? null)
     },
-    [activities, canvasEdges, sourceObjects],
+    [activities, canvasEdges, magneticConnectionTargetsEnabled, sourceObjects],
   )
 
   const handleNodeDragStop = useMemo(
-    () => (_event: ReactMouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
+    () => (_event: ReactMouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData | CanvasGroupNodeData>) => {
+      setAlignmentGuides({ vertical: null, horizontal: null })
+
+      if (node.data && 'canvasGroup' in node.data) {
+        if (node.data.canvasGroup.locked) {
+          return
+        }
+        setLiveGroupPositions((current) => ({
+          ...current,
+          [node.id]: node.position,
+        }))
+        void onMoveGroup(node.id, node.position)
+        return
+      }
+
       if (node.data && 'activity' in node.data && node.data.activity.is_locked) {
         return
       }
@@ -542,11 +599,25 @@ export function WorkflowCanvas({
 
       onMoveNode(node.id, persistedDraggedPosition)
     },
-    [activities, activityRolesById, collisionAvoidanceEnabled, groupingMode, liveNodePositions, onMoveNode, roleLanes, sourceObjects],
+    [activities, activityRolesById, collisionAvoidanceEnabled, groupingMode, liveNodePositions, onMoveGroup, onMoveNode, roleLanes, sourceObjects],
   )
 
   const handleNodeDrag = useMemo(
-    () => (_event: ReactMouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData>) => {
+    () => (_event: ReactMouseEvent, node: Node<ActivityNodeData | CanvasObjectNodeData | CanvasGroupNodeData>) => {
+      if (node.data && 'canvasGroup' in node.data) {
+        if (node.data.canvasGroup.locked) {
+          return
+        }
+        interruptFocusAnimation()
+        setSelectionActionError(null)
+        setAlignmentGuides({ vertical: null, horizontal: null })
+        setLiveGroupPositions((current) => ({
+          ...current,
+          [node.id]: node.position,
+        }))
+        return
+      }
+
       if (node.data && 'activity' in node.data && node.data.activity.is_locked) {
         return
       }
@@ -556,7 +627,147 @@ export function WorkflowCanvas({
       }
 
       interruptFocusAnimation()
+      setSelectionActionError(null)
       const activity = activities.find((item) => item.id === node.id)
+      const nodeDimensions =
+        activity?.node_type === 'start_event'
+          ? DEFAULT_NODE_DIMENSIONS.start_event
+          : activity?.node_type === 'end_event'
+            ? DEFAULT_NODE_DIMENSIONS.end_event
+            : activity?.node_type === 'gateway_decision'
+              ? DEFAULT_NODE_DIMENSIONS.gateway_decision
+              : activity?.node_type === 'gateway_merge'
+                ? DEFAULT_NODE_DIMENSIONS.gateway_merge
+                : activity
+                  ? DEFAULT_NODE_DIMENSIONS.activity
+                  : DEFAULT_NODE_DIMENSIONS.source
+
+      if (alignmentGuidesEnabled) {
+        const dragPosition =
+          groupingMode === 'role_lanes' && activity
+            ? { x: node.position.x, y: activity.position_y }
+            : node.position
+        const draggedRect = {
+          x: dragPosition.x,
+          y: dragPosition.y,
+          width: nodeDimensions.width,
+          height: nodeDimensions.height,
+        }
+        const draggedAnchors = {
+          left: draggedRect.x,
+          centerX: draggedRect.x + draggedRect.width / 2,
+          right: draggedRect.x + draggedRect.width,
+          top: draggedRect.y,
+          centerY: draggedRect.y + draggedRect.height / 2,
+          bottom: draggedRect.y + draggedRect.height,
+        }
+
+        let nextVertical: number | null = null
+        let nextHorizontal: number | null = null
+        let verticalDelta = Number.POSITIVE_INFINITY
+        let horizontalDelta = Number.POSITIVE_INFINITY
+
+        for (const candidateActivity of activities) {
+          if (candidateActivity.id === node.id) {
+            continue
+          }
+
+          const candidatePosition = liveNodePositions[candidateActivity.id] ?? {
+            x: candidateActivity.position_x,
+            y: candidateActivity.position_y,
+          }
+          const candidateDimensions =
+            candidateActivity.node_type === 'start_event'
+              ? DEFAULT_NODE_DIMENSIONS.start_event
+              : candidateActivity.node_type === 'end_event'
+                ? DEFAULT_NODE_DIMENSIONS.end_event
+                : candidateActivity.node_type === 'gateway_decision'
+                  ? DEFAULT_NODE_DIMENSIONS.gateway_decision
+                  : candidateActivity.node_type === 'gateway_merge'
+                    ? DEFAULT_NODE_DIMENSIONS.gateway_merge
+                    : DEFAULT_NODE_DIMENSIONS.activity
+          const candidateAnchors = {
+            left: candidatePosition.x,
+            centerX: candidatePosition.x + candidateDimensions.width / 2,
+            right: candidatePosition.x + candidateDimensions.width,
+            top: candidatePosition.y,
+            centerY: candidatePosition.y + candidateDimensions.height / 2,
+            bottom: candidatePosition.y + candidateDimensions.height,
+          }
+
+          for (const axis of [
+            ['left', 'left'],
+            ['centerX', 'centerX'],
+            ['right', 'right'],
+          ] as const) {
+            const delta = Math.abs(draggedAnchors[axis[0]] - candidateAnchors[axis[1]])
+            if (delta <= 10 && delta < verticalDelta) {
+              verticalDelta = delta
+              nextVertical = candidateAnchors[axis[1]]
+            }
+          }
+
+          for (const axis of [
+            ['top', 'top'],
+            ['centerY', 'centerY'],
+            ['bottom', 'bottom'],
+          ] as const) {
+            const delta = Math.abs(draggedAnchors[axis[0]] - candidateAnchors[axis[1]])
+            if (delta <= 10 && delta < horizontalDelta) {
+              horizontalDelta = delta
+              nextHorizontal = candidateAnchors[axis[1]]
+            }
+          }
+        }
+
+        for (const candidateSource of sourceObjects) {
+          if (candidateSource.id === node.id) {
+            continue
+          }
+
+          const candidatePosition = liveNodePositions[candidateSource.id] ?? {
+            x: candidateSource.position_x,
+            y: candidateSource.position_y,
+          }
+          const candidateAnchors = {
+            left: candidatePosition.x,
+            centerX: candidatePosition.x + DEFAULT_NODE_DIMENSIONS.source.width / 2,
+            right: candidatePosition.x + DEFAULT_NODE_DIMENSIONS.source.width,
+            top: candidatePosition.y,
+            centerY: candidatePosition.y + DEFAULT_NODE_DIMENSIONS.source.height / 2,
+            bottom: candidatePosition.y + DEFAULT_NODE_DIMENSIONS.source.height,
+          }
+
+          for (const axis of [
+            ['left', 'left'],
+            ['centerX', 'centerX'],
+            ['right', 'right'],
+          ] as const) {
+            const delta = Math.abs(draggedAnchors[axis[0]] - candidateAnchors[axis[1]])
+            if (delta <= 10 && delta < verticalDelta) {
+              verticalDelta = delta
+              nextVertical = candidateAnchors[axis[1]]
+            }
+          }
+
+          for (const axis of [
+            ['top', 'top'],
+            ['centerY', 'centerY'],
+            ['bottom', 'bottom'],
+          ] as const) {
+            const delta = Math.abs(draggedAnchors[axis[0]] - candidateAnchors[axis[1]])
+            if (delta <= 10 && delta < horizontalDelta) {
+              horizontalDelta = delta
+              nextHorizontal = candidateAnchors[axis[1]]
+            }
+          }
+        }
+
+        setAlignmentGuides({ vertical: nextVertical, horizontal: nextHorizontal })
+      } else {
+        setAlignmentGuides({ vertical: null, horizontal: null })
+      }
+
       if (groupingMode === 'role_lanes' && activity) {
         setLiveNodePositions((current) => ({
           ...current,
@@ -573,7 +784,7 @@ export function WorkflowCanvas({
         [node.id]: node.position,
       }))
     },
-    [activities, groupingMode, interruptFocusAnimation],
+    [activities, alignmentGuidesEnabled, groupingMode, interruptFocusAnimation, liveNodePositions, sourceObjects],
   )
 
   useEffect(() => {
@@ -596,6 +807,24 @@ export function WorkflowCanvas({
       return next
     })
   }, [activities, sourceObjects])
+
+  useEffect(() => {
+    setLiveGroupPositions((current) => {
+      const next = { ...current }
+      for (const [id, position] of Object.entries(current)) {
+        const group = canvasGroups.find((entry) => entry.id === id)
+        if (!group) {
+          delete next[id]
+          continue
+        }
+
+        if (group.position_x === position.x && group.position_y === position.y) {
+          delete next[id]
+        }
+      }
+      return next
+    })
+  }, [canvasGroups])
 
   useEffect(() => {
     publishViewportCenter()
@@ -676,13 +905,47 @@ export function WorkflowCanvas({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== 'Backspace' && event.key !== 'Delete') {
+      if (event.code === 'Space' && !isTypingTarget(event.target)) {
+        setIsPanKeyPressed(true)
+      }
+
+      if (isTypingTarget(event.target)) {
         return
       }
 
-      const target = event.target as HTMLElement | null
-      const isTyping = Boolean(target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable))
-      if (isTyping) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd' && selectedNodeIdsRef.current.length > 0) {
+        event.preventDefault()
+        void onDuplicateSelection(selectedNodeIdsRef.current)
+        return
+      }
+
+      if (!event.metaKey && !event.ctrlKey && !event.altKey && event.key.toLowerCase() === 'l' && selectedNodeIdsRef.current.length > 0) {
+        event.preventDefault()
+        void onToggleLockSelection(selectedNodeIdsRef.current)
+        return
+      }
+
+      if (!event.metaKey && !event.ctrlKey && event.key.startsWith('Arrow') && selectedNodeIdsRef.current.length > 0) {
+        event.preventDefault()
+        const step = event.shiftKey ? 84 : 28
+        const delta =
+          event.key === 'ArrowLeft'
+            ? { x: -step, y: 0 }
+            : event.key === 'ArrowRight'
+              ? { x: step, y: 0 }
+              : event.key === 'ArrowUp'
+                ? { x: 0, y: -step }
+                : event.key === 'ArrowDown'
+                  ? { x: 0, y: step }
+                  : null
+
+        if (delta) {
+          void onNudgeSelection(selectedNodeIdsRef.current, delta)
+        }
+        return
+      }
+
+      if (event.key !== 'Backspace' && event.key !== 'Delete') {
         return
       }
 
@@ -693,18 +956,47 @@ export function WorkflowCanvas({
         return
       }
 
-      if (selectedEdgeIds.length === 0) {
+      if (selectedEdgeIds.length > 0) {
+        event.preventDefault()
+        void onDeleteEdges(selectedEdgeIds)
+        setSelectedEdgeIds([])
+        return
+      }
+
+      if (selectedNodeIdsRef.current.length === 0) {
         return
       }
 
       event.preventDefault()
-      void onDeleteEdges(selectedEdgeIds)
-      setSelectedEdgeIds([])
+      onDeleteSelection({ nodeIds: selectedNodeIdsRef.current, edgeIds: [] })
+      setSelectedNodeIds([])
+      setSelectionActionMenu(null)
+      onSelectionChange({ nodeId: null, edgeId: null, dataObjectId: null })
+    }
+
+    function handleKeyUp(event: KeyboardEvent) {
+      if (event.code === 'Space') {
+        setIsPanKeyPressed(false)
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onDeleteDataObject, onDeleteEdges, onSelectionChange, selectedDataObjectId, selectedEdgeIds])
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [
+    onDeleteDataObject,
+    onDeleteEdges,
+    onDeleteSelection,
+    onDuplicateSelection,
+    onNudgeSelection,
+    onSelectionChange,
+    onToggleLockSelection,
+    selectedDataObjectId,
+    selectedEdgeIds,
+  ])
 
   useEffect(() => {
     if (!selectionActionMenu) {
@@ -734,10 +1026,47 @@ export function WorkflowCanvas({
     }
   }, [selectionActionMenu])
 
-  const nodes = useMemo<Array<Node<ActivityNodeData | CanvasObjectNodeData>>>(() => {
+  const nodes = useMemo<Array<Node<ActivityNodeData | CanvasObjectNodeData | CanvasGroupNodeData>>>(() => {
     const childrenByParent = new Set(activities.map((activity) => activity.parent_id).filter(Boolean))
+    const groupMemberCounts = Object.fromEntries(
+      canvasGroups.map((canvasGroup) => [
+        canvasGroup.id,
+        activities.filter((activity) => activity.group_id === canvasGroup.id).length +
+          sourceObjects.filter((canvasObject) => canvasObject.group_id === canvasGroup.id).length,
+      ]),
+    )
 
-      const activityNodes = activities.map<Node<ActivityNodeData>>((activity) => {
+    const groupNodes = canvasGroups.map<Node<CanvasGroupNodeData>>((canvasGroup) => ({
+      id: canvasGroup.id,
+      type: 'groupNode',
+      position: liveGroupPositions[canvasGroup.id] ?? { x: canvasGroup.position_x, y: canvasGroup.position_y },
+      selected: selectedNodeIds.includes(canvasGroup.id),
+      draggable: !canvasGroup.locked,
+      dragHandle: '.wow-group-node__header',
+      style: {
+        width: canvasGroup.width,
+        height: canvasGroup.collapsed ? 72 : canvasGroup.height,
+        zIndex: selectedNodeIds.includes(canvasGroup.id) ? 3 : 0,
+      },
+      data: {
+        canvasGroup,
+        memberCount: groupMemberCounts[canvasGroup.id] ?? 0,
+        onRename: (groupId, label) => {
+          void onRenameGroup(groupId, label)
+        },
+        onToggleCollapsed: (groupId) => {
+          void onToggleCollapseGroup(groupId)
+        },
+        onToggleLock: (groupId) => {
+          void onToggleLockSelection([groupId])
+        },
+        onDelete: (groupId) => {
+          onDeleteSelection({ nodeIds: [groupId], edgeIds: [] })
+        },
+      },
+    }))
+
+    const activityNodes = activities.map<Node<ActivityNodeData>>((activity) => {
       const freePosition = liveNodePositions[activity.id] ?? { x: activity.position_x, y: activity.position_y }
       const laneDisplayY = getLaneDisplayY(roleLanes, activity.id, activityRolesById)
       const isSelected = selectedNodeIds.includes(activity.id)
@@ -759,6 +1088,9 @@ export function WorkflowCanvas({
             : freePosition,
         selected: isSelected,
         draggable: !activity.is_locked,
+        style: {
+          zIndex: 2,
+        },
           data: {
             activity,
             hasChildren: childrenByParent.has(activity.id),
@@ -819,6 +1151,9 @@ export function WorkflowCanvas({
       position: liveNodePositions[canvasObject.id] ?? { x: canvasObject.position_x, y: canvasObject.position_y },
       selected: selectedNodeIds.includes(canvasObject.id),
       draggable: !canvasObject.is_locked,
+      style: {
+        zIndex: 2,
+      },
       data: {
         canvasObject,
         showHandles:
@@ -833,10 +1168,10 @@ export function WorkflowCanvas({
       },
     }))
 
-    return [...activityNodes, ...objectNodes]
-  }, [activities, activityAssigneesById, activityRoleAcronymsById, activityRolesById, groupingMode, hoveredConnectionTargetNodeId, liveNodePositions, onCreateRole, onCreateSubprocess, onDeleteLinkedSubprocess, onInlineRenameActivity, onLinkSubprocess, onOpenDataObject, onOpenSubprocess, onQuickChangeActivityRole, onQuickChangeActivityType, onSelectActivity, onUnlinkSubprocess, organizationRoles, roleLanes, selectedNodeIds, sourceObjects])
+    return [...groupNodes, ...activityNodes, ...objectNodes]
+  }, [activities, activityAssigneesById, activityRoleAcronymsById, activityRolesById, canvasGroups, groupingMode, hoveredConnectionTargetNodeId, liveGroupPositions, liveNodePositions, onCreateRole, onCreateSubprocess, onDeleteLinkedSubprocess, onDeleteSelection, onInlineRenameActivity, onLinkSubprocess, onOpenDataObject, onOpenSubprocess, onQuickChangeActivityRole, onQuickChangeActivityType, onRenameGroup, onSelectActivity, onToggleCollapseGroup, onToggleLockSelection, onUnlinkSubprocess, organizationRoles, roleLanes, selectedNodeIds, sourceObjects])
 
-  const [renderNodes, setRenderNodes] = useState<Array<Node<ActivityNodeData | CanvasObjectNodeData>>>([])
+  const [renderNodes, setRenderNodes] = useState<Array<Node<ActivityNodeData | CanvasObjectNodeData | CanvasGroupNodeData>>>([])
 
   useEffect(() => {
     setRenderNodes((current) =>
@@ -846,7 +1181,7 @@ export function WorkflowCanvas({
           return node
         }
 
-        const existingWithMeasured = existing as Node<ActivityNodeData | CanvasObjectNodeData> & {
+        const existingWithMeasured = existing as Node<ActivityNodeData | CanvasObjectNodeData | CanvasGroupNodeData> & {
           measured?: { width?: number; height?: number }
         }
 
@@ -940,6 +1275,64 @@ export function WorkflowCanvas({
     selectedRegularActivityIds.length === selectedNodeIds.length &&
     selectedRegularActivityIds.length >= 2
 
+  const selectedAlignableNodeIds = useMemo(
+    () =>
+      selectedNodeIds.filter((nodeId) => {
+        const activity = activities.find((entry) => entry.id === nodeId)
+        if (activity) {
+          return activity.node_type === 'activity'
+        }
+
+        return sourceObjects.some((entry) => entry.id === nodeId)
+      }),
+    [activities, selectedNodeIds, sourceObjects],
+  )
+
+  const canAlignSelection = selectedNodeIds.length >= 2 && selectedAlignableNodeIds.length === selectedNodeIds.length
+
+  const selectedGroupableNodeIds = useMemo(
+    () =>
+      selectedNodeIds.filter((nodeId) => {
+        if (activities.some((entry) => entry.id === nodeId)) {
+          return true
+        }
+
+        return sourceObjects.some((entry) => entry.id === nodeId)
+      }),
+    [activities, selectedNodeIds, sourceObjects],
+  )
+
+  const canGroupSelection = selectedNodeIds.length >= 2 && selectedGroupableNodeIds.length === selectedNodeIds.length
+
+  const selectionBounds = useMemo(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper || selectedNodeIds.length < 2) {
+      return null
+    }
+
+    const wrapperRect = wrapper.getBoundingClientRect()
+    const nodeRects = selectedNodeIds
+      .map((nodeId) => wrapper.querySelector(`.react-flow__node[data-id="${nodeId}"]`))
+      .filter((node): node is Element => Boolean(node))
+      .map((node) => node.getBoundingClientRect())
+
+    if (nodeRects.length < 2) {
+      return null
+    }
+
+    const left = Math.min(...nodeRects.map((rect) => rect.left))
+    const right = Math.max(...nodeRects.map((rect) => rect.right))
+    const top = Math.min(...nodeRects.map((rect) => rect.top))
+    const bottom = Math.max(...nodeRects.map((rect) => rect.bottom))
+
+    return {
+      left: left - wrapperRect.left,
+      top: top - wrapperRect.top,
+      width: right - left,
+      height: bottom - top,
+    }
+  }, [selectedNodeIds, renderNodes])
+
   function getSelectionActionMenuPosition(nodeIds: string[]) {
     const wrapper = wrapperRef.current
     if (!wrapper || nodeIds.length === 0) {
@@ -974,6 +1367,15 @@ export function WorkflowCanvas({
     },
     [],
   )
+
+  useEffect(() => {
+    function handleWindowBlur() {
+      setIsPanKeyPressed(false)
+    }
+
+    window.addEventListener('blur', handleWindowBlur)
+    return () => window.removeEventListener('blur', handleWindowBlur)
+  }, [])
 
   const edges = useMemo<Array<Edge>>(
     () =>
@@ -1077,7 +1479,10 @@ export function WorkflowCanvas({
 
         onToolbarDrop({ kind, position })
       }}
-      className="relative h-full min-h-0 w-full overflow-hidden bg-[radial-gradient(circle_at_top,rgba(58,127,163,0.14),transparent_35%),linear-gradient(180deg,#08121b_0%,#060d14_100%)]"
+      data-canvas-mode={activeConnectionSource ? 'connect' : isPanKeyPressed ? 'pan' : 'select'}
+      className={`relative h-full min-h-0 w-full overflow-hidden bg-[radial-gradient(circle_at_top,rgba(58,127,163,0.14),transparent_35%),linear-gradient(180deg,#08121b_0%,#060d14_100%)] ${
+        activeConnectionSource ? 'wow-canvas wow-canvas--connect-mode' : isPanKeyPressed ? 'wow-canvas wow-canvas--pan-mode' : 'wow-canvas wow-canvas--select-mode'
+      }`}
     >
       {groupingMode === 'role_lanes' ? (
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" data-testid="role-lane-overlay">
@@ -1098,6 +1503,32 @@ export function WorkflowCanvas({
           ))}
         </div>
       ) : null}
+      {selectionBounds ? (
+        <div
+          data-testid="canvas-selection-bounds"
+          className="wow-canvas-selection-bounds"
+          style={{
+            left: `${selectionBounds.left}px`,
+            top: `${selectionBounds.top}px`,
+            width: `${selectionBounds.width}px`,
+            height: `${selectionBounds.height}px`,
+          }}
+        />
+      ) : null}
+      {alignmentGuides.vertical !== null ? (
+        <div
+          data-testid="canvas-alignment-guide-vertical"
+          className="wow-canvas-alignment-guide wow-canvas-alignment-guide--vertical"
+          style={{ left: `${alignmentGuides.vertical}px` }}
+        />
+      ) : null}
+      {alignmentGuides.horizontal !== null ? (
+        <div
+          data-testid="canvas-alignment-guide-horizontal"
+          className="wow-canvas-alignment-guide wow-canvas-alignment-guide--horizontal"
+          style={{ top: `${alignmentGuides.horizontal}px` }}
+        />
+      ) : null}
       {selectionActionMenu && selectedNodeIds.length > 1 ? (
         <div
           data-testid="canvas-selection-actions"
@@ -1110,44 +1541,186 @@ export function WorkflowCanvas({
           <button
             type="button"
             className="wow-canvas-selection-actions__button"
-            data-testid="canvas-selection-action-lock"
-            onClick={() => {
-              void onToggleLockSelection(selectedNodeIds)
-              setSelectionActionMenu(null)
+            data-testid="canvas-selection-action-align-left"
+            onClick={async () => {
+              if (!canAlignSelection) {
+                return
+              }
+
+              try {
+                setSelectionActionPending('align')
+                setSelectionActionError(null)
+                await onAlignSelection(selectedAlignableNodeIds, 'left')
+                setSelectionActionMenu(null)
+              } catch (error) {
+                setSelectionActionError(error instanceof Error ? error.message : 'Ausrichten fehlgeschlagen.')
+              } finally {
+                setSelectionActionPending(null)
+              }
             }}
-            aria-label="Sperren"
-            title="Sperren"
+            aria-label="Links ausrichten"
+            title="Links ausrichten"
+            disabled={!canAlignSelection || selectionActionPending !== null}
           >
-            <Lock className="h-4 w-4" />
+            <ArrowLeftToLine className="h-4 w-4" />
           </button>
           <button
             type="button"
-            className="wow-canvas-selection-actions__button wow-canvas-selection-actions__button--disabled"
+            className="wow-canvas-selection-actions__button"
+            data-testid="canvas-selection-action-align-top"
+            onClick={async () => {
+              if (!canAlignSelection) {
+                return
+              }
+
+              try {
+                setSelectionActionPending('align')
+                setSelectionActionError(null)
+                await onAlignSelection(selectedAlignableNodeIds, 'top')
+                setSelectionActionMenu(null)
+              } catch (error) {
+                setSelectionActionError(error instanceof Error ? error.message : 'Ausrichten fehlgeschlagen.')
+              } finally {
+                setSelectionActionPending(null)
+              }
+            }}
+            aria-label="Oben ausrichten"
+            title="Oben ausrichten"
+            disabled={!canAlignSelection || selectionActionPending !== null}
+          >
+            <ArrowUpToLine className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className="wow-canvas-selection-actions__button"
+            data-testid="canvas-selection-action-distribute-horizontal"
+            onClick={async () => {
+              if (!canAlignSelection) {
+                return
+              }
+
+              try {
+                setSelectionActionPending('align')
+                setSelectionActionError(null)
+                await onAlignSelection(selectedAlignableNodeIds, 'horizontal_distribute')
+                setSelectionActionMenu(null)
+              } catch (error) {
+                setSelectionActionError(error instanceof Error ? error.message : 'Ausrichten fehlgeschlagen.')
+              } finally {
+                setSelectionActionPending(null)
+              }
+            }}
+            aria-label="Horizontal verteilen"
+            title="Horizontal verteilen"
+            disabled={!canAlignSelection || selectionActionPending !== null}
+          >
+            <Columns3 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className="wow-canvas-selection-actions__button"
+            data-testid="canvas-selection-action-distribute-vertical"
+            onClick={async () => {
+              if (!canAlignSelection) {
+                return
+              }
+
+              try {
+                setSelectionActionPending('align')
+                setSelectionActionError(null)
+                await onAlignSelection(selectedAlignableNodeIds, 'vertical_distribute')
+                setSelectionActionMenu(null)
+              } catch (error) {
+                setSelectionActionError(error instanceof Error ? error.message : 'Ausrichten fehlgeschlagen.')
+              } finally {
+                setSelectionActionPending(null)
+              }
+            }}
+            aria-label="Vertikal verteilen"
+            title="Vertikal verteilen"
+            disabled={!canAlignSelection || selectionActionPending !== null}
+          >
+            <Rows3 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className="wow-canvas-selection-actions__button"
+            data-testid="canvas-selection-action-lock"
+            onClick={async () => {
+              try {
+                setSelectionActionPending('lock')
+                setSelectionActionError(null)
+                await onToggleLockSelection(selectedNodeIds)
+                setSelectionActionMenu(null)
+              } catch (error) {
+                setSelectionActionError(error instanceof Error ? error.message : 'Sperren fehlgeschlagen.')
+              } finally {
+                setSelectionActionPending(null)
+              }
+            }}
+            aria-label="Sperren"
+            title="Sperren"
+            disabled={selectionActionPending !== null}
+          >
+            {selectionActionPending === 'lock' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            className="wow-canvas-selection-actions__button"
             data-testid="canvas-selection-action-group"
             aria-label="Gruppieren"
             title="Gruppieren"
-            disabled
+            disabled={!canGroupSelection || selectionActionPending !== null}
+            onClick={async () => {
+              if (!canGroupSelection) {
+                return
+              }
+
+              try {
+                setSelectionActionPending('group')
+                setSelectionActionError(null)
+                await onCreateGroup(selectedGroupableNodeIds)
+                setSelectionActionMenu(null)
+              } catch (error) {
+                setSelectionActionError(error instanceof Error ? error.message : 'Gruppieren fehlgeschlagen.')
+              } finally {
+                setSelectionActionPending(null)
+              }
+            }}
           >
-            <Group className="h-4 w-4" />
+            {selectionActionPending === 'group' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Group className="h-4 w-4" />}
           </button>
           <button
             type="button"
             className="wow-canvas-selection-actions__button"
             data-testid="canvas-selection-action-aggregate"
-            onClick={() => {
+            onClick={async () => {
               if (!canAggregateSelection) {
                 return
               }
 
-              void onAggregateActivities(selectedRegularActivityIds)
-              setSelectionActionMenu(null)
+              try {
+                setSelectionActionPending('aggregate')
+                setSelectionActionError(null)
+                await onAggregateActivities(selectedRegularActivityIds)
+                setSelectionActionMenu(null)
+              } catch (error) {
+                setSelectionActionError(error instanceof Error ? error.message : 'Aggregation fehlgeschlagen.')
+              } finally {
+                setSelectionActionPending(null)
+              }
             }}
             aria-label="Zu Subprozess aggregieren"
             title="Zu Subprozess aggregieren"
-            disabled={!canAggregateSelection}
+            disabled={!canAggregateSelection || selectionActionPending !== null}
           >
-            <Workflow className="h-4 w-4" />
+            {selectionActionPending === 'aggregate' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Workflow className="h-4 w-4" />}
           </button>
+          {selectionActionError ? (
+            <div className="wow-canvas-selection-actions__status" data-testid="canvas-selection-action-status">
+              {selectionActionError}
+            </div>
+          ) : null}
         </div>
       ) : null}
       <ReactFlow
@@ -1160,7 +1733,7 @@ export function WorkflowCanvas({
         snapGrid={[28, 28]}
         selectionOnDrag
         selectionMode={SelectionMode.Partial}
-        panOnDrag={[1, 2]}
+        panOnDrag={isPanKeyPressed ? [0, 1] : [1]}
         nodeDragThreshold={0}
         defaultEdgeOptions={{ animated: false }}
         deleteKeyCode={['Backspace', 'Delete']}
@@ -1191,16 +1764,19 @@ export function WorkflowCanvas({
         onSelectionStart={() => {
           isLassoSelectionRef.current = true
           setSelectionActionMenu(null)
+          setSelectionActionError(null)
+          setAlignmentGuides({ vertical: null, horizontal: null })
         }}
         onSelectionChange={({ nodes: nextNodes, edges: nextEdges }) => {
           const nextNodeIds = nextNodes.map((node) => node.id)
           const nextEdgeIds = nextEdges.map((edge) => edge.id)
+          const selectedActivityNodeId = nextNodeIds.length === 1 && activities.some((entry) => entry.id === nextNodeIds[0]) ? nextNodeIds[0] : null
           setSelectedNodeIds(nextNodeIds)
           setSelectedEdgeIds(nextEdgeIds)
           setOpenEdgePopoverId(null)
 
-          if (nextNodeIds.length === 1 && nextEdgeIds.length === 0) {
-            onSelectionChange({ nodeId: nextNodeIds[0], edgeId: null, dataObjectId: null })
+          if (selectedActivityNodeId && nextEdgeIds.length === 0) {
+            onSelectionChange({ nodeId: selectedActivityNodeId, edgeId: null, dataObjectId: null })
             return
           }
 
@@ -1232,6 +1808,7 @@ export function WorkflowCanvas({
           setSelectedEdgeIds([edge.id])
           setOpenEdgePopoverId(null)
           setSelectionActionMenu(null)
+          setSelectionActionError(null)
           onSelectionChange({ nodeId: null, edgeId: edge.id, dataObjectId: null })
         }}
         onNodeClick={(_, node) => {
@@ -1239,7 +1816,12 @@ export function WorkflowCanvas({
           setSelectedNodeIds([node.id])
           setOpenEdgePopoverId(null)
           setSelectionActionMenu(null)
-          onSelectionChange({ nodeId: node.id, edgeId: null, dataObjectId: null })
+          setSelectionActionError(null)
+          onSelectionChange({
+            nodeId: activities.some((entry) => entry.id === node.id) ? node.id : null,
+            edgeId: null,
+            dataObjectId: null,
+          })
         }}
         onPaneClick={() => {
           interruptFocusAnimation()
@@ -1247,6 +1829,8 @@ export function WorkflowCanvas({
           setSelectedEdgeIds([])
           setOpenEdgePopoverId(null)
           setSelectionActionMenu(null)
+          setSelectionActionError(null)
+          setAlignmentGuides({ vertical: null, horizontal: null })
           onSelectionChange({ nodeId: null, edgeId: null, dataObjectId: null })
         }}
         onNodesDelete={(deletedNodes) => {

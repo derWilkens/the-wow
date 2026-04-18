@@ -28,6 +28,10 @@ export class UpsertCanvasObjectDto {
   @IsUUID()
   parent_activity_id!: string | null
 
+  @IsOptional()
+  @IsUUID()
+  group_id?: string | null
+
   @IsIn(['quelle', 'datenobjekt'])
   object_type!: 'quelle' | 'datenobjekt'
 

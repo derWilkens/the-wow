@@ -9,6 +9,10 @@ export class UpsertActivityDto {
   @IsUUID()
   parent_id!: string | null
 
+  @IsOptional()
+  @IsUUID()
+  group_id?: string | null
+
   @IsIn(['activity', 'start_event', 'end_event', 'gateway_decision', 'gateway_merge'])
   node_type!: 'activity' | 'start_event' | 'end_event' | 'gateway_decision' | 'gateway_merge'
 

@@ -27,7 +27,15 @@ const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
 
 function readUiPreferences(): UiPreferences {
   if (typeof window === 'undefined') {
-    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false, enable_node_collision_avoidance: true }
+    return {
+      default_grouping_mode: 'free',
+      snap_to_grid: true,
+      enable_table_view: false,
+      enable_swimlane_view: false,
+      enable_node_collision_avoidance: true,
+      enable_alignment_guides: true,
+      enable_magnetic_connection_targets: true,
+    }
   }
 
   try {
@@ -41,9 +49,20 @@ function readUiPreferences(): UiPreferences {
       enable_table_view: typeof parsed.enable_table_view === 'boolean' ? parsed.enable_table_view : false,
       enable_swimlane_view: typeof parsed.enable_swimlane_view === 'boolean' ? parsed.enable_swimlane_view : false,
       enable_node_collision_avoidance: typeof parsed.enable_node_collision_avoidance === 'boolean' ? parsed.enable_node_collision_avoidance : true,
+      enable_alignment_guides: typeof parsed.enable_alignment_guides === 'boolean' ? parsed.enable_alignment_guides : true,
+      enable_magnetic_connection_targets:
+        typeof parsed.enable_magnetic_connection_targets === 'boolean' ? parsed.enable_magnetic_connection_targets : true,
     }
   } catch {
-    return { default_grouping_mode: 'free', snap_to_grid: true, enable_table_view: false, enable_swimlane_view: false, enable_node_collision_avoidance: true }
+    return {
+      default_grouping_mode: 'free',
+      snap_to_grid: true,
+      enable_table_view: false,
+      enable_swimlane_view: false,
+      enable_node_collision_avoidance: true,
+      enable_alignment_guides: true,
+      enable_magnetic_connection_targets: true,
+    }
   }
 }
 
@@ -575,6 +594,54 @@ export function SettingsDialog({
                         data-testid="settings-ui-collision-off"
                         onClick={() => setUiPreferences((current) => ({ ...current, enable_node_collision_avoidance: false }))}
                         className={`rounded-full px-4 py-2 text-sm ${!uiPreferences.enable_node_collision_avoidance ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Ausgeschaltet
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-5">
+                    <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Ausrichtungshilfen</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Zeigt beim manuellen Ziehen Hilfslinien fuer gleiche Kanten und Zentren. Standard ist eingeschaltet.
+                    </p>
+                    <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+                      <button
+                        type="button"
+                        data-testid="settings-ui-alignment-guides-on"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_alignment_guides: true }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.enable_alignment_guides ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Eingeschaltet
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="settings-ui-alignment-guides-off"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_alignment_guides: false }))}
+                        className={`rounded-full px-4 py-2 text-sm ${!uiPreferences.enable_alignment_guides ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Ausgeschaltet
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-5">
+                    <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Magnetische Verbindungsziele</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Hebt naheliegende Zielknoten beim Kantenziehen hervor und verstaerkt den Snap auf sinnvolle Ziele. Standard ist eingeschaltet.
+                    </p>
+                    <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+                      <button
+                        type="button"
+                        data-testid="settings-ui-magnetic-targets-on"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_magnetic_connection_targets: true }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.enable_magnetic_connection_targets ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Eingeschaltet
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="settings-ui-magnetic-targets-off"
+                        onClick={() => setUiPreferences((current) => ({ ...current, enable_magnetic_connection_targets: false }))}
+                        className={`rounded-full px-4 py-2 text-sm ${!uiPreferences.enable_magnetic_connection_targets ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
                       >
                         Ausgeschaltet
                       </button>

@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "node --max-old-space-size=8192 ./node_modules/vitest/vitest.mjs run",
     "test:e2e": "playwright test",
     "capture:screenshots": "playwright test e2e/screenshots.spec.ts"
   },

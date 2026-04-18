@@ -174,6 +174,8 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByTestId('settings-ui-swimlane-on'))
     fireEvent.click(screen.getByTestId('settings-ui-snap-off'))
     fireEvent.click(screen.getByTestId('settings-ui-collision-off'))
+    fireEvent.click(screen.getByTestId('settings-ui-alignment-guides-off'))
+    fireEvent.click(screen.getByTestId('settings-ui-magnetic-targets-off'))
     fireEvent.click(screen.getByTestId('settings-ui-save'))
 
     expect(onUiPreferencesChange).toHaveBeenCalledWith({
@@ -182,12 +184,16 @@ describe('SettingsDialog', () => {
       enable_table_view: true,
       enable_swimlane_view: true,
       enable_node_collision_avoidance: false,
+      enable_alignment_guides: false,
+      enable_magnetic_connection_targets: false,
     })
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('role_lanes')
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"snap_to_grid":false')
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_table_view":true')
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_swimlane_view":true')
     expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_node_collision_avoidance":false')
+    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_alignment_guides":false')
+    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_magnetic_connection_targets":false')
   })
 
   it('defaults snap to grid to enabled and optional views to disabled when no preference is stored', () => {
@@ -199,6 +205,8 @@ describe('SettingsDialog', () => {
     expect(screen.getByTestId('settings-ui-table-view-off')).toHaveClass('bg-cyan-400')
     expect(screen.getByTestId('settings-ui-swimlane-off')).toHaveClass('bg-cyan-400')
     expect(screen.getByTestId('settings-ui-collision-on')).toHaveClass('bg-cyan-400')
+    expect(screen.getByTestId('settings-ui-alignment-guides-on')).toHaveClass('bg-cyan-400')
+    expect(screen.getByTestId('settings-ui-magnetic-targets-on')).toHaveClass('bg-cyan-400')
   })
 
   it('resets grouping to free when swimlane view is disabled before saving', () => {
@@ -227,6 +235,8 @@ describe('SettingsDialog', () => {
       enable_table_view: false,
       enable_swimlane_view: false,
       enable_node_collision_avoidance: true,
+      enable_alignment_guides: true,
+      enable_magnetic_connection_targets: true,
     })
   })
 

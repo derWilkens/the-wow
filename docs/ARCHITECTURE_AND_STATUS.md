@@ -46,6 +46,13 @@ Hinweis:
   - simplified canvas wrapper that stays close to native React Flow behavior
   - native connect flow plus add-node-on-edge-drop behavior
   - interruptible focus animation when returning from SIPOC to canvas
+  - left-drag lasso selection as primary direct-manipulation gesture
+  - keyboard-based duplicate, lock, delete and nudge interactions
+  - selection popover for align, group and aggregate actions
+- `frontend/src/components/canvas/GroupNode.tsx`
+  - persistent container rendering for grouped nodes on the canvas
+- `frontend/src/api/canvasGroups.ts`
+  - TanStack Query hooks for `canvas_groups`
 - `frontend/src/components/canvas/WorkflowSipocTable.tsx`
   - read-only SIPOC view derived from the loaded workflow model
   - one row per activity with aggregated supplier/input/process/process-role/output/consumer data
@@ -139,6 +146,11 @@ Hinweis:
 - `frontend/e2e/activity-type-quick-change.spec.ts`
   - focused business E2E for changing the activity type directly on the node
   - verifies tooltip, icon popover, immediate save, and persistence after fresh login
+- `frontend/e2e/group-selection.spec.ts`
+  - focused browser repro for lasso selection and persistent group creation
+  - verifies group persistence after reload
+  - the spec was extended to cover group rename plus collapse persistence after reload
+  - the new browser path currently depends on `017_canvas_groups_collapsed.sql` being visible in the running REST schema cache
 
 ## UI Surface Status
 
@@ -169,6 +181,9 @@ Hinweis:
   - source/data object CRUD
 - `backend/src/canvas-edges/*`
   - edge list/upsert/delete
+- `backend/src/canvas-groups/*`
+  - persistent canvas group list/upsert/delete
+  - clears memberships on delete
 - `backend/src/activity-resources/*`
   - IT-tool catalog, activity-level tool links, and check sources
 - `backend/src/organizations/*`
@@ -192,6 +207,7 @@ Current important entities:
 - `canvas_objects`
 - `object_fields`
 - `canvas_edges`
+- `canvas_groups`
 - `it_tools`
 - `activity_it_tools`
 - `activity_check_sources`
@@ -264,6 +280,12 @@ Current edge fields:
 - `013_activity_roles_and_assignments.sql`
   - adds `organization_roles`
   - adds `assignee_label` and `role_id` on `activities`
+- `016_canvas_groups.sql`
+  - adds `canvas_groups`
+  - adds `group_id` to `activities`
+  - adds `group_id` to `canvas_objects`
+- `017_canvas_groups_collapsed.sql`
+  - adds `collapsed` to `canvas_groups`
 
 ## Operational SQL Scripts
 
@@ -292,6 +314,8 @@ Stable:
 - current-workflow details from dedicated header button
 - workspace update flow for name, purpose, expected inputs, and expected outputs
 - optional header view toggles controlled through persisted UI preferences
+- direct-manipulation base for lasso, quick align and persistent groups
+- editable group labels and persistent collapse state on canvas groups
 - hidden header search/export and header-free undo/redo layout
 - shared role-create dialog behavior between activity detail and node role badge
 - live data persistence
@@ -333,13 +357,18 @@ Latest known good local verification:
 
 - frontend build: green
 - frontend unit tests: green
-  - `68 / 68`
+  - `30 / 30` files
+  - `139 / 139` tests
 - backend build: green
 - backend unit tests: green
   - `22 / 22`
 - full browser E2E against local preview with credentials: green
   - `54 passed`
   - `1 skipped`
+- focused persistent-group verification: green
+  - `group-selection.spec.ts`: `1 passed`
+- focused backend verification for canvas groups: green
+  - `canvas-groups.service.spec.ts`: `3 passed`
   - the single skip is the intentionally excluded mail-/invitation-flow in `saas-organizations.spec.ts`
 - dedicated BIM reference checks: green
   - `bim-cyclic-coordination.spec.ts`: `2 passed`

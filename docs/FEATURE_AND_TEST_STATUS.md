@@ -1,6 +1,6 @@
 # Feature And Test Status
 
-Stand: 2026-04-09
+Stand: 2026-04-18
 
 Diese Liste konsolidiert die Features aus den Specs in `specs/` und aus den Entscheidungsrunden im Chat. Status:
 
@@ -167,6 +167,18 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Detailablauf-Dialog weniger transparent
 - [x] Popovers und Dialoge zentral ueber CSS-Surface-Klassen auf sehr geringe Transparenz vereinheitlicht
 - [x] Aktivitaetstyp-Popover praktisch opak
+- [x] Linke Maus-Drag-Selektion mit Action-Popover
+- [x] Pan nur noch ueber `Space + Drag` oder mittlere Maustaste
+- [x] Keyboard-Basis fuer direkte Manipulation (`L`, `Ctrl/Cmd+D`, Nudge, Delete`)
+- [x] Alignment Guides als erste visuelle Ausrichtungshilfe
+- [x] Quick Align fuer Mehrfachselektion
+- [x] Magnetische Connection-Targets per UI-Praeferenz schaltbar
+- [x] Persistente Gruppencontainer (`canvas_groups`)
+- [x] Gruppen aus Lasso-Selektion erzeugbar
+- [x] Gruppencontainer im Canvas sichtbar und gemeinsam verschiebbar
+- [x] Gruppenlabel direkt im Container-Header editierbar
+- [x] Gruppeninhalte ein- und ausklappbar
+- [x] Eingeklappte Gruppen blenden enthaltene Knoten und Kanten im Canvas aus
 
 ### Zusätzliche Workflow-Views
 - [x] Umschaltung zwischen Zeichenmodus und tabellarischer SIPOC-View
@@ -242,7 +254,11 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `src/components/canvas/DataObjectPopup.test.tsx`
 - [x] `src/components/canvas/GatewayNode.test.tsx`
 - [x] `src/components/canvas/FloatingCanvasToolbar.test.tsx`
-- [x] `src/components/canvas/WorkflowCanvas.test.tsx`
+- [x] `src/components/canvas/WorkflowCanvas.viewport.test.tsx`
+- [x] `src/components/canvas/WorkflowCanvas.layout.test.tsx`
+- [x] `src/components/canvas/WorkflowCanvas.selection.test.tsx`
+- [x] `src/components/canvas/WorkflowCanvas.connection.test.tsx`
+- [x] `src/components/canvas/GroupNode.test.tsx`
 - [x] `src/components/canvas/WorkflowSipocTable.test.tsx`
 - [x] `src/components/auth/AuthScreen.test.tsx`
 - [x] `src/components/settings/TransportModeSettingsDialog.test.tsx`
@@ -253,6 +269,8 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `src/components/ui/CustomChoiceList.test.tsx`
 - [x] `src/components/roles/RoleCreateForm.tsx`
 - [x] `src/App.test.tsx`
+- [x] `src/App.canvas-groups.test.ts`
+- [x] `backend/src/canvas-groups/canvas-groups.service.spec.ts`
 
 ### Zuletzt gezielt verifiziert
 - [x] Zentrale Popup-/Dialog-Surfaces ueber `frontend/src/index.css`
@@ -305,8 +323,11 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `e2e/sipoc-view.spec.ts`
 - [x] `e2e/view-preferences.spec.ts`
 - [x] `e2e/workflow-details.spec.ts`
+- [x] `e2e/group-selection.spec.ts`
 
-Hinweis: Die Login-gebundene Suite laeuft mit `E2E_EMAIL`/`E2E_PASSWORD` gegen die lokale Preview. `playwright.config.ts` zeigt standardmaessig auf `http://127.0.0.1:4174`; die aktuellen verifizierten Browserlaeufe wurden gegen `http://127.0.0.1:4175` ausgefuehrt. Der letzte komplette Vollsuiten-Stand in dieser Session ist jetzt `54 passed / 1 skipped`.
+Hinweis: Die Login-gebundene Suite laeuft mit `E2E_EMAIL`/`E2E_PASSWORD` gegen die lokale Preview. `playwright.config.ts` zeigt standardmaessig auf `http://127.0.0.1:4174`. Zusaetzlich ist jetzt ein fokussierter Browser-Repro fuer persistente Gruppen vorhanden:
+- `e2e/group-selection.spec.ts`: `1 passed`
+- die Spec ist jetzt um Rename/Collapse/Reload erweitert, der neue Pfad ist lokal aber aktuell durch fehlendes `canvas_groups.collapsed` im laufenden REST-Schema-Cache blockiert
 Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordination` vorhanden, inklusive Detailablaeufen, IT-Tools, Datenobjekten, Transportmodi, Gateway-Labels und expliziter Merge-Variante. Zwei kleine Repro-Specs haerten jetzt die zuletzt gefundenen Problemstellen vor dem Gesamtszenario:
 - `e2e/subprocess-entry.spec.ts`
 - `e2e/swimlane-visible-roles.spec.ts`
@@ -325,8 +346,10 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
 ## Letzter verifizierter Stand
 
 - [x] Frontend Build
+- [x] Frontend Build nach Gruppen-/Canvas-Interaction-Erweiterung
 - [x] Frontend Unit-Tests
-  - `68 / 68` gruen
+  - `30 / 30` Dateien gruen
+  - `139 / 139` Tests gruen
 - [x] Backend Build
 - [x] Backend Tests
   - `22 / 22` gruen
@@ -337,6 +360,13 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
 - [x] Transportmodus-E2E fuer Settings-Flow
 - [x] Zentraler Settings-/Stammdaten-E2E
   - `e2e/settings-master-data.spec.ts`: `1 passed`
+- [x] Persistente Gruppen end-to-end gegen lokale Preview verifiziert
+  - `e2e/group-selection.spec.ts`: `1 passed`
+- [x] Gruppen-Header-Interaktion lokal verifiziert
+  - `frontend/src/components/canvas/GroupNode.test.tsx`: gruen
+  - `frontend/src/App.canvas-groups.test.ts`: gruen
+- [x] `canvas_groups`-Backend-Service lokal verifiziert
+  - `backend/src/canvas-groups/canvas-groups.service.spec.ts`: `3 passed`
 - [x] Workflow-Details-Einstieg fuer aktuellen Arbeitsablauf verifiziert
   - `frontend/src/components/layout/AppHeader.test.tsx`: gruen
   - `frontend/src/components/workspace/WorkflowDetailDialog.test.tsx`: gruen
@@ -345,7 +375,10 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
 - [x] View-Praeferenzen und aufgeraeumter Header verifiziert
   - `frontend/src/components/layout/AppHeader.test.tsx`: gruen
   - `frontend/src/components/settings/SettingsDialog.test.tsx`: gruen
-  - `frontend/src/components/canvas/WorkflowCanvas.test.tsx`: gruen
+  - `frontend/src/components/canvas/WorkflowCanvas.viewport.test.tsx`: gruen
+  - `frontend/src/components/canvas/WorkflowCanvas.layout.test.tsx`: gruen
+  - `frontend/src/components/canvas/WorkflowCanvas.selection.test.tsx`: gruen
+  - `frontend/src/components/canvas/WorkflowCanvas.connection.test.tsx`: gruen
   - `e2e/view-preferences.spec.ts`: `1 passed`
 - [x] Rollen-/Ausfuehrenden-Modell lokal auch ohne eingespielte Migration `013` per Fallback verifiziert
 - [x] Gemeinsamer Rollen-Anlege-Dialog fuer Aktivitaetsknoten und Aktivitaetsdetail verifiziert

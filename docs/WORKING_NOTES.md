@@ -51,6 +51,13 @@ npm run build
 npm run test
 ```
 
+Focused frontend canvas tests with the now explicit single-fork Vitest profile:
+
+```bash
+cd the-wow/frontend
+npx vitest run src/components/canvas/WorkflowCanvas.viewport.test.tsx src/components/canvas/WorkflowCanvas.layout.test.tsx src/components/canvas/WorkflowCanvas.selection.test.tsx src/components/canvas/WorkflowCanvas.connection.test.tsx
+```
+
 Frontend E2E against local preview:
 
 ```bash
@@ -198,6 +205,10 @@ Important detail:
     - `.wow-surface-popover`
     - `.wow-surface-dialog`
     - `.wow-overlay-scrim`
+  - lasso selection is now the primary left-drag interaction on the canvas
+  - pan is intentionally reserved for `Space + Drag` or middle mouse
+  - selection actions now include quick align and persistent grouping
+  - persistent groups are separate canvas containers, not semantic subprocess aggregation
 - activity types now have a stable semantic default:
   - `Unbestimmt`
   - shown with a question-mark icon
@@ -348,9 +359,27 @@ Avoid introducing a separate business entity called `subprocess`. A child workfl
   - `activity-detail-from-edge-detail.spec.ts`: `1 passed`
   - `edge-two-named-data-objects.spec.ts`: `1 passed`
   - `activity-detail-check-sources.spec.ts`: `1 passed`
+- Latest persistent-group verification is green with:
+  - `group-selection.spec.ts`: `1 passed`
+  - `canvas-groups.service.spec.ts`: `3 passed`
+- Latest group-header verification is green with:
+  - `GroupNode.test.tsx`: inline rename and collapse toggle covered
+  - `App.canvas-groups.test.ts`: persisted `collapsed` flag covered
+- Current browser blocker for the new rename/collapse path:
+  - `canvas_groups.collapsed` is wired in code but not yet visible to the running Supabase REST schema cache
+  - until that is refreshed, the extended `group-selection.spec.ts` path cannot pass end-to-end
 - Latest unit verification is green with:
-  - frontend: `68 / 68`
+  - frontend: `30 / 30` Dateien
+  - frontend: `139 / 139` Tests
   - backend: `22 / 22`
+- Local note for Vitest:
+  - the former monolithic `WorkflowCanvas.test.tsx` had started hitting the local Node heap under the default Vitest worker setup
+  - the canvas coverage now lives in:
+    - `WorkflowCanvas.viewport.test.tsx`
+    - `WorkflowCanvas.layout.test.tsx`
+    - `WorkflowCanvas.selection.test.tsx`
+    - `WorkflowCanvas.connection.test.tsx`
+  - the frontend test config is now pinned to a single fork / no file parallelism to keep local canvas tests stable
 - Latest settings/master-data verification is green with:
   - `settings-master-data.spec.ts`: `1 passed`
 - Latest SIPOC view verification is green with:
@@ -363,7 +392,7 @@ Avoid introducing a separate business entity called `subprocess`. A child workfl
 - Latest view-preferences verification is green with:
   - `AppHeader.test.tsx`: header cleanup and conditional toggles covered
   - `SettingsDialog.test.tsx`: persisted UI flags and grouping fallback covered
-  - `WorkflowCanvas.test.tsx`: grouping regression remains covered
+  - `WorkflowCanvas.layout.test.tsx`: grouping regression remains covered
   - `view-preferences.spec.ts`: `1 passed`
 - Latest role/assignee model verification is green with:
   - local save path remains functional through fallback behavior even when migration `013_activity_roles_and_assignments.sql` is not yet applied

@@ -74,6 +74,7 @@ export class CanvasObjectsService {
       id: objectId,
       workspace_id: workspaceId,
       parent_activity_id: dto.parent_activity_id ?? null,
+      ...(dto.group_id !== undefined ? { group_id: dto.group_id ?? null } : {}),
       object_type: dto.object_type,
       name: dto.name,
       ...(dto.is_locked !== undefined ? { is_locked: dto.is_locked } : {}),
