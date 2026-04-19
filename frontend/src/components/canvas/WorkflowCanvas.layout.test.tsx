@@ -159,8 +159,20 @@ describe('WorkflowCanvas layout interactions', () => {
     const groupNode = latestProps.nodes.find((node) => node.id === 'group-1')
     const activityNode = latestProps.nodes.find((node) => node.id === 'activity-1')
 
-    expect(groupNode?.style?.zIndex).toBe(3)
+    expect(groupNode?.style?.zIndex).toBe(1000)
     expect(activityNode?.style?.zIndex).toBe(2)
+  })
+
+  it('uses persisted z-index for source nodes and raises selected sources above the canvas content', () => {
+    renderWorkflowCanvas({
+      selectedNodeId: 'source-1',
+      canvasObjects: [createSourceObject({ id: 'source-1', z_index: 7 })],
+    })
+
+    const latestProps = getLatestReactFlowProps<{ nodes: Array<{ id: string; style?: { zIndex?: number } }> }>()
+    const sourceNode = latestProps.nodes.find((node) => node.id === 'source-1')
+
+    expect(sourceNode?.style?.zIndex).toBe(1107)
   })
 
   it('shrinks collapsed groups to header height and exposes rename/collapse callbacks', () => {

@@ -1,37 +1,42 @@
 import { Injectable } from '@nestjs/common'
 import { randomUUID } from 'crypto'
 import { DatabaseService } from '../database/database.service'
+import { fallbackCanvasObjectLayers } from '../fallback-store'
 import { UpsertCanvasObjectDto } from './dto/upsert-canvas-object.dto'
 
 @Injectable()
 export class CanvasObjectsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  private normalizeLockState<T extends { is_locked?: boolean | null }>(record: T) {
+  private normalizeObject<T extends { is_locked?: boolean | null; z_index?: number | null }>(record: T) {
+    const fallbackLayer = 'id' in record ? fallbackCanvasObjectLayers.get(String(record.id)) : null
     return {
       ...record,
       is_locked: Boolean(record.is_locked),
+      z_index: typeof record.z_index === 'number' ? record.z_index : (fallbackLayer?.zIndex ?? 0),
     }
   }
 
-  async list(userId: string, workspaceId: string, parentActivityId: string | null) {
-    await this.databaseService.assertWorkspaceAccess(workspaceId, userId)
+  private isMissingZIndexSchema(error: unknown) {
+    const code = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code?: unknown }).code ?? '') : ''
+    const message =
+      typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message?: unknown }).message ?? '')
+        : ''
 
-    let query = this.databaseService.supabase
-      .from('canvas_objects')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('edge_sort_order', { ascending: true })
-      .order('name', { ascending: true })
+    return code === 'PGRST204' || code === 'PGRST205' || code === '42703' || message.includes('z_index')
+  }
 
-    query = parentActivityId ? query.eq('parent_activity_id', parentActivityId) : query.is('parent_activity_id', null)
+  private sortCanvasObjects<T extends { object_type?: string | null; z_index?: number | null; position_x?: number | null; edge_sort_order?: number | null }>(
+    canvasObjects: T[],
+  ) {
+    return [...canvasObjects].sort((left, right) => {
+      const leftZIndex = typeof left.z_index === 'number' ? left.z_index : 0
+      const rightZIndex = typeof right.z_index === 'number' ? right.z_index : 0
+      if (leftZIndex !== rightZIndex) {
+        return leftZIndex - rightZIndex
+      }
 
-    const { data, error } = await query
-    if (error) {
-      throw error
-    }
-
-    const canvasObjects = (data ?? []).sort((left, right) => {
       if (left.object_type === 'quelle' && right.object_type === 'quelle') {
         return (left.position_x ?? 0) - (right.position_x ?? 0)
       }
@@ -42,6 +47,43 @@ export class CanvasObjectsService {
 
       return left.object_type === 'quelle' ? -1 : 1
     })
+  }
+
+  async list(userId: string, workspaceId: string, parentActivityId: string | null) {
+    await this.databaseService.assertWorkspaceAccess(workspaceId, userId)
+
+    const fetchObjects = async (includeZIndexOrder: boolean) => {
+      let query = this.databaseService.supabase.from('canvas_objects').select('*').eq('workspace_id', workspaceId)
+
+      if (includeZIndexOrder) {
+        query = query.order('z_index', { ascending: true })
+      }
+
+      query = query.order('edge_sort_order', { ascending: true }).order('name', { ascending: true })
+      query = parentActivityId ? query.eq('parent_activity_id', parentActivityId) : query.is('parent_activity_id', null)
+
+      return query
+    }
+
+    let data
+    try {
+      const result = await fetchObjects(true)
+      if (result.error) {
+        throw result.error
+      }
+      data = result.data
+    } catch (error) {
+      if (!this.isMissingZIndexSchema(error)) {
+        throw error
+      }
+
+      const fallbackResult = await fetchObjects(false)
+      if (fallbackResult.error) {
+        throw fallbackResult.error
+      }
+      data = fallbackResult.data
+    }
+    const canvasObjects = this.sortCanvasObjects(data ?? [])
     if (canvasObjects.length === 0) {
       return []
     }
@@ -57,7 +99,7 @@ export class CanvasObjectsService {
     }
 
     return canvasObjects.map((item) => ({
-      ...this.normalizeLockState(item),
+      ...this.normalizeObject(item),
       fields: (fields ?? []).filter((field) => field.object_id === item.id),
     }))
   }
@@ -78,20 +120,38 @@ export class CanvasObjectsService {
       object_type: dto.object_type,
       name: dto.name,
       ...(dto.is_locked !== undefined ? { is_locked: dto.is_locked } : {}),
+      ...(dto.z_index !== undefined ? { z_index: dto.z_index } : { z_index: 0 }),
       edge_id: dto.object_type === 'datenobjekt' ? dto.edge_id ?? null : null,
       edge_sort_order: dto.object_type === 'datenobjekt' ? dto.edge_sort_order ?? 0 : null,
       position_x: dto.object_type === 'quelle' ? dto.position_x ?? 0 : null,
       position_y: dto.object_type === 'quelle' ? dto.position_y ?? 0 : null,
     }
 
-    const { data, error } = await this.databaseService.supabase
-      .from('canvas_objects')
-      .upsert(payload)
-      .select('*')
-      .single()
+    let data
+    try {
+      const result = await this.databaseService.supabase.from('canvas_objects').upsert(payload).select('*').single()
+      if (result.error) {
+        throw result.error
+      }
+      data = result.data
+    } catch (error) {
+      if (!this.isMissingZIndexSchema(error)) {
+        throw error
+      }
 
-    if (error) {
-      throw error
+      const { z_index: _ignoredZIndex, ...fallbackPayload } = payload
+      const fallbackResult = await this.databaseService.supabase.from('canvas_objects').upsert(fallbackPayload).select('*').single()
+      if (fallbackResult.error) {
+        throw fallbackResult.error
+      }
+      data = {
+        ...fallbackResult.data,
+        z_index: dto.z_index ?? 0,
+      }
+      fallbackCanvasObjectLayers.set(objectId, {
+        objectId,
+        zIndex: dto.z_index ?? 0,
+      })
     }
 
     if (dto.object_type === 'datenobjekt' && dto.fields) {
@@ -116,11 +176,11 @@ export class CanvasObjectsService {
     const [fullObject] = await this.list(userId, workspaceId, dto.parent_activity_id ?? null)
     if (dto.parent_activity_id === null) {
       const objects = await this.list(userId, workspaceId, null)
-      return objects.find((item) => item.id === objectId) ?? { ...this.normalizeLockState(data), fields: [] }
+      return objects.find((item) => item.id === objectId) ?? { ...this.normalizeObject(data), fields: [] }
     }
 
     const objects = await this.list(userId, workspaceId, dto.parent_activity_id ?? null)
-    return objects.find((item) => item.id === objectId) ?? fullObject ?? { ...this.normalizeLockState(data), fields: [] }
+    return objects.find((item) => item.id === objectId) ?? fullObject ?? { ...this.normalizeObject(data), fields: [] }
   }
 
   async remove(userId: string, workspaceId: string, id: string) {
@@ -129,6 +189,7 @@ export class CanvasObjectsService {
     if (error) {
       throw error
     }
+    fallbackCanvasObjectLayers.delete(id)
     return { success: true }
   }
 }

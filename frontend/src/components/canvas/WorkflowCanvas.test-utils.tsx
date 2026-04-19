@@ -239,6 +239,8 @@ export function buildWorkflowCanvasProps(overrides: Partial<WorkflowCanvasProps>
     onMoveGroup: vi.fn(),
     onRenameGroup: vi.fn(),
     onToggleCollapseGroup: vi.fn(),
+    onBringNodeToFront: vi.fn(),
+    onSendNodeToBack: vi.fn(),
     onAggregateActivities: vi.fn(),
     onDeleteEdges: vi.fn(),
     onDeleteDataObject: vi.fn(),

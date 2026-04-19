@@ -38,7 +38,13 @@ type OrganizationRoleRecord = {
   created_by: string | null
 }
 
+type CanvasObjectLayerRecord = {
+  objectId: string
+  zIndex: number
+}
+
 export const fallbackActivityAssignments = new Map<string, ActivityAssignmentRecord>()
 export const fallbackActivityComments = new Map<string, ActivityCommentRecord>()
 export const fallbackWorkflowTemplates = new Map<string, WorkflowTemplateRecord>()
 export const fallbackOrganizationRoles = new Map<string, OrganizationRoleRecord>()
+export const fallbackCanvasObjectLayers = new Map<string, CanvasObjectLayerRecord>()

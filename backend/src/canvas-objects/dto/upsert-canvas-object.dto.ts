@@ -43,6 +43,10 @@ export class UpsertCanvasObjectDto {
   is_locked?: boolean
 
   @IsOptional()
+  @IsNumber()
+  z_index?: number
+
+  @IsOptional()
   @IsUUID()
   edge_id?: string | null
 

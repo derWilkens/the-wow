@@ -179,6 +179,10 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Gruppenlabel direkt im Container-Header editierbar
 - [x] Gruppeninhalte ein- und ausklappbar
 - [x] Eingeklappte Gruppen blenden enthaltene Knoten und Kanten im Canvas aus
+- [x] Erste persistente Z-Layer-Steuerung fuer Gruppen
+- [x] Erste persistente Z-Layer-Steuerung fuer Datenspeicher
+- [x] Selektierte Gruppen koennen nach vorne / hinten verschoben werden
+- [x] Selektierte Datenspeicher koennen nach vorne / hinten verschoben werden
 
 ### Zusätzliche Workflow-Views
 - [x] Umschaltung zwischen Zeichenmodus und tabellarischer SIPOC-View
@@ -259,6 +263,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `src/components/canvas/WorkflowCanvas.selection.test.tsx`
 - [x] `src/components/canvas/WorkflowCanvas.connection.test.tsx`
 - [x] `src/components/canvas/GroupNode.test.tsx`
+- [x] `supabase/migrations/018_canvas_object_z_index.sql`
 - [x] `src/components/canvas/WorkflowSipocTable.test.tsx`
 - [x] `src/components/auth/AuthScreen.test.tsx`
 - [x] `src/components/settings/TransportModeSettingsDialog.test.tsx`
@@ -324,10 +329,13 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `e2e/view-preferences.spec.ts`
 - [x] `e2e/workflow-details.spec.ts`
 - [x] `e2e/group-selection.spec.ts`
+- [x] `e2e/source-z-layer.spec.ts`
+- [x] `e2e/quick-align.spec.ts`
+- [x] `e2e/magnetic-connection-targets.spec.ts`
 
 Hinweis: Die Login-gebundene Suite laeuft mit `E2E_EMAIL`/`E2E_PASSWORD` gegen die lokale Preview. `playwright.config.ts` zeigt standardmaessig auf `http://127.0.0.1:4174`. Zusaetzlich ist jetzt ein fokussierter Browser-Repro fuer persistente Gruppen vorhanden:
-- `e2e/group-selection.spec.ts`: `1 passed`
-- die Spec ist jetzt um Rename/Collapse/Reload erweitert, der neue Pfad ist lokal aber aktuell durch fehlendes `canvas_groups.collapsed` im laufenden REST-Schema-Cache blockiert
+- `e2e/group-selection.spec.ts`: `2 passed`
+- die Spec deckt jetzt persistenten Gruppenaufbau sowie Rename/Collapse/Reload-Persistenz ab
 Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordination` vorhanden, inklusive Detailablaeufen, IT-Tools, Datenobjekten, Transportmodi, Gateway-Labels und expliziter Merge-Variante. Zwei kleine Repro-Specs haerten jetzt die zuletzt gefundenen Problemstellen vor dem Gesamtszenario:
 - `e2e/subprocess-entry.spec.ts`
 - `e2e/swimlane-visible-roles.spec.ts`
@@ -361,10 +369,19 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
 - [x] Zentraler Settings-/Stammdaten-E2E
   - `e2e/settings-master-data.spec.ts`: `1 passed`
 - [x] Persistente Gruppen end-to-end gegen lokale Preview verifiziert
-  - `e2e/group-selection.spec.ts`: `1 passed`
+  - `e2e/group-selection.spec.ts`: `2 passed`
+- [x] Z-Layer fuer Datenspeicher end-to-end gegen lokale Preview verifiziert
+  - `e2e/source-z-layer.spec.ts`: `2 passed`
+- [x] Quick-Align fuer Mehrfachselektion gegen lokale Preview verifiziert
+  - `e2e/quick-align.spec.ts`: `2 passed`
+- [x] Magnetische Connection-Targets gegen lokale Preview verifiziert
+  - `e2e/magnetic-connection-targets.spec.ts`: `1 passed`
 - [x] Gruppen-Header-Interaktion lokal verifiziert
   - `frontend/src/components/canvas/GroupNode.test.tsx`: gruen
   - `frontend/src/App.canvas-groups.test.ts`: gruen
+- [x] Erste Z-Layer-Steuerung fuer Gruppen und Datenspeicher lokal verifiziert
+  - `frontend/src/components/canvas/WorkflowCanvas.layout.test.tsx`: gruen
+  - `frontend/src/components/canvas/WorkflowCanvas.selection.test.tsx`: gruen
 - [x] `canvas_groups`-Backend-Service lokal verifiziert
   - `backend/src/canvas-groups/canvas-groups.service.spec.ts`: `3 passed`
 - [x] Workflow-Details-Einstieg fuer aktuellen Arbeitsablauf verifiziert

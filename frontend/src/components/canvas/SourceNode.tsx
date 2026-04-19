@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import type { NodeProps } from 'reactflow'
-import { Lock, Server } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpToLine, Lock, Server } from 'lucide-react'
 import type { CanvasObjectNodeData } from '../../types'
 import { CanvasHandles } from './CanvasHandles'
 
@@ -19,6 +19,38 @@ export const SourceNode = memo(function SourceNode({ data }: NodeProps<CanvasObj
         isConnectionPreviewTarget ? 'wow-node--connection-preview-target' : ''
       }`}
     >
+      {showHandles ? (
+        <div className="wow-source-node__layer-actions">
+          <button
+            type="button"
+            className="wow-source-node__layer-action nodrag"
+            data-testid={`source-node-bring-front-${canvasObject.id}`}
+            aria-label="Datenspeicher nach vorne"
+            title="Datenspeicher nach vorne"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation()
+              data.onBringToFront?.(canvasObject.id)
+            }}
+          >
+            <ArrowUpToLine className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            className="wow-source-node__layer-action nodrag"
+            data-testid={`source-node-send-back-${canvasObject.id}`}
+            aria-label="Datenspeicher nach hinten"
+            title="Datenspeicher nach hinten"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation()
+              data.onSendToBack?.(canvasObject.id)
+            }}
+          >
+            <ArrowDownToLine className="h-3 w-3" />
+          </button>
+        </div>
+      ) : null}
       <div className="wow-object-node__content">
         <Server className="wow-object-node__icon" />
         {canvasObject.name}

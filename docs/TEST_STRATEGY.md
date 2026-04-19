@@ -154,7 +154,6 @@ Aktuelle Beispiele:
 - `frontend/e2e/group-selection.spec.ts`
   - lasso selection -> group action -> persistent group after reload
   - same focused spec now also covers rename + collapse + reload persistence
-  - the extended path needs the running REST schema cache to know `canvas_groups.collapsed`
 - `frontend/e2e/subprocess-entry.spec.ts`
   - submenu-/trigger-bezogenes Verhalten auf dichtem Canvas
 - `frontend/e2e/swimlane-visible-roles.spec.ts`
@@ -179,6 +178,15 @@ Aktuelle Beispiele:
 - `frontend/e2e/activity-type-quick-change.spec.ts`
   - gezielter Repro fuer den direkten Typwechsel am Aktivitaets-Node
   - prueft Tooltip, Popover, sofortiges Speichern und Persistenz ueber eine frische Sitzung
+- `frontend/e2e/source-z-layer.spec.ts`
+  - gezielter Repro fuer `nach vorne` / `nach hinten` bei ueberlappenden Datenspeichern
+  - prueft Persistenz nach Reload
+- `frontend/e2e/quick-align.spec.ts`
+  - gezielter Repro fuer Mehrfachselektion plus `Links ausrichten`
+  - prueft `Links ausrichten`, `Horizontal verteilen` und Persistenz nach Reload
+- `frontend/e2e/magnetic-connection-targets.spec.ts`
+  - gezielter Repro fuer die UI-Praeferenz `Magnetische Verbindungsziele`
+  - prueft ausgeschaltetes und wieder eingeschaltetes Preview-Verhalten nach Reload
 
 Diese Specs sind absichtlich klein und diagnostisch stark.
 
@@ -268,6 +276,10 @@ Die Vollsuite ist **nicht** das beste erste Diagnosewerkzeug fuer einen frisch g
 - bei neuen Gruppenfunktionen denselben Ablauf verfolgen:
   - zuerst `GroupNode` / `WorkflowCanvas` als Komponente absichern
   - danach einen kleinen Browser-Repro fuer rename/collapse plus Reload-Persistenz anlegen
+- bei neuer Z-Layer-Steuerung denselben Ablauf verfolgen:
+  - zuerst die persistente Reihenfolge im App-/Canvas-State absichern
+  - danach Gruppen- und Datenspeicher-Aktionen isoliert in Canvas-Komponententests pruefen
+  - erst dann den Browser-Repro ergaenzen
 - wenn dieselbe Erstellungs- oder Auswahlaktion an mehreren Einstiegspunkten existiert, zuerst eine gemeinsame Formular- oder Optionskomponente schaffen und dann beide Einstiege gezielt gegeneinander absichern
 - bei visuellen Oberflaechenregeln wie Dialog-/Popover-Transparenz zuerst die gemeinsamen CSS-Surfaces zentralisieren und dann nur gezielt die betroffenen Komponenten gegen Build plus kleine Komponententest-Sets pruefen
 - bei React-Flow-Hitbox-Problemen lieber gezielt robust machen als globale Workarounds bauen

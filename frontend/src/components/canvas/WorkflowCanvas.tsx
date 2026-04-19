@@ -242,6 +242,8 @@ interface WorkflowCanvasProps {
   onMoveGroup?: (groupId: string, position: { x: number; y: number }) => Promise<void> | void
   onRenameGroup?: (groupId: string, label: string) => Promise<void> | void
   onToggleCollapseGroup?: (groupId: string) => Promise<void> | void
+  onBringNodeToFront?: (nodeId: string) => Promise<void> | void
+  onSendNodeToBack?: (nodeId: string) => Promise<void> | void
   onAggregateActivities: (activityIds: string[]) => Promise<void> | void
   onDeleteEdges: (edgeIds: string[]) => void
   onDeleteDataObject: (id: string) => void
@@ -298,6 +300,8 @@ export function WorkflowCanvas({
   onMoveGroup = () => {},
   onRenameGroup = () => {},
   onToggleCollapseGroup = () => {},
+  onBringNodeToFront = () => {},
+  onSendNodeToBack = () => {},
   onAggregateActivities,
   onDeleteEdges,
   onDeleteDataObject,
@@ -325,6 +329,7 @@ export function WorkflowCanvas({
   const [selectionActionPending, setSelectionActionPending] = useState<'lock' | 'align' | 'group' | 'aggregate' | null>(null)
   const [selectionActionError, setSelectionActionError] = useState<string | null>(null)
   const [isPanKeyPressed, setIsPanKeyPressed] = useState(false)
+  const [groupLabelDrafts, setGroupLabelDrafts] = useState<Record<string, string>>({})
   const [alignmentGuides, setAlignmentGuides] = useState<{ vertical: number | null; horizontal: number | null }>({
     vertical: null,
     horizontal: null,
@@ -400,6 +405,16 @@ export function WorkflowCanvas({
       setOpenEdgePopoverId(null)
     }
   }, [selectedEdgeId])
+
+  useEffect(() => {
+    setGroupLabelDrafts((current) => {
+      const nextDrafts: Record<string, string> = {}
+      for (const canvasGroup of canvasGroups) {
+        nextDrafts[canvasGroup.id] = current[canvasGroup.id] ?? canvasGroup.label
+      }
+      return nextDrafts
+    })
+  }, [canvasGroups])
 
   useEffect(() => {
     if (!activeConnectionSource) {
@@ -1046,13 +1061,21 @@ export function WorkflowCanvas({
       style: {
         width: canvasGroup.width,
         height: canvasGroup.collapsed ? 72 : canvasGroup.height,
-        zIndex: selectedNodeIds.includes(canvasGroup.id) ? 3 : 0,
+        zIndex: (canvasGroup.z_index ?? 0) + (selectedNodeIds.includes(canvasGroup.id) ? 1000 : 0),
       },
       data: {
         canvasGroup,
         memberCount: groupMemberCounts[canvasGroup.id] ?? 0,
+        draftLabel: groupLabelDrafts[canvasGroup.id] ?? canvasGroup.label,
         onRename: (groupId, label) => {
+          setGroupLabelDrafts((current) => ({ ...current, [groupId]: label }))
           void onRenameGroup(groupId, label)
+        },
+        onDraftLabelChange: (groupId, label) => {
+          setGroupLabelDrafts((current) => ({ ...current, [groupId]: label }))
+        },
+        onCancelRename: (groupId) => {
+          setGroupLabelDrafts((current) => ({ ...current, [groupId]: canvasGroup.label }))
         },
         onToggleCollapsed: (groupId) => {
           void onToggleCollapseGroup(groupId)
@@ -1062,6 +1085,12 @@ export function WorkflowCanvas({
         },
         onDelete: (groupId) => {
           onDeleteSelection({ nodeIds: [groupId], edgeIds: [] })
+        },
+        onBringToFront: (groupId) => {
+          void onBringNodeToFront(groupId)
+        },
+        onSendToBack: (groupId) => {
+          void onSendNodeToBack(groupId)
         },
       },
     }))
@@ -1152,7 +1181,7 @@ export function WorkflowCanvas({
       selected: selectedNodeIds.includes(canvasObject.id),
       draggable: !canvasObject.is_locked,
       style: {
-        zIndex: 2,
+        zIndex: 100 + (canvasObject.z_index ?? 0) + (selectedNodeIds.includes(canvasObject.id) ? 1000 : 0),
       },
       data: {
         canvasObject,
@@ -1165,11 +1194,17 @@ export function WorkflowCanvas({
             onOpenDataObject(selected)
           }
         },
+        onBringToFront: (id) => {
+          void onBringNodeToFront(id)
+        },
+        onSendToBack: (id) => {
+          void onSendNodeToBack(id)
+        },
       },
     }))
 
     return [...groupNodes, ...activityNodes, ...objectNodes]
-  }, [activities, activityAssigneesById, activityRoleAcronymsById, activityRolesById, canvasGroups, groupingMode, hoveredConnectionTargetNodeId, liveGroupPositions, liveNodePositions, onCreateRole, onCreateSubprocess, onDeleteLinkedSubprocess, onDeleteSelection, onInlineRenameActivity, onLinkSubprocess, onOpenDataObject, onOpenSubprocess, onQuickChangeActivityRole, onQuickChangeActivityType, onRenameGroup, onSelectActivity, onToggleCollapseGroup, onToggleLockSelection, onUnlinkSubprocess, organizationRoles, roleLanes, selectedNodeIds, sourceObjects])
+  }, [activities, activityAssigneesById, activityRoleAcronymsById, activityRolesById, canvasGroups, groupLabelDrafts, groupingMode, hoveredConnectionTargetNodeId, liveGroupPositions, liveNodePositions, onBringNodeToFront, onCreateRole, onCreateSubprocess, onDeleteLinkedSubprocess, onDeleteSelection, onInlineRenameActivity, onLinkSubprocess, onOpenDataObject, onOpenSubprocess, onQuickChangeActivityRole, onQuickChangeActivityType, onRenameGroup, onSelectActivity, onSendNodeToBack, onToggleCollapseGroup, onToggleLockSelection, onUnlinkSubprocess, organizationRoles, roleLanes, selectedNodeIds, sourceObjects])
 
   const [renderNodes, setRenderNodes] = useState<Array<Node<ActivityNodeData | CanvasObjectNodeData | CanvasGroupNodeData>>>([])
 
@@ -1770,13 +1805,13 @@ export function WorkflowCanvas({
         onSelectionChange={({ nodes: nextNodes, edges: nextEdges }) => {
           const nextNodeIds = nextNodes.map((node) => node.id)
           const nextEdgeIds = nextEdges.map((edge) => edge.id)
-          const selectedActivityNodeId = nextNodeIds.length === 1 && activities.some((entry) => entry.id === nextNodeIds[0]) ? nextNodeIds[0] : null
+          const selectedSingleNodeId = nextNodeIds.length === 1 ? nextNodeIds[0] : null
           setSelectedNodeIds(nextNodeIds)
           setSelectedEdgeIds(nextEdgeIds)
           setOpenEdgePopoverId(null)
 
-          if (selectedActivityNodeId && nextEdgeIds.length === 0) {
-            onSelectionChange({ nodeId: selectedActivityNodeId, edgeId: null, dataObjectId: null })
+          if (selectedSingleNodeId && nextEdgeIds.length === 0) {
+            onSelectionChange({ nodeId: selectedSingleNodeId, edgeId: null, dataObjectId: null })
             return
           }
 
@@ -1818,7 +1853,7 @@ export function WorkflowCanvas({
           setSelectionActionMenu(null)
           setSelectionActionError(null)
           onSelectionChange({
-            nodeId: activities.some((entry) => entry.id === node.id) ? node.id : null,
+            nodeId: node.id,
             edgeId: null,
             dataObjectId: null,
           })

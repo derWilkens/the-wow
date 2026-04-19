@@ -268,21 +268,80 @@ describe('WorkflowCanvas selection actions', () => {
   it('wires selected group quick actions into the shared canvas callbacks', () => {
     const onToggleLockSelection = vi.fn()
     const onDeleteSelection = vi.fn()
+    const onBringNodeToFront = vi.fn()
+    const onSendNodeToBack = vi.fn()
 
     renderWorkflowCanvas({
       canvasGroups: [createCanvasGroup({ id: 'group-1' })],
       onToggleLockSelection,
       onDeleteSelection,
+      onBringNodeToFront,
+      onSendNodeToBack,
       selectedNodeId: 'group-1',
     })
 
-    const latestProps = getLatestReactFlowProps<{ nodes: Array<{ id: string; data?: { onToggleLock?: (groupId: string) => void; onDelete?: (groupId: string) => void } }> }>()
+    const latestProps = getLatestReactFlowProps<{ nodes: Array<{ id: string; data?: { onToggleLock?: (groupId: string) => void; onDelete?: (groupId: string) => void; onBringToFront?: (groupId: string) => void; onSendToBack?: (groupId: string) => void } }> }>()
     const groupNode = latestProps.nodes.find((node) => node.id === 'group-1')
 
+    groupNode?.data?.onBringToFront?.('group-1')
+    groupNode?.data?.onSendToBack?.('group-1')
     groupNode?.data?.onToggleLock?.('group-1')
     groupNode?.data?.onDelete?.('group-1')
 
+    expect(onBringNodeToFront).toHaveBeenCalledWith('group-1')
+    expect(onSendNodeToBack).toHaveBeenCalledWith('group-1')
     expect(onToggleLockSelection).toHaveBeenCalledWith(['group-1'])
     expect(onDeleteSelection).toHaveBeenCalledWith({ nodeIds: ['group-1'], edgeIds: [] })
+  })
+
+  it('reports single group selections back to the parent as node selections', () => {
+    const onSelectionChange = vi.fn()
+
+    renderWorkflowCanvas({
+      canvasGroups: [createCanvasGroup({ id: 'group-1' })],
+      onSelectionChange,
+    })
+
+    let latestProps = getLatestReactFlowProps<{
+      onNodeClick?: (event: unknown, node: { id: string }) => void
+      onSelectionChange?: (params: { nodes: Array<{ id: string }>; edges: Array<{ id: string }> }) => void
+    }>()
+
+    act(() => {
+      latestProps.onNodeClick?.({}, { id: 'group-1' })
+    })
+
+    expect(onSelectionChange).toHaveBeenCalledWith({ nodeId: 'group-1', edgeId: null, dataObjectId: null })
+
+    act(() => {
+      latestProps = getLatestReactFlowProps()
+      latestProps.onSelectionChange?.({
+        nodes: [{ id: 'group-1' }],
+        edges: [],
+      })
+    })
+
+    expect(onSelectionChange).toHaveBeenLastCalledWith({ nodeId: 'group-1', edgeId: null, dataObjectId: null })
+  })
+
+  it('wires selected source z-layer actions into the shared canvas callbacks', () => {
+    const onBringNodeToFront = vi.fn()
+    const onSendNodeToBack = vi.fn()
+
+    renderWorkflowCanvas({
+      canvasObjects: [createSourceObject({ id: 'source-1' })],
+      onBringNodeToFront,
+      onSendNodeToBack,
+      selectedNodeId: 'source-1',
+    })
+
+    const latestProps = getLatestReactFlowProps<{ nodes: Array<{ id: string; data?: { onBringToFront?: (id: string) => void; onSendToBack?: (id: string) => void } }> }>()
+    const sourceNode = latestProps.nodes.find((node) => node.id === 'source-1')
+
+    sourceNode?.data?.onBringToFront?.('source-1')
+    sourceNode?.data?.onSendToBack?.('source-1')
+
+    expect(onBringNodeToFront).toHaveBeenCalledWith('source-1')
+    expect(onSendNodeToBack).toHaveBeenCalledWith('source-1')
   })
 })

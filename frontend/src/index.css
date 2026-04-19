@@ -875,6 +875,33 @@ select {
   font-weight: 500;
 }
 
+.wow-source-node__layer-actions {
+  position: absolute;
+  top: -0.55rem;
+  right: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.wow-source-node__layer-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  background: rgba(8, 22, 34, 0.94);
+  color: rgba(224, 242, 254, 0.96);
+  box-shadow: 0 10px 20px rgba(2, 8, 12, 0.28);
+}
+
+.wow-source-node__layer-action:hover {
+  border-color: rgba(199, 246, 255, 0.46);
+  background: rgba(11, 29, 43, 0.96);
+}
+
 .wow-object-node__icon {
   height: 1rem;
   width: 1rem;

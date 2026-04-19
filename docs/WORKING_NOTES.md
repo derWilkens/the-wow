@@ -209,6 +209,10 @@ Important detail:
   - pan is intentionally reserved for `Space + Drag` or middle mouse
   - selection actions now include quick align and persistent grouping
   - persistent groups are separate canvas containers, not semantic subprocess aggregation
+  - first z-layer control is now intentionally narrow:
+    - groups and datenspeicher only
+    - activities/gateways remain outside manual layer control for now
+  - a layer change must persist through later move/lock/nudge/group operations
 - activity types now have a stable semantic default:
   - `Unbestimmt`
   - shown with a question-mark icon
@@ -360,14 +364,19 @@ Avoid introducing a separate business entity called `subprocess`. A child workfl
   - `edge-two-named-data-objects.spec.ts`: `1 passed`
   - `activity-detail-check-sources.spec.ts`: `1 passed`
 - Latest persistent-group verification is green with:
-  - `group-selection.spec.ts`: `1 passed`
+  - `group-selection.spec.ts`: `2 passed`
   - `canvas-groups.service.spec.ts`: `3 passed`
 - Latest group-header verification is green with:
-  - `GroupNode.test.tsx`: inline rename and collapse toggle covered
+  - `GroupNode.test.tsx`: inline rename, collapse toggle, and layer actions covered
   - `App.canvas-groups.test.ts`: persisted `collapsed` flag covered
-- Current browser blocker for the new rename/collapse path:
-  - `canvas_groups.collapsed` is wired in code but not yet visible to the running Supabase REST schema cache
-  - until that is refreshed, the extended `group-selection.spec.ts` path cannot pass end-to-end
+- Latest z-layer verification is green with:
+  - `WorkflowCanvas.layout.test.tsx`: persisted z-order rendering covered
+  - `WorkflowCanvas.selection.test.tsx`: group/source layer callbacks covered
+  - `source-z-layer.spec.ts`: `2 passed`
+- Latest quick-align verification is green with:
+  - `quick-align.spec.ts`: `2 passed`
+- Latest magnetic-target verification is green with:
+  - `magnetic-connection-targets.spec.ts`: `1 passed`
 - Latest unit verification is green with:
   - frontend: `30 / 30` Dateien
   - frontend: `139 / 139` Tests

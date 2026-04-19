@@ -1,15 +1,32 @@
-import { memo, useEffect, useState } from 'react'
+import { memo } from 'react'
 import type { NodeProps } from 'reactflow'
-import { ChevronDown, ChevronRight, FolderKanban, Lock, Trash2, Unlock } from 'lucide-react'
+import { ArrowDownToLine, ArrowUpToLine, ChevronDown, ChevronRight, FolderKanban, Lock, Trash2, Unlock } from 'lucide-react'
 import type { CanvasGroupNodeData } from '../../types'
 
 export const GroupNode = memo(function GroupNode({ data, selected }: NodeProps<CanvasGroupNodeData>) {
-  const { canvasGroup, memberCount = 0, onRename, onToggleCollapsed, onToggleLock, onDelete } = data
-  const [draftLabel, setDraftLabel] = useState(canvasGroup.label)
+  const {
+    canvasGroup,
+    memberCount = 0,
+    draftLabel = canvasGroup.label,
+    onRename,
+    onDraftLabelChange,
+    onCancelRename,
+    onToggleCollapsed,
+    onToggleLock,
+    onDelete,
+    onBringToFront,
+    onSendToBack,
+  } = data
 
-  useEffect(() => {
-    setDraftLabel(canvasGroup.label)
-  }, [canvasGroup.label])
+  function commitLabel(nextValue: string) {
+    const trimmed = nextValue.trim()
+    if (trimmed && trimmed !== canvasGroup.label) {
+      onRename?.(canvasGroup.id, trimmed)
+      return
+    }
+
+    onCancelRename?.(canvasGroup.id)
+  }
 
   return (
     <div
@@ -40,22 +57,18 @@ export const GroupNode = memo(function GroupNode({ data, selected }: NodeProps<C
             value={draftLabel}
             onMouseDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
-            onChange={(event) => setDraftLabel(event.target.value)}
-            onBlur={() => {
-              const trimmed = draftLabel.trim()
-              if (trimmed && trimmed !== canvasGroup.label) {
-                onRename?.(canvasGroup.id, trimmed)
-              } else {
-                setDraftLabel(canvasGroup.label)
-              }
-            }}
+            onChange={(event) => onDraftLabelChange?.(canvasGroup.id, event.target.value)}
+            onBlur={(event) => commitLabel(event.currentTarget.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
+                event.preventDefault()
+                commitLabel(event.currentTarget.value)
                 event.currentTarget.blur()
               }
 
               if (event.key === 'Escape') {
-                setDraftLabel(canvasGroup.label)
+                event.preventDefault()
+                onCancelRename?.(canvasGroup.id)
                 event.currentTarget.blur()
               }
             }}
@@ -68,6 +81,34 @@ export const GroupNode = memo(function GroupNode({ data, selected }: NodeProps<C
         </span>
         {selected ? (
           <div className="wow-group-node__actions" data-testid={`group-node-actions-${canvasGroup.id}`}>
+            <button
+              type="button"
+              className="wow-group-node__action nodrag"
+              data-testid={`group-node-bring-front-${canvasGroup.id}`}
+              aria-label="Gruppe nach vorne"
+              title="Gruppe nach vorne"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                onBringToFront?.(canvasGroup.id)
+              }}
+            >
+              <ArrowUpToLine className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              className="wow-group-node__action nodrag"
+              data-testid={`group-node-send-back-${canvasGroup.id}`}
+              aria-label="Gruppe nach hinten"
+              title="Gruppe nach hinten"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                onSendToBack?.(canvasGroup.id)
+              }}
+            >
+              <ArrowDownToLine className="h-3.5 w-3.5" />
+            </button>
             <button
               type="button"
               className="wow-group-node__action nodrag"

@@ -119,6 +119,7 @@ interface CanvasObjectBase {
   group_id?: string | null
   name: string
   is_locked?: boolean
+  z_index?: number
   updated_at: string
   fields?: ObjectField[]
 }
@@ -325,6 +326,7 @@ export interface UpsertCanvasObjectInput {
   object_type: CanvasObjectType
   name: string
   is_locked?: boolean
+  z_index?: number
   edge_id?: string | null
   edge_sort_order?: number | null
   position_x?: number
@@ -379,15 +381,22 @@ export interface CanvasObjectNodeData {
   showHandles?: boolean
   isConnectionPreviewTarget?: boolean
   onOpenPopup: (id: string) => void
+  onBringToFront?: (id: string) => void
+  onSendToBack?: (id: string) => void
 }
 
 export interface CanvasGroupNodeData {
   canvasGroup: CanvasGroup
   memberCount?: number
+  draftLabel?: string
   onRename?: (groupId: string, label: string) => Promise<void> | void
+  onDraftLabelChange?: (groupId: string, label: string) => void
+  onCancelRename?: (groupId: string) => void
   onToggleCollapsed?: (groupId: string) => void
   onToggleLock?: (groupId: string) => void
   onDelete?: (groupId: string) => void
+  onBringToFront?: (groupId: string) => void
+  onSendToBack?: (groupId: string) => void
 }
 
 export interface UpsertCanvasGroupInput {

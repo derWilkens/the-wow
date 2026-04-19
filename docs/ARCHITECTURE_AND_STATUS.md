@@ -51,8 +51,15 @@ Hinweis:
   - selection popover for align, group and aggregate actions
 - `frontend/src/components/canvas/GroupNode.tsx`
   - persistent container rendering for grouped nodes on the canvas
+  - now also exposes direct layer actions for selected groups
+- `frontend/src/components/canvas/SourceNode.tsx`
+  - renders persistent datenspeicher nodes
+  - now also exposes direct layer actions for selected sources
 - `frontend/src/api/canvasGroups.ts`
   - TanStack Query hooks for `canvas_groups`
+- `frontend/src/api/canvasObjects.ts`
+  - TanStack Query hooks for `canvas_objects`
+  - now used for persisted `z_index` updates on source nodes
 - `frontend/src/components/canvas/WorkflowSipocTable.tsx`
   - read-only SIPOC view derived from the loaded workflow model
   - one row per activity with aggregated supplier/input/process/process-role/output/consumer data
@@ -149,8 +156,16 @@ Hinweis:
 - `frontend/e2e/group-selection.spec.ts`
   - focused browser repro for lasso selection and persistent group creation
   - verifies group persistence after reload
-  - the spec was extended to cover group rename plus collapse persistence after reload
-  - the new browser path currently depends on `017_canvas_groups_collapsed.sql` being visible in the running REST schema cache
+  - verifies rename plus collapse persistence after reload
+- `frontend/e2e/source-z-layer.spec.ts`
+  - focused browser repro for persisted source-layer ordering
+  - verifies `nach vorne`, `nach hinten`, and reload persistence for overlapping datenspeicher
+- `frontend/e2e/quick-align.spec.ts`
+  - focused browser repro for multi-selection quick align
+  - verifies `Links ausrichten` plus reload persistence
+- `frontend/e2e/magnetic-connection-targets.spec.ts`
+  - focused browser repro for the UI preference behind magnetic target previews
+  - verifies disabled and re-enabled preview behavior after reload
 
 ## UI Surface Status
 
@@ -179,6 +194,7 @@ Hinweis:
   - activity list/upsert/delete
 - `backend/src/canvas-objects/*`
   - source/data object CRUD
+  - now also persists `z_index` for source-layer ordering
 - `backend/src/canvas-edges/*`
   - edge list/upsert/delete
 - `backend/src/canvas-groups/*`
@@ -286,6 +302,8 @@ Current edge fields:
   - adds `group_id` to `canvas_objects`
 - `017_canvas_groups_collapsed.sql`
   - adds `collapsed` to `canvas_groups`
+- `018_canvas_object_z_index.sql`
+  - adds `z_index` to `canvas_objects`
 
 ## Operational SQL Scripts
 
@@ -316,6 +334,9 @@ Stable:
 - optional header view toggles controlled through persisted UI preferences
 - direct-manipulation base for lasso, quick align and persistent groups
 - editable group labels and persistent collapse state on canvas groups
+- first persisted z-layer controls for groups and datenspeicher
+- browser-verified quick align for multi-selection
+- browser-verified magnetic connection target preference
 - hidden header search/export and header-free undo/redo layout
 - shared role-create dialog behavior between activity detail and node role badge
 - live data persistence
@@ -366,7 +387,13 @@ Latest known good local verification:
   - `54 passed`
   - `1 skipped`
 - focused persistent-group verification: green
-  - `group-selection.spec.ts`: `1 passed`
+  - `group-selection.spec.ts`: `2 passed`
+- focused source z-layer verification: green
+  - `source-z-layer.spec.ts`: `2 passed`
+- focused quick-align verification: green
+  - `quick-align.spec.ts`: `2 passed`
+- focused magnetic-target verification: green
+  - `magnetic-connection-targets.spec.ts`: `1 passed`
 - focused backend verification for canvas groups: green
   - `canvas-groups.service.spec.ts`: `3 passed`
   - the single skip is the intentionally excluded mail-/invitation-flow in `saas-organizations.spec.ts`

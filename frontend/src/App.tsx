@@ -740,10 +740,9 @@ function WorkspaceCanvasApp({
 
   const visibleCanvasObjects = useMemo(
     () =>
-      uniqueById([...canvasObjects, ...optimisticCanvasObjects]).filter(
-        (canvasObject) =>
-          !optimisticHiddenNodeIds.includes(canvasObject.id) && !collapsedGroupIds.has(canvasObject.group_id ?? ''),
-      ),
+      uniqueById([...canvasObjects, ...optimisticCanvasObjects])
+        .filter((canvasObject) => !optimisticHiddenNodeIds.includes(canvasObject.id) && !collapsedGroupIds.has(canvasObject.group_id ?? ''))
+        .sort((left, right) => (left.z_index ?? 0) - (right.z_index ?? 0)),
     [canvasObjects, collapsedGroupIds, optimisticCanvasObjects, optimisticHiddenNodeIds],
   )
   const visibleSourceObjects = useMemo(
@@ -1186,8 +1185,11 @@ function WorkspaceCanvasApp({
         await upsertCanvasObject.mutateAsync({
           id: canvasObject.id,
           parent_activity_id: canvasObject.parent_activity_id,
+          group_id: canvasObject.group_id ?? null,
           object_type: canvasObject.object_type,
           name: canvasObject.name,
+          is_locked: canvasObject.is_locked ?? false,
+          z_index: canvasObject.z_index ?? 0,
           edge_id: canvasObject.object_type === 'datenobjekt' ? canvasObject.edge_id : null,
           edge_sort_order: canvasObject.object_type === 'datenobjekt' ? canvasObject.edge_sort_order : null,
           position_x: canvasObject.object_type === 'quelle' ? canvasObject.position_x : undefined,
@@ -1648,6 +1650,7 @@ function WorkspaceCanvasApp({
       name,
       position_x: position.x,
       position_y: position.y,
+      z_index: visibleSourceObjects.reduce((max, entry) => Math.max(max, entry.z_index ?? 0), -1) + 1,
       edge_id: null,
       edge_sort_order: null,
       updated_at: new Date().toISOString(),
@@ -1665,6 +1668,7 @@ function WorkspaceCanvasApp({
         parent_activity_id: parentActivityId,
         object_type: 'quelle',
         name: optimisticObject.name,
+        z_index: optimisticObject.z_index ?? 0,
         position_x: position.x,
         position_y: position.y,
       })
@@ -1689,6 +1693,7 @@ function WorkspaceCanvasApp({
           parent_activity_id: createdObject.parent_activity_id,
           object_type: createdObject.object_type,
           name: createdObject.name,
+          z_index: createdObject.z_index ?? 0,
           position_x: pendingPosition.x,
           position_y: pendingPosition.y,
         })
@@ -2010,6 +2015,7 @@ function WorkspaceCanvasApp({
       object_type: canvasObject.object_type,
       name: canvasObject.name,
       is_locked: canvasObject.is_locked,
+      z_index: canvasObject.z_index ?? 0,
       position_x: position.x,
       position_y: position.y,
     })
@@ -2075,6 +2081,7 @@ function WorkspaceCanvasApp({
           object_type: canvasObject.object_type,
           name: canvasObject.name,
           is_locked: shouldLock,
+          z_index: canvasObject.z_index ?? 0,
           position_x: canvasObject.position_x,
           position_y: canvasObject.position_y,
         }),
@@ -2124,6 +2131,7 @@ function WorkspaceCanvasApp({
           object_type: canvasObject.object_type,
           name: `${canvasObject.name} Kopie`,
           is_locked: canvasObject.is_locked ?? false,
+          z_index: (canvasObject.z_index ?? 0) + 1,
           position_x: canvasObject.position_x + duplicateOffset,
           position_y: canvasObject.position_y + duplicateOffset,
         }),
@@ -2177,6 +2185,7 @@ function WorkspaceCanvasApp({
           object_type: canvasObject.object_type,
           name: canvasObject.name,
           is_locked: canvasObject.is_locked ?? false,
+          z_index: canvasObject.z_index ?? 0,
           position_x: canvasObject.position_x + delta.x,
           position_y: canvasObject.position_y + delta.y,
         }),
@@ -2307,6 +2316,7 @@ function WorkspaceCanvasApp({
           object_type: canvasObject.object_type,
           name: canvasObject.name,
           is_locked: canvasObject.is_locked ?? false,
+          z_index: canvasObject.z_index ?? 0,
           position_x: nextPosition.x,
           position_y: nextPosition.y,
         })
@@ -2395,6 +2405,7 @@ function WorkspaceCanvasApp({
           object_type: canvasObject.object_type,
           name: canvasObject.name,
           is_locked: canvasObject.is_locked ?? false,
+          z_index: canvasObject.z_index ?? 0,
           position_x: canvasObject.position_x,
           position_y: canvasObject.position_y,
         }),
@@ -2418,6 +2429,33 @@ function WorkspaceCanvasApp({
       collapsed: overrides.collapsed ?? group.collapsed ?? false,
       z_index: overrides.z_index ?? group.z_index ?? 0,
     })
+  }
+
+  function buildCanvasObjectUpsertInput(canvasObject: CanvasObject, overrides: Partial<UpsertCanvasObjectInput> = {}): UpsertCanvasObjectInput {
+    return {
+      id: overrides.id ?? canvasObject.id,
+      parent_activity_id: overrides.parent_activity_id ?? canvasObject.parent_activity_id,
+      group_id: overrides.group_id ?? canvasObject.group_id ?? null,
+      object_type: overrides.object_type ?? canvasObject.object_type,
+      name: overrides.name ?? canvasObject.name,
+      is_locked: overrides.is_locked ?? canvasObject.is_locked ?? false,
+      z_index: overrides.z_index ?? canvasObject.z_index ?? 0,
+      edge_id: overrides.edge_id ?? (canvasObject.object_type === 'datenobjekt' ? canvasObject.edge_id : null),
+      edge_sort_order: overrides.edge_sort_order ?? (canvasObject.object_type === 'datenobjekt' ? canvasObject.edge_sort_order : null),
+      position_x: overrides.position_x ?? (canvasObject.object_type === 'quelle' ? canvasObject.position_x : undefined),
+      position_y: overrides.position_y ?? (canvasObject.object_type === 'quelle' ? canvasObject.position_y : undefined),
+      fields:
+        overrides.fields ??
+        (canvasObject.object_type === 'datenobjekt'
+          ? (canvasObject.fields ?? []).map((field, index) => ({
+              id: field.id,
+              name: field.name,
+              field_type: field.field_type,
+              required: field.required,
+              sort_order: index,
+            }))
+          : undefined),
+    }
   }
 
   async function renameCanvasGroup(groupId: string, label: string) {
@@ -2500,11 +2538,58 @@ function WorkspaceCanvasApp({
           object_type: canvasObject.object_type,
           name: canvasObject.name,
           is_locked: canvasObject.is_locked ?? false,
+          z_index: canvasObject.z_index ?? 0,
           position_x: canvasObject.position_x + deltaX,
           position_y: canvasObject.position_y + deltaY,
         }),
       ),
     ])
+  }
+
+  async function bringCanvasNodeToFront(nodeId: string) {
+    const group = visibleCanvasGroups.find((entry) => entry.id === nodeId)
+    if (group) {
+      const maxZIndex = visibleCanvasGroups.reduce((max, entry) => Math.max(max, entry.z_index ?? 0), 0)
+      if ((group.z_index ?? 0) >= maxZIndex) {
+        return
+      }
+      rememberSnapshot()
+      await saveCanvasGroup(group, { z_index: maxZIndex + 1 })
+      return
+    }
+
+    const canvasObject = visibleSourceObjects.find((entry) => entry.id === nodeId)
+    if (canvasObject) {
+      const maxZIndex = visibleSourceObjects.reduce((max, entry) => Math.max(max, entry.z_index ?? 0), 0)
+      if ((canvasObject.z_index ?? 0) >= maxZIndex) {
+        return
+      }
+      rememberSnapshot()
+      await upsertCanvasObject.mutateAsync(buildCanvasObjectUpsertInput(canvasObject, { z_index: maxZIndex + 1 }))
+    }
+  }
+
+  async function sendCanvasNodeToBack(nodeId: string) {
+    const group = visibleCanvasGroups.find((entry) => entry.id === nodeId)
+    if (group) {
+      const minZIndex = visibleCanvasGroups.reduce((min, entry) => Math.min(min, entry.z_index ?? 0), 0)
+      if ((group.z_index ?? 0) <= minZIndex) {
+        return
+      }
+      rememberSnapshot()
+      await saveCanvasGroup(group, { z_index: minZIndex - 1 })
+      return
+    }
+
+    const canvasObject = visibleSourceObjects.find((entry) => entry.id === nodeId)
+    if (canvasObject) {
+      const minZIndex = visibleSourceObjects.reduce((min, entry) => Math.min(min, entry.z_index ?? 0), 0)
+      if ((canvasObject.z_index ?? 0) <= minZIndex) {
+        return
+      }
+      rememberSnapshot()
+      await upsertCanvasObject.mutateAsync(buildCanvasObjectUpsertInput(canvasObject, { z_index: minZIndex - 1 }))
+    }
   }
 
   async function aggregateSelectedActivities(activityIds: string[]) {
@@ -2694,8 +2779,11 @@ function WorkspaceCanvasApp({
       await upsertCanvasObject.mutateAsync({
         id: canvasObject.id,
         parent_activity_id: canvasObject.parent_activity_id,
+        group_id: canvasObject.group_id ?? null,
         object_type: canvasObject.object_type,
         name: trimmedName,
+        is_locked: canvasObject.is_locked ?? false,
+        z_index: canvasObject.z_index ?? 0,
         edge_id: canvasObject.edge_id,
         edge_sort_order: canvasObject.edge_sort_order,
         fields: (canvasObject.fields ?? []).map((field, index) => ({
@@ -3138,6 +3226,8 @@ function WorkspaceCanvasApp({
                   onMoveGroup={(groupId, position) => void moveCanvasGroup(groupId, position)}
                   onRenameGroup={(groupId, label) => void renameCanvasGroup(groupId, label)}
                   onToggleCollapseGroup={(groupId) => void toggleCanvasGroupCollapsed(groupId)}
+                  onBringNodeToFront={(nodeId) => void bringCanvasNodeToFront(nodeId)}
+                  onSendNodeToBack={(nodeId) => void sendCanvasNodeToBack(nodeId)}
                   onAggregateActivities={(activityIds) => void aggregateSelectedActivities(activityIds)}
                   onDeleteEdges={(edgeIds) => void removeEdges(edgeIds)}
                   onDeleteDataObject={(id) => void removeDataObject(id)}
