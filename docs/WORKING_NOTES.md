@@ -176,9 +176,12 @@ Important detail:
 - the `UI` section now also controls whether optional workflow views are visible:
   - `Tabellensicht`
   - `Swimlane View`
-  - both default to off
+  - `Theme` with `System`, `Hell`, `Dunkel`
+  - `Tabellensicht` and `Swimlane View` both default to off
   - if disabled, their header toggles are intentionally hidden
   - disabling swimlanes also forces the saved grouping mode back to `free`
+  - UI preferences are now persisted per user in the backend key/value store under `ui_preferences`
+  - older local `wow-ui-preferences` values are intentionally ignored
 - company name changes are now handled in that settings dialog and should update visible organization context immediately
 - roles are now also managed centrally from that same settings dialog:
   - create, edit, and delete from the company catalog
@@ -298,6 +301,11 @@ Important detail:
   - verifies default-hidden optional view controls
   - verifies enabling/disabling `Tabellensicht` and `Swimlane View`
   - verifies that search/export stay hidden and undo/redo remain only in the floating toolbar
+  - persists via `/user-preferences/ui_preferences`
+- a dedicated browser flow now also exists for theme preferences:
+  - `frontend/e2e/theme-preferences.spec.ts`
+  - verifies `System`, `Hell`, `Dunkel`
+  - verifies reload persistence via `/user-preferences/ui_preferences`
 - current rule for large browser failures:
   - isolate the concrete failing interaction in a dedicated repro spec first
   - get that smaller repro green
@@ -403,6 +411,11 @@ Avoid introducing a separate business entity called `subprocess`. A child workfl
   - `SettingsDialog.test.tsx`: persisted UI flags and grouping fallback covered
   - `WorkflowCanvas.layout.test.tsx`: grouping regression remains covered
   - `view-preferences.spec.ts`: `1 passed`
+- Latest theme-preferences verification is green with:
+  - `uiPreferences.test.ts`: covered
+  - `useDocumentTheme.test.tsx`: covered
+  - `user-preferences.service.spec.ts`: `2 passed`
+  - `theme-preferences.spec.ts`: `1 passed`
 - Latest role/assignee model verification is green with:
   - local save path remains functional through fallback behavior even when migration `013_activity_roles_and_assignments.sql` is not yet applied
 - Latest shared role-create dialog verification is green with:

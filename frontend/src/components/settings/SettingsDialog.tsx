@@ -19,60 +19,10 @@ import {
   useTransportModes,
   useUpdateTransportMode,
 } from '../../api/transportModes'
+import { normalizeUiPreferences } from '../../lib/uiPreferences'
 import type { CatalogRole, CanvasGroupingMode, ITTool, OrganizationRole, TransportModeOption, UiPreferences } from '../../types'
 
 type SettingsSection = 'company' | 'ui' | 'master-data'
-
-const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
-
-function readUiPreferences(): UiPreferences {
-  if (typeof window === 'undefined') {
-    return {
-      default_grouping_mode: 'free',
-      snap_to_grid: true,
-      enable_table_view: false,
-      enable_swimlane_view: false,
-      enable_node_collision_avoidance: true,
-      enable_alignment_guides: true,
-      enable_magnetic_connection_targets: true,
-    }
-  }
-
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(UI_PREFERENCES_STORAGE_KEY) ?? '{}') as Partial<UiPreferences>
-    return {
-      default_grouping_mode:
-        parsed.default_grouping_mode === 'role_lanes' || parsed.default_grouping_mode === 'free'
-          ? parsed.default_grouping_mode
-          : 'free',
-      snap_to_grid: typeof parsed.snap_to_grid === 'boolean' ? parsed.snap_to_grid : true,
-      enable_table_view: typeof parsed.enable_table_view === 'boolean' ? parsed.enable_table_view : false,
-      enable_swimlane_view: typeof parsed.enable_swimlane_view === 'boolean' ? parsed.enable_swimlane_view : false,
-      enable_node_collision_avoidance: typeof parsed.enable_node_collision_avoidance === 'boolean' ? parsed.enable_node_collision_avoidance : true,
-      enable_alignment_guides: typeof parsed.enable_alignment_guides === 'boolean' ? parsed.enable_alignment_guides : true,
-      enable_magnetic_connection_targets:
-        typeof parsed.enable_magnetic_connection_targets === 'boolean' ? parsed.enable_magnetic_connection_targets : true,
-    }
-  } catch {
-    return {
-      default_grouping_mode: 'free',
-      snap_to_grid: true,
-      enable_table_view: false,
-      enable_swimlane_view: false,
-      enable_node_collision_avoidance: true,
-      enable_alignment_guides: true,
-      enable_magnetic_connection_targets: true,
-    }
-  }
-}
-
-function writeUiPreferences(preferences: UiPreferences) {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  window.localStorage.setItem(UI_PREFERENCES_STORAGE_KEY, JSON.stringify(preferences))
-}
 
 function TransportModeRow({
   mode,
@@ -319,6 +269,8 @@ export function SettingsDialog({
   organizationName,
   organizationRole,
   isOpen,
+  uiPreferences: persistedUiPreferences,
+  isSavingUiPreferences,
   onClose,
   onOrganizationRenamed,
   onUiPreferencesChange,
@@ -327,9 +279,11 @@ export function SettingsDialog({
   organizationName: string
   organizationRole: OrganizationRole | null
   isOpen: boolean
+  uiPreferences: UiPreferences
+  isSavingUiPreferences: boolean
   onClose: () => void
   onOrganizationRenamed: (name: string) => void
-  onUiPreferencesChange: (preferences: UiPreferences) => void
+  onUiPreferencesChange: (preferences: UiPreferences) => Promise<void> | void
 }) {
   const [activeSection, setActiveSection] = useState<SettingsSection>('company')
   const [organizationFormName, setOrganizationFormName] = useState(organizationName)
@@ -343,7 +297,8 @@ export function SettingsDialog({
   const [newRoleLabel, setNewRoleLabel] = useState('')
   const [newRoleAcronym, setNewRoleAcronym] = useState('')
   const [newRoleDescription, setNewRoleDescription] = useState('')
-  const [uiPreferences, setUiPreferences] = useState<UiPreferences>(() => readUiPreferences())
+  const [uiPreferences, setUiPreferences] = useState<UiPreferences>(() => normalizeUiPreferences(persistedUiPreferences))
+  const [uiPreferencesError, setUiPreferencesError] = useState<string | null>(null)
 
   const { data: transportModes = [] } = useTransportModes(isOpen ? organizationId : null)
   const { data: itTools = [] } = useOrganizationITTools(isOpen ? organizationId : null)
@@ -369,8 +324,9 @@ export function SettingsDialog({
       return
     }
 
-    setUiPreferences(readUiPreferences())
-  }, [isOpen])
+    setUiPreferences(normalizeUiPreferences(persistedUiPreferences))
+    setUiPreferencesError(null)
+  }, [isOpen, persistedUiPreferences])
 
   const sortedTransportModes = useMemo(
     () =>
@@ -502,6 +458,62 @@ export function SettingsDialog({
                       >
                         Nach Rollen gruppieren
                     </button>
+                  </div>
+                  <div className="mt-5">
+                    <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Theme</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Waehlt aus, ob die Oberflaeche dem System folgt oder explizit im hellen bzw. dunklen Modus dargestellt wird.
+                    </p>
+                    <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+                      <button
+                        type="button"
+                        data-testid="settings-ui-theme-system"
+                        onClick={() => setUiPreferences((current) => ({ ...current, theme_mode: 'system' }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.theme_mode === 'system' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        System
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="settings-ui-theme-light"
+                        onClick={() => setUiPreferences((current) => ({ ...current, theme_mode: 'light' }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.theme_mode === 'light' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Hell
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="settings-ui-theme-dark"
+                        onClick={() => setUiPreferences((current) => ({ ...current, theme_mode: 'dark' }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.theme_mode === 'dark' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Dunkel
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-5">
+                    <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Canvas-Startansicht</p>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Legt fest, ob ein Ablauf beim Oeffnen im Fit View startet oder die zuletzt gespeicherte Sicht wiederherstellt.
+                    </p>
+                    <div className="mt-4 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1">
+                      <button
+                        type="button"
+                        data-testid="settings-ui-canvas-open-fit-view"
+                        onClick={() => setUiPreferences((current) => ({ ...current, canvas_open_behavior: 'fit_view' }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.canvas_open_behavior === 'fit_view' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Fit View
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="settings-ui-canvas-open-remember-last-view"
+                        onClick={() => setUiPreferences((current) => ({ ...current, canvas_open_behavior: 'remember_last_view' }))}
+                        className={`rounded-full px-4 py-2 text-sm ${uiPreferences.canvas_open_behavior === 'remember_last_view' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+                      >
+                        Letzte Sicht
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-5">
                     <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Tabellensicht</p>
@@ -647,20 +659,26 @@ export function SettingsDialog({
                       </button>
                     </div>
                   </div>
+                  {uiPreferencesError ? <p className="mt-4 text-sm text-rose-200">{uiPreferencesError}</p> : null}
                   <div className="mt-4 flex justify-end">
                     <button
                       type="button"
                       data-testid="settings-ui-save"
-                      onClick={() => {
+                      disabled={isSavingUiPreferences}
+                      onClick={async () => {
+                        setUiPreferencesError(null)
                         const nextPreferences = {
                           ...uiPreferences,
                           default_grouping_mode:
                             uiPreferences.enable_swimlane_view ? uiPreferences.default_grouping_mode : 'free',
                         }
-                        writeUiPreferences(nextPreferences)
-                        onUiPreferencesChange(nextPreferences)
+                        try {
+                          await onUiPreferencesChange(nextPreferences)
+                        } catch (error) {
+                          setUiPreferencesError(error instanceof Error ? error.message : 'Praeferenzen konnten nicht gespeichert werden.')
+                        }
                       }}
-                      className="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950"
+                      className="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-40"
                     >
                       Praeferenzen speichern
                     </button>

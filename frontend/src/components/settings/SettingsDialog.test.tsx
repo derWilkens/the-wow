@@ -1,5 +1,7 @@
+import type { ComponentProps } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { UiPreferences } from '../../types'
 import { SettingsDialog } from './SettingsDialog'
 
 const mutateUpdateOrganizationAsync = vi.fn()
@@ -12,6 +14,18 @@ const mutateDeleteItToolAsync = vi.fn()
 const mutateCreateRoleAsync = vi.fn()
 const mutateUpdateRoleAsync = vi.fn()
 const mutateDeleteRoleAsync = vi.fn()
+
+const defaultUiPreferences: UiPreferences = {
+  default_grouping_mode: 'free',
+  canvas_open_behavior: 'fit_view',
+  snap_to_grid: true,
+  enable_table_view: false,
+  enable_swimlane_view: false,
+  enable_node_collision_avoidance: true,
+  enable_alignment_guides: true,
+  enable_magnetic_connection_targets: true,
+  theme_mode: 'system',
+}
 
 vi.mock('../../api/organizations', () => ({
   useUpdateOrganization: () => ({
@@ -103,20 +117,22 @@ vi.mock('../../api/organizationRoles', () => ({
 
 describe('SettingsDialog', () => {
   beforeEach(() => {
-    localStorage.clear()
     vi.clearAllMocks()
   })
 
-  function renderDialog() {
+  function renderDialog(overrides: Partial<ComponentProps<typeof SettingsDialog>> = {}) {
     return render(
       <SettingsDialog
         organizationId="org-1"
         organizationName="Acme GmbH"
         organizationRole="owner"
         isOpen
+        uiPreferences={defaultUiPreferences}
+        isSavingUiPreferences={false}
         onClose={vi.fn()}
         onOrganizationRenamed={vi.fn()}
         onUiPreferencesChange={vi.fn()}
+        {...overrides}
       />,
     )
   }
@@ -129,17 +145,7 @@ describe('SettingsDialog', () => {
       membership_role: 'owner',
     })
 
-    render(
-      <SettingsDialog
-        organizationId="org-1"
-        organizationName="Acme GmbH"
-        organizationRole="owner"
-        isOpen
-        onClose={vi.fn()}
-        onOrganizationRenamed={onOrganizationRenamed}
-        onUiPreferencesChange={vi.fn()}
-      />,
-    )
+    renderDialog({ onOrganizationRenamed })
 
     fireEvent.change(screen.getByTestId('settings-company-name'), { target: { value: 'Neue Acme GmbH' } })
     fireEvent.click(screen.getByTestId('settings-company-save'))
@@ -153,54 +159,45 @@ describe('SettingsDialog', () => {
     expect(onOrganizationRenamed).toHaveBeenCalledWith('Neue Acme GmbH')
   })
 
-  it('saves ui preferences including snap to grid', () => {
-    const onUiPreferencesChange = vi.fn()
+  it('saves ui preferences including theme mode', async () => {
+    const onUiPreferencesChange = vi.fn().mockResolvedValue(undefined)
 
-    render(
-      <SettingsDialog
-        organizationId="org-1"
-        organizationName="Acme GmbH"
-        organizationRole="owner"
-        isOpen
-        onClose={vi.fn()}
-        onOrganizationRenamed={vi.fn()}
-        onUiPreferencesChange={onUiPreferencesChange}
-      />,
-    )
+    renderDialog({ onUiPreferencesChange })
 
     fireEvent.click(screen.getByTestId('settings-nav-ui'))
     fireEvent.click(screen.getByTestId('settings-ui-grouping-lanes'))
+    fireEvent.click(screen.getByTestId('settings-ui-canvas-open-remember-last-view'))
     fireEvent.click(screen.getByTestId('settings-ui-table-view-on'))
     fireEvent.click(screen.getByTestId('settings-ui-swimlane-on'))
     fireEvent.click(screen.getByTestId('settings-ui-snap-off'))
     fireEvent.click(screen.getByTestId('settings-ui-collision-off'))
     fireEvent.click(screen.getByTestId('settings-ui-alignment-guides-off'))
     fireEvent.click(screen.getByTestId('settings-ui-magnetic-targets-off'))
+    fireEvent.click(screen.getByTestId('settings-ui-theme-light'))
     fireEvent.click(screen.getByTestId('settings-ui-save'))
 
-    expect(onUiPreferencesChange).toHaveBeenCalledWith({
-      default_grouping_mode: 'role_lanes',
-      snap_to_grid: false,
-      enable_table_view: true,
-      enable_swimlane_view: true,
-      enable_node_collision_avoidance: false,
-      enable_alignment_guides: false,
-      enable_magnetic_connection_targets: false,
-    })
-    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('role_lanes')
-    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"snap_to_grid":false')
-    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_table_view":true')
-    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_swimlane_view":true')
-    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_node_collision_avoidance":false')
-    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_alignment_guides":false')
-    expect(window.localStorage.getItem('wow-ui-preferences')).toContain('"enable_magnetic_connection_targets":false')
+    await waitFor(() =>
+      expect(onUiPreferencesChange).toHaveBeenCalledWith({
+        default_grouping_mode: 'role_lanes',
+        canvas_open_behavior: 'remember_last_view',
+        snap_to_grid: false,
+        enable_table_view: true,
+        enable_swimlane_view: true,
+        enable_node_collision_avoidance: false,
+        enable_alignment_guides: false,
+        enable_magnetic_connection_targets: false,
+        theme_mode: 'light',
+      }),
+    )
   })
 
-  it('defaults snap to grid to enabled and optional views to disabled when no preference is stored', () => {
+  it('defaults theme mode to system when no custom preference is supplied', () => {
     renderDialog()
 
     fireEvent.click(screen.getByTestId('settings-nav-ui'))
 
+    expect(screen.getByTestId('settings-ui-theme-system')).toHaveClass('bg-cyan-400')
+    expect(screen.getByTestId('settings-ui-canvas-open-fit-view')).toHaveClass('bg-cyan-400')
     expect(screen.getByTestId('settings-ui-snap-on')).toHaveClass('bg-cyan-400')
     expect(screen.getByTestId('settings-ui-table-view-off')).toHaveClass('bg-cyan-400')
     expect(screen.getByTestId('settings-ui-swimlane-off')).toHaveClass('bg-cyan-400')
@@ -209,35 +206,29 @@ describe('SettingsDialog', () => {
     expect(screen.getByTestId('settings-ui-magnetic-targets-on')).toHaveClass('bg-cyan-400')
   })
 
-  it('resets grouping to free when swimlane view is disabled before saving', () => {
-    const onUiPreferencesChange = vi.fn()
+  it('resets grouping to free when swimlane view is disabled before saving', async () => {
+    const onUiPreferencesChange = vi.fn().mockResolvedValue(undefined)
 
-    render(
-      <SettingsDialog
-        organizationId="org-1"
-        organizationName="Acme GmbH"
-        organizationRole="owner"
-        isOpen
-        onClose={vi.fn()}
-        onOrganizationRenamed={vi.fn()}
-        onUiPreferencesChange={onUiPreferencesChange}
-      />,
-    )
+    renderDialog({ onUiPreferencesChange })
 
     fireEvent.click(screen.getByTestId('settings-nav-ui'))
     fireEvent.click(screen.getByTestId('settings-ui-grouping-lanes'))
     fireEvent.click(screen.getByTestId('settings-ui-swimlane-off'))
     fireEvent.click(screen.getByTestId('settings-ui-save'))
 
-    expect(onUiPreferencesChange).toHaveBeenCalledWith({
-      default_grouping_mode: 'free',
-      snap_to_grid: true,
-      enable_table_view: false,
-      enable_swimlane_view: false,
-      enable_node_collision_avoidance: true,
-      enable_alignment_guides: true,
-      enable_magnetic_connection_targets: true,
-    })
+    await waitFor(() =>
+      expect(onUiPreferencesChange).toHaveBeenCalledWith({
+        default_grouping_mode: 'free',
+        canvas_open_behavior: 'fit_view',
+        snap_to_grid: true,
+        enable_table_view: false,
+        enable_swimlane_view: false,
+        enable_node_collision_avoidance: true,
+        enable_alignment_guides: true,
+        enable_magnetic_connection_targets: true,
+        theme_mode: 'system',
+      }),
+    )
   })
 
   it('creates transport modes, roles and organization IT tools from the master-data section', async () => {

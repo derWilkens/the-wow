@@ -1,6 +1,6 @@
 # Test Strategy
 
-Stand: 2026-04-18
+Stand: 2026-04-21
 
 ## Zielbild
 
@@ -175,6 +175,7 @@ Aktuelle Beispiele:
 - `frontend/e2e/view-preferences.spec.ts`
   - gezielter Repro fuer sichtbare/unsichtbare optionale Views im Header
   - prueft Defaults, Aktivierung, Deaktivierung und den aufgeraeumten Header ohne Suche/Export
+  - Persistenz laeuft ueber `/user-preferences/ui_preferences`
 - `frontend/e2e/activity-type-quick-change.spec.ts`
   - gezielter Repro fuer den direkten Typwechsel am Aktivitaets-Node
   - prueft Tooltip, Popover, sofortiges Speichern und Persistenz ueber eine frische Sitzung
@@ -187,6 +188,9 @@ Aktuelle Beispiele:
 - `frontend/e2e/magnetic-connection-targets.spec.ts`
   - gezielter Repro fuer die UI-Praeferenz `Magnetische Verbindungsziele`
   - prueft ausgeschaltetes und wieder eingeschaltetes Preview-Verhalten nach Reload
+- `frontend/e2e/theme-preferences.spec.ts`
+  - gezielter Repro fuer benutzerbezogene Theme-Persistenz
+  - prueft `System`, `Hell`, `Dunkel` und Reload-Verhalten ueber `/user-preferences/ui_preferences`
 
 Diese Specs sind absichtlich klein und diagnostisch stark.
 
@@ -269,6 +273,7 @@ Die Vollsuite ist **nicht** das beste erste Diagnosewerkzeug fuer einen frisch g
 - bei alternativen Ansichten wie SIPOC zuerst die reine Ableitungslogik per Unit-Test absichern und erst dann die View-Umschaltung im Browser pruefen
 - bei workflowweiten Metadaten zuerst den direkten Update-Pfad im Backend testen, dann den Dialog isoliert als Komponente und erst danach den Header-Einstieg im Browser pruefen
 - bei UI-Praeferenzen fuer sichtbare Views zuerst den Header und den Settings-Dialog als Komponenten absichern und dann einen kleinen Browsertest fuer Persistenz und Sichtbarkeit anlegen
+- bei benutzerbezogenen UI-Praeferenzen keine `localStorage`-Annahmen mehr in E2E verwenden; produktive Persistenz laeuft ueber `user_preferences`
 - bei kleinen Direktinteraktionen auf dem Node zuerst den isolierten Komponentenpfad testen und danach einen schmalen Browser-Repro fuer Speichern plus Persistenz anlegen
 - bei neuer Canvas-Direktmanipulation denselben Ablauf verfolgen:
   - Komponentenlogik fuer Selection/Popover

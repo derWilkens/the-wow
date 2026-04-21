@@ -1,45 +1,40 @@
 import { expect, test } from '@playwright/test'
-import { cleanupOrganizationsByNames, cleanupWorkspaces, createWorkflow, getAccessToken, loginAs, testSuffix } from './helpers'
+import { cleanupWorkspaces, createWorkflow, getAccessToken, login, testSuffix } from './helpers'
 
-const settingsUserEmail = '2@derwilkens.de'
-const settingsUserPassword = 'Wilkens:)'
 const settingsApiBaseUrl = process.env.E2E_API_BASE_URL || 'http://127.0.0.1:3000'
 
-async function loginForViewPreferences(page: Parameters<typeof test>[0]['page']) {
-  await loginAs(page, settingsUserEmail, settingsUserPassword)
-  await Promise.race([
-    page.getByRole('heading', { name: /Firma ausw|Firma anlegen/i }).waitFor({ state: 'visible', timeout: 20_000 }),
-    page.getByRole('heading', { name: /Arbeitsablauf ausw/i }).waitFor({ state: 'visible', timeout: 20_000 }),
-    page.getByTestId('toolbar-activity').waitFor({ state: 'visible', timeout: 20_000 }),
-  ])
-  await expect.poll(async () => getAccessToken(page), { timeout: 20_000 }).toBeTruthy()
-}
-
-async function createOrganizationForSession(page: Parameters<typeof test>[0]['page'], organizationName: string) {
+async function readUiPreferences(page: Parameters<typeof test>[0]['page']) {
   const accessToken = await getAccessToken(page)
   expect(accessToken).toBeTruthy()
 
-  const response = await page.request.post(`${settingsApiBaseUrl}/organizations`, {
+  const response = await page.request.get(`${settingsApiBaseUrl}/user-preferences/ui_preferences`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    failOnStatusCode: false,
+  })
+
+  expect(response.ok()).toBeTruthy()
+  const text = await response.text()
+  return text ? (JSON.parse(text) as { key: string; value: Record<string, unknown>; updated_at: string } | null) : null
+}
+
+async function setUiPreferences(page: Parameters<typeof test>[0]['page'], value: Record<string, unknown>) {
+  const accessToken = await getAccessToken(page)
+  expect(accessToken).toBeTruthy()
+
+  const response = await page.request.put(`${settingsApiBaseUrl}/user-preferences/ui_preferences`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     data: {
-      name: organizationName,
+      preference_value: value,
     },
+    failOnStatusCode: false,
   })
 
   expect(response.ok()).toBeTruthy()
-  const organization = (await response.json()) as { id: string; name: string }
-
-  await page.evaluate((organizationId) => {
-    window.localStorage.setItem('wow-active-organization-id', organizationId)
-  }, organization.id)
-  await page.reload()
-  await page.getByTestId(`organization-select-${organization.id}`).click()
-  await page.getByRole('heading', { name: /Arbeitsablauf ausw/i }).waitFor({ state: 'visible', timeout: 20_000 })
-
-  return organization
 }
 
 test.describe('view preferences', () => {
@@ -47,14 +42,27 @@ test.describe('view preferences', () => {
     test.setTimeout(60_000)
 
     const suffix = testSuffix()
-    const organizationName = `View Pref Org ${suffix}`
     const workflowName = `View Pref Workflow ${suffix}`
     const createdWorkspaceIds: string[] = []
     let accessToken: string | null = null
+    let originalPreferences: { key: string; value: Record<string, unknown>; updated_at: string } | null = null
 
     try {
-      await loginForViewPreferences(page)
-      await createOrganizationForSession(page, organizationName)
+      await login(page)
+      accessToken = await getAccessToken(page)
+      originalPreferences = await readUiPreferences(page)
+      await setUiPreferences(page, {
+        default_grouping_mode: 'free',
+        canvas_open_behavior: 'fit_view',
+        snap_to_grid: true,
+        enable_table_view: false,
+        enable_swimlane_view: false,
+        enable_node_collision_avoidance: true,
+        enable_alignment_guides: true,
+        enable_magnetic_connection_targets: true,
+        theme_mode: 'system',
+      })
+      await login(page)
       accessToken = await getAccessToken(page)
 
       const workflow = await createWorkflow(page, workflowName)
@@ -69,15 +77,24 @@ test.describe('view preferences', () => {
       await expect(page.getByTestId('toolbar-canvas-search')).toHaveCount(0)
       await expect(page.getByTestId('toolbar-export')).toHaveCount(0)
 
-      const defaultPreferences = await page.evaluate(() => window.localStorage.getItem('wow-ui-preferences'))
-      expect(defaultPreferences === null || defaultPreferences.includes('"enable_table_view":false')).toBeTruthy()
-      expect(defaultPreferences === null || defaultPreferences.includes('"enable_swimlane_view":false')).toBeTruthy()
+      const defaultPreferences = await readUiPreferences(page)
+      if (defaultPreferences) {
+        expect(defaultPreferences.value.enable_table_view).toBe(false)
+        expect(defaultPreferences.value.enable_swimlane_view).toBe(false)
+      }
 
       await page.getByTestId('toolbar-settings').click()
       await page.getByTestId('settings-nav-ui').click()
       await page.getByTestId('settings-ui-table-view-on').click()
       await page.getByTestId('settings-ui-swimlane-on').click()
+      const enablePreferencesResponse = page.waitForResponse(
+        (response) =>
+          response.url().includes('/user-preferences/ui_preferences') &&
+          response.request().method() === 'PUT',
+        { timeout: 15_000 },
+      )
       await page.getByTestId('settings-ui-save').click()
+      expect((await enablePreferencesResponse).ok()).toBe(true)
       await page.getByTestId('settings-dialog-close').click()
 
       await expect(page.getByTestId('toolbar-view-sipoc')).toBeVisible()
@@ -87,15 +104,22 @@ test.describe('view preferences', () => {
       await expect(page.getByTestId('toolbar-undo')).toHaveCount(1)
       await expect(page.getByTestId('toolbar-redo')).toHaveCount(1)
 
-      const enabledPreferences = await page.evaluate(() => window.localStorage.getItem('wow-ui-preferences'))
-      expect(enabledPreferences).toContain('"enable_table_view":true')
-      expect(enabledPreferences).toContain('"enable_swimlane_view":true')
+      const enabledPreferences = await readUiPreferences(page)
+      expect(enabledPreferences?.value.enable_table_view).toBe(true)
+      expect(enabledPreferences?.value.enable_swimlane_view).toBe(true)
 
       await page.getByTestId('toolbar-settings').click()
       await page.getByTestId('settings-nav-ui').click()
       await page.getByTestId('settings-ui-table-view-off').click()
       await page.getByTestId('settings-ui-swimlane-off').click()
+      const disablePreferencesResponse = page.waitForResponse(
+        (response) =>
+          response.url().includes('/user-preferences/ui_preferences') &&
+          response.request().method() === 'PUT',
+        { timeout: 15_000 },
+      )
       await page.getByTestId('settings-ui-save').click()
+      expect((await disablePreferencesResponse).ok()).toBe(true)
       await page.getByTestId('settings-dialog-close').click()
 
       await expect(page.getByTestId('toolbar-view-canvas')).toHaveCount(0)
@@ -106,12 +130,14 @@ test.describe('view preferences', () => {
       await expect(page.getByTestId('toolbar-undo')).toHaveCount(1)
       await expect(page.getByTestId('toolbar-redo')).toHaveCount(1)
 
-      const disabledPreferences = await page.evaluate(() => window.localStorage.getItem('wow-ui-preferences'))
-      expect(disabledPreferences).toContain('"enable_table_view":false')
-      expect(disabledPreferences).toContain('"enable_swimlane_view":false')
+      const disabledPreferences = await readUiPreferences(page)
+      expect(disabledPreferences?.value.enable_table_view).toBe(false)
+      expect(disabledPreferences?.value.enable_swimlane_view).toBe(false)
     } finally {
+      if (originalPreferences) {
+        await setUiPreferences(page, originalPreferences.value).catch(() => undefined)
+      }
       await cleanupWorkspaces(request, createdWorkspaceIds, accessToken)
-      await cleanupOrganizationsByNames([organizationName])
     }
   })
 })

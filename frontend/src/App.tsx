@@ -4,6 +4,7 @@ import type { Connection } from 'reactflow'
 import { useActivities, useAggregateActivitiesToSubprocess, useCreateSubprocess, useDeleteActivity, useLinkSubprocess, useUnlinkSubprocess, useUpsertActivity } from './api/activities'
 import { useAcceptOrganizationInvitation, useCreateOrganization, useOrganizations, usePendingOrganizationInvitations } from './api/organizations'
 import { useCreateOrganizationRole, useOrganizationRoles } from './api/organizationRoles'
+import { useUpsertUserPreference, useUserPreference } from './api/userPreferences'
 import { useCanvasEdges, useDeleteCanvasEdge, useUpsertCanvasEdge } from './api/canvasEdges'
 import { useCanvasGroups, useDeleteCanvasGroup, useUpsertCanvasGroup } from './api/canvasGroups'
 import { useCanvasObjects, useDeleteCanvasObject, useUpsertCanvasObject } from './api/canvasObjects'
@@ -28,63 +29,30 @@ import { SettingsDialog } from './components/settings/SettingsDialog'
 import { WorkspaceList } from './components/workspace/WorkspaceList'
 import { WorkflowDetailDialog } from './components/workspace/WorkflowDetailDialog'
 import { useAuthSession } from './hooks/useAuthSession'
+import { useDocumentTheme } from './hooks/useDocumentTheme'
+import { UI_PREFERENCES_KEY, getDefaultUiPreferences, normalizeUiPreferences } from './lib/uiPreferences'
+import { WORKSPACE_VIEW_MEMORY_KEY, normalizeWorkspaceViewMemory } from './lib/workspaceViewMemory'
 import { supabase } from './lib/supabase'
 import { useCanvasStore } from './store/canvasStore'
 import type {
   Activity,
+  CanvasOpenBehavior,
   CanvasEdge,
   CanvasGroup,
   CanvasGroupingMode,
   CanvasObject,
   EdgeDataObject,
+  HierarchyFocusState,
   ObjectField,
   TransportModeOption,
   UiPreferences,
+  UiThemeMode,
   UpsertCanvasObjectInput,
+  ViewportCenter,
   WorkflowViewMode,
+  WorkspaceViewMemory,
   Workspace,
-  HierarchyFocusState,
 } from './types'
-
-const UI_PREFERENCES_STORAGE_KEY = 'wow-ui-preferences'
-
-function readUiPreferences(): UiPreferences {
-  if (typeof window === 'undefined') {
-    return {
-      default_grouping_mode: 'free',
-      snap_to_grid: true,
-      enable_table_view: false,
-      enable_swimlane_view: false,
-      enable_node_collision_avoidance: true,
-      enable_alignment_guides: true,
-      enable_magnetic_connection_targets: true,
-    }
-  }
-
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(UI_PREFERENCES_STORAGE_KEY) ?? '{}') as Partial<UiPreferences>
-    return {
-      default_grouping_mode: parsed.default_grouping_mode === 'role_lanes' ? 'role_lanes' : 'free',
-      snap_to_grid: typeof parsed.snap_to_grid === 'boolean' ? parsed.snap_to_grid : true,
-      enable_table_view: typeof parsed.enable_table_view === 'boolean' ? parsed.enable_table_view : false,
-      enable_swimlane_view: typeof parsed.enable_swimlane_view === 'boolean' ? parsed.enable_swimlane_view : false,
-      enable_node_collision_avoidance: typeof parsed.enable_node_collision_avoidance === 'boolean' ? parsed.enable_node_collision_avoidance : true,
-      enable_alignment_guides: typeof parsed.enable_alignment_guides === 'boolean' ? parsed.enable_alignment_guides : true,
-      enable_magnetic_connection_targets:
-        typeof parsed.enable_magnetic_connection_targets === 'boolean' ? parsed.enable_magnetic_connection_targets : true,
-    }
-  } catch {
-    return {
-      default_grouping_mode: 'free',
-      snap_to_grid: true,
-      enable_table_view: false,
-      enable_swimlane_view: false,
-      enable_node_collision_avoidance: true,
-      enable_alignment_guides: true,
-      enable_magnetic_connection_targets: true,
-    }
-  }
-}
 
 interface CanvasSnapshot {
   activities: Activity[]
@@ -103,8 +71,22 @@ export default function App() {
   const { organizationId, organizationRole, workspaceId, workspaceName, selectOrganization, leaveOrganization } = useCanvasStore()
   const { data: organizations = [], isLoading: organizationsLoading } = useOrganizations(Boolean(session))
   const { data: pendingInvitations = [], isLoading: invitationsLoading } = usePendingOrganizationInvitations(Boolean(session))
+  const { data: userUiPreference } = useUserPreference<UiPreferences>(UI_PREFERENCES_KEY, Boolean(session))
+  const upsertUiPreference = useUpsertUserPreference<UiPreferences>(UI_PREFERENCES_KEY)
   const createOrganization = useCreateOrganization()
   const acceptInvitation = useAcceptOrganizationInvitation()
+  const [uiPreferences, setUiPreferences] = useState<UiPreferences>(() => getDefaultUiPreferences())
+
+  useEffect(() => {
+    if (!session) {
+      setUiPreferences(getDefaultUiPreferences())
+      return
+    }
+
+    setUiPreferences(normalizeUiPreferences(userUiPreference?.value))
+  }, [session, userUiPreference])
+
+  useDocumentTheme(uiPreferences.theme_mode)
 
   useEffect(() => {
     if (organizations.length === 0) {
@@ -168,6 +150,13 @@ export default function App() {
       organizationId={organizationId}
       organizationRole={organizationRole}
       currentUserId={session.user.id}
+      uiPreferences={uiPreferences}
+      onUiPreferencesChange={async (preferences) => {
+        const normalizedPreferences = normalizeUiPreferences(preferences)
+        const savedPreference = await upsertUiPreference.mutateAsync(normalizedPreferences)
+        setUiPreferences(normalizeUiPreferences(savedPreference.value))
+      }}
+      isSavingUiPreferences={upsertUiPreference.isPending}
     />
   )
 }
@@ -208,6 +197,14 @@ function areStringArraysEqual(left: string[] | undefined, right: string[] | unde
   }
 
   return leftValues.every((value, index) => value === rightValues[index])
+}
+
+function areViewportCentersEqual(left: ViewportCenter | null | undefined, right: ViewportCenter | null | undefined) {
+  if (!left || !right) {
+    return false
+  }
+
+  return left.x === right.x && left.y === right.y && left.zoom === right.zoom
 }
 
 function getCanvasNodeKind(nodeId: string, activities: Activity[], sourceObjects: Extract<CanvasObject, { object_type: 'quelle' }>[]) {
@@ -385,6 +382,7 @@ function getDefaultActivityDescription(_nodeType: Activity['node_type']) {
 }
 
 const HIERARCHY_FOCUS_TRANSITION_MS = 280
+const WORKSPACE_VIEW_SAVE_DEBOUNCE_MS = 700
 
 function getHierarchyTransitionDuration() {
   if (typeof window === 'undefined') {
@@ -404,12 +402,18 @@ function WorkspaceCanvasApp({
   organizationId,
   organizationRole,
   currentUserId,
+  uiPreferences: persistedUiPreferences,
+  onUiPreferencesChange,
+  isSavingUiPreferences,
 }: {
   workspaceId: string
   workspaceName: string
   organizationId: string
   organizationRole: 'owner' | 'admin' | 'member' | null
   currentUserId: string
+  uiPreferences: UiPreferences
+  onUiPreferencesChange: (preferences: UiPreferences) => Promise<void>
+  isSavingUiPreferences: boolean
 }) {
   const {
     parentActivityId,
@@ -455,6 +459,8 @@ function WorkspaceCanvasApp({
   const deleteCanvasObject = useDeleteCanvasObject(workspaceId)
   const upsertCanvasEdge = useUpsertCanvasEdge(workspaceId)
   const deleteCanvasEdge = useDeleteCanvasEdge(workspaceId)
+  const { data: workspaceViewMemoryPreference } = useUserPreference<WorkspaceViewMemory>(WORKSPACE_VIEW_MEMORY_KEY, true)
+  const upsertWorkspaceViewMemory = useUpsertUserPreference<WorkspaceViewMemory>(WORKSPACE_VIEW_MEMORY_KEY)
   const seedInFlightRef = useRef(false)
   const isApplyingHistoryRef = useRef(false)
   const latestSnapshotRef = useRef<CanvasSnapshot>(emptySnapshot)
@@ -464,6 +470,8 @@ function WorkspaceCanvasApp({
   const activityDetailPopupRef = useRef<ActivityDetailPopupHandle | null>(null)
   const canvasSectionRef = useRef<HTMLElement | null>(null)
   const collapseFromMaximizedRef = useRef(false)
+  const workspaceViewMemoryRef = useRef<WorkspaceViewMemory>({})
+  const lastRememberedViewportWorkspaceRef = useRef<string | null>(null)
 
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null)
   const [selectedDataObjectId, setSelectedDataObjectId] = useState<string | null>(null)
@@ -483,20 +491,33 @@ function WorkspaceCanvasApp({
   >({})
   const [wizardActivity, setWizardActivity] = useState<Activity | null>(null)
   const [linkActivity, setLinkActivity] = useState<Activity | null>(null)
-  const [viewportCenter, setViewportCenter] = useState({ x: 360, y: 260, zoom: 1 })
+  const [viewportCenter, setViewportCenter] = useState<ViewportCenter>({ x: 360, y: 260, zoom: 1 })
   const [viewportRestoreRequest, setViewportRestoreRequest] = useState<{
     workspaceId: string
-    center: { x: number; y: number; zoom: number }
+    center: ViewportCenter
+  } | null>(null)
+  const [rememberedViewportRestoreRequest, setRememberedViewportRestoreRequest] = useState<{
+    workspaceId: string
+    center: ViewportCenter
   } | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isWorkflowDetailOpen, setIsWorkflowDetailOpen] = useState(false)
   const [dataObjectActionError, setDataObjectActionError] = useState<string | null>(null)
   const [workflowViewMode, setWorkflowViewMode] = useState<WorkflowViewMode>('canvas')
-  const [uiPreferences, setUiPreferences] = useState<UiPreferences>(() => readUiPreferences())
+  const [uiPreferences, setUiPreferences] = useState<UiPreferences>(persistedUiPreferences)
   const [focusedCanvasNodeId, setFocusedCanvasNodeId] = useState<string | null>(null)
   const [activeWorkspaceName, setActiveWorkspaceName] = useState(workspaceName)
   const [sourceInsertPosition, setSourceInsertPosition] = useState<{ x: number; y: number } | null>(null)
   const autoCollapseHierarchyOnMinimizeRef = useRef(false)
+  const workspaceViewMemory = useMemo(
+    () => normalizeWorkspaceViewMemory(workspaceViewMemoryPreference?.value),
+    [workspaceViewMemoryPreference?.value],
+  )
+  const rememberedWorkspaceViewport = workspaceViewMemory[workspaceId] ?? null
+  const shouldRestoreLastView =
+    uiPreferences.canvas_open_behavior === 'remember_last_view' && rememberedWorkspaceViewport !== null
+  const effectiveViewportRestoreRequest = viewportRestoreRequest ?? rememberedViewportRestoreRequest
+  const shouldAutoFitOnLoad = !effectiveViewportRestoreRequest && !shouldRestoreLastView
 
   const currentSnapshot = useMemo<CanvasSnapshot>(
     () => cloneSnapshot({ activities, canvasObjects, canvasEdges }),
@@ -510,6 +531,61 @@ function WorkspaceCanvasApp({
   useEffect(() => {
     setActiveWorkspaceName(workspaceName)
   }, [workspaceId, workspaceName])
+
+  useEffect(() => {
+    setUiPreferences(persistedUiPreferences)
+  }, [persistedUiPreferences])
+
+  useEffect(() => {
+    workspaceViewMemoryRef.current = workspaceViewMemory
+  }, [workspaceViewMemory])
+
+  useEffect(() => {
+    lastRememberedViewportWorkspaceRef.current = null
+    setRememberedViewportRestoreRequest(null)
+  }, [workspaceId])
+
+  useEffect(() => {
+    if (!shouldRestoreLastView || !rememberedWorkspaceViewport) {
+      return
+    }
+
+    if (lastRememberedViewportWorkspaceRef.current === workspaceId) {
+      return
+    }
+
+    lastRememberedViewportWorkspaceRef.current = workspaceId
+    setRememberedViewportRestoreRequest({
+      workspaceId,
+      center: rememberedWorkspaceViewport,
+    })
+  }, [rememberedWorkspaceViewport, shouldRestoreLastView, workspaceId])
+
+  useEffect(() => {
+    if (uiPreferences.canvas_open_behavior !== 'remember_last_view') {
+      return
+    }
+
+    const savedViewport = workspaceViewMemoryRef.current[workspaceId]
+    if (areViewportCentersEqual(savedViewport, viewportCenter)) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      const currentMemory = workspaceViewMemoryRef.current
+      const currentViewport = currentMemory[workspaceId]
+      if (areViewportCentersEqual(currentViewport, viewportCenter)) {
+        return
+      }
+
+      void upsertWorkspaceViewMemory.mutateAsync({
+        ...currentMemory,
+        [workspaceId]: viewportCenter,
+      })
+    }, WORKSPACE_VIEW_SAVE_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timeout)
+  }, [uiPreferences.canvas_open_behavior, upsertWorkspaceViewMemory, viewportCenter, workspaceId])
 
   useEffect(() => {
     if (!uiPreferences.enable_table_view && workflowViewMode === 'sipoc_table') {
@@ -3057,7 +3133,7 @@ function WorkspaceCanvasApp({
 
   return (
     <div className="h-screen w-full overflow-hidden px-4 py-4 md:px-6 print:h-auto print:px-0 print:py-0">
-      <div className="flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-white/10 bg-slate-950/70 shadow-[0_40px_120px_rgba(3,8,12,0.55)] backdrop-blur-xl print:min-h-0 print:max-w-none print:rounded-none print:border-0 print:bg-white print:shadow-none">
+      <div className="wow-app-shell flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-white/10 shadow-[0_40px_120px_rgba(3,8,12,0.55)] backdrop-blur-xl print:min-h-0 print:max-w-none print:rounded-none print:border-0 print:bg-white print:shadow-none">
         <AppHeader
           workspaceName={activeWorkspaceName}
           workspaceTrail={workspaceTrail}
@@ -3087,7 +3163,7 @@ function WorkspaceCanvasApp({
         <main className="grid min-h-0 flex-1 gap-4 p-4 print:block print:p-0">
           <section
             ref={canvasSectionRef}
-            className="relative min-h-0 overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,20,31,0.92),rgba(6,14,22,0.96))] print:rounded-none print:border-0 print:bg-white"
+            className="wow-canvas-shell relative min-h-0 overflow-hidden rounded-[26px] border border-white/10 print:rounded-none print:border-0 print:bg-white"
           >
             {workflowViewMode === 'canvas' ? (
               <FloatingCanvasToolbar
@@ -3125,9 +3201,12 @@ function WorkspaceCanvasApp({
               <div className="h-full pl-24 sm:pl-28">
                 <WorkflowCanvas
                   workspaceId={workspaceId}
-                  autoFitOnLoad
-                  viewportRestoreRequest={viewportRestoreRequest}
-                  onViewportRestoreApplied={() => setViewportRestoreRequest(null)}
+                  autoFitOnLoad={shouldAutoFitOnLoad}
+                  viewportRestoreRequest={effectiveViewportRestoreRequest}
+                  onViewportRestoreApplied={() => {
+                    setViewportRestoreRequest(null)
+                    setRememberedViewportRestoreRequest(null)
+                  }}
                   activities={visibleActivities}
                   canvasGroups={visibleCanvasGroups}
                   canvasObjects={visibleCanvasObjects}
@@ -3337,7 +3416,18 @@ function WorkspaceCanvasApp({
             isOpen={isSettingsOpen}
             onClose={() => setIsSettingsOpen(false)}
             onOrganizationRenamed={updateOrganizationName}
-            onUiPreferencesChange={(preferences) => setUiPreferences(preferences)}
+            uiPreferences={uiPreferences}
+            onUiPreferencesChange={async (preferences) => {
+              const previousPreferences = uiPreferences
+              setUiPreferences(preferences)
+              try {
+                await onUiPreferencesChange(preferences)
+              } catch (error) {
+                setUiPreferences(previousPreferences)
+                throw error
+              }
+            }}
+            isSavingUiPreferences={isSavingUiPreferences}
           />
           <WorkflowDetailDialog
             workspace={currentWorkspace}

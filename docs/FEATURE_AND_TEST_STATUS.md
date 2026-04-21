@@ -1,6 +1,6 @@
 # Feature And Test Status
 
-Stand: 2026-04-18
+Stand: 2026-04-21
 
 Diese Liste konsolidiert die Features aus den Specs in `specs/` und aus den Entscheidungsrunden im Chat. Status:
 
@@ -144,9 +144,12 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] Firmenname im Einstellungsdialog bearbeiten
 - [x] Firmenname wird nach Save sofort im UI aktualisiert
 - [x] UI-Praeferenzstruktur fuer Canvas-Gruppierung vorbereitet
+- [x] UI-Praeferenzen als benutzerbezogene `user_preferences` im Key/Value-Store persistiert
 - [x] Default-Gruppierung im Einstellungsdialog speicherbar
 - [x] Tabellensicht in UI-Einstellungen aktivierbar/deaktivierbar
 - [x] Swimlane View in UI-Einstellungen aktivierbar/deaktivierbar
+- [x] Theme-Umschaltung `System` / `Hell` / `Dunkel` im Einstellungsdialog
+- [x] Default-Theme ist `System`
 - [x] Tabellensicht standardmaessig deaktiviert
 - [x] Swimlane View standardmaessig deaktiviert
 - [x] Deaktivierte optionale Views blenden ihre Header-Umschaltung aus
@@ -332,6 +335,7 @@ Die uebergeordnete Teststrategie ist in `docs/TEST_STRATEGY.md` dokumentiert.
 - [x] `e2e/source-z-layer.spec.ts`
 - [x] `e2e/quick-align.spec.ts`
 - [x] `e2e/magnetic-connection-targets.spec.ts`
+- [x] `e2e/theme-preferences.spec.ts`
 
 Hinweis: Die Login-gebundene Suite laeuft mit `E2E_EMAIL`/`E2E_PASSWORD` gegen die lokale Preview. `playwright.config.ts` zeigt standardmaessig auf `http://127.0.0.1:4174`. Zusaetzlich ist jetzt ein fokussierter Browser-Repro fuer persistente Gruppen vorhanden:
 - `e2e/group-selection.spec.ts`: `2 passed`
@@ -376,6 +380,11 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
   - `e2e/quick-align.spec.ts`: `2 passed`
 - [x] Magnetische Connection-Targets gegen lokale Preview verifiziert
   - `e2e/magnetic-connection-targets.spec.ts`: `1 passed`
+- [x] Theme-Persistenz ueber benutzerbezogene `user_preferences` verifiziert
+  - `backend/src/user-preferences/user-preferences.service.spec.ts`: `2 passed`
+  - `frontend/src/lib/uiPreferences.test.ts`: gruen
+  - `frontend/src/hooks/useDocumentTheme.test.tsx`: gruen
+  - `e2e/theme-preferences.spec.ts`: `1 passed`
 - [x] Gruppen-Header-Interaktion lokal verifiziert
   - `frontend/src/components/canvas/GroupNode.test.tsx`: gruen
   - `frontend/src/App.canvas-groups.test.ts`: gruen
@@ -397,6 +406,7 @@ Zusaetzlich ist ein eigener headed Referenztest fuer `BIM zyklische Modellkoordi
   - `frontend/src/components/canvas/WorkflowCanvas.selection.test.tsx`: gruen
   - `frontend/src/components/canvas/WorkflowCanvas.connection.test.tsx`: gruen
   - `e2e/view-preferences.spec.ts`: `1 passed`
+  - Persistenz laeuft ueber `/user-preferences/ui_preferences`, nicht mehr ueber `localStorage`
 - [x] Rollen-/Ausfuehrenden-Modell lokal auch ohne eingespielte Migration `013` per Fallback verifiziert
 - [x] Gemeinsamer Rollen-Anlege-Dialog fuer Aktivitaetsknoten und Aktivitaetsdetail verifiziert
   - `frontend/src/components/ui/CustomChoiceList.test.tsx`: gruen

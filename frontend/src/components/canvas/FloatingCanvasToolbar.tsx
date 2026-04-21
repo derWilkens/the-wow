@@ -42,7 +42,7 @@ export function FloatingCanvasToolbar({
       className="pointer-events-none absolute left-4 top-6 z-20 flex max-h-[calc(100%-12rem)] max-w-[calc(100%-2rem)] flex-col gap-2 md:left-6"
       aria-label="Canvas-Werkzeuge"
     >
-      <div className="pointer-events-none overflow-x-visible overflow-y-auto rounded-[28px] border border-white/10 bg-slate-950/78 p-2 shadow-[0_24px_80px_rgba(2,8,12,0.45)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="wow-toolbar-shell pointer-events-none overflow-x-visible overflow-y-auto rounded-[28px] border border-white/10 p-2 shadow-[0_24px_80px_rgba(2,8,12,0.45)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="pointer-events-none flex flex-col gap-2">
           <FloatingToolbarButton
             testId="toolbar-undo"
@@ -60,7 +60,7 @@ export function FloatingCanvasToolbar({
             onClick={onRedo}
             disabled={!canRedo}
           />
-          <div className="mx-2 my-1 h-px bg-white/10" />
+          <div className="wow-toolbar-divider mx-2 my-1 h-px" />
           <FloatingToolbarButton
             testId="toolbar-start"
             label="Start"
@@ -108,7 +108,7 @@ export function FloatingCanvasToolbar({
             dragKind="end"
             onDragStart={onToolbarDragStart}
           />
-          <div className="mx-2 my-1 h-px bg-white/10" />
+          <div className="wow-toolbar-divider mx-2 my-1 h-px" />
           <FloatingToolbarButton
             testId="toolbar-source"
             label="Datenspeicher"

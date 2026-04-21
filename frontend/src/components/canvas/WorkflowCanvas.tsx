@@ -319,6 +319,7 @@ export function WorkflowCanvas({
     handleId: string | null
     handleType: 'source' | 'target' | null
   } | null>(null)
+  const [isReactFlowReady, setIsReactFlowReady] = useState(false)
   const [hoveredConnectionTargetNodeId, setHoveredConnectionTargetNodeId] = useState<string | null>(null)
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([])
@@ -1260,7 +1261,7 @@ export function WorkflowCanvas({
 
   useEffect(() => {
     const instance = reactFlowRef.current
-    if (!autoFitOnLoad || !instance || renderNodes.length === 0) {
+    if (!autoFitOnLoad || !isReactFlowReady || !instance || renderNodes.length === 0) {
       return
     }
     if (lastFitWorkspaceRef.current === workspaceId) {
@@ -1268,33 +1269,49 @@ export function WorkflowCanvas({
     }
 
     lastFitWorkspaceRef.current = workspaceId
+    let nestedFrame: number | null = null
     const frame = window.requestAnimationFrame(() => {
-      void instance.fitView?.({
-        padding: 0.18,
-        duration: 250,
+      nestedFrame = window.requestAnimationFrame(() => {
+        void instance.fitView?.({
+          padding: 0.18,
+          duration: 250,
+        })
       })
     })
 
-    return () => window.cancelAnimationFrame(frame)
-  }, [autoFitOnLoad, renderNodes.length, workspaceId])
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (nestedFrame !== null) {
+        window.cancelAnimationFrame(nestedFrame)
+      }
+    }
+  }, [autoFitOnLoad, isReactFlowReady, renderNodes.length, workspaceId])
 
   useEffect(() => {
     const instance = reactFlowRef.current
-    if (!instance || !viewportRestoreRequest || viewportRestoreRequest.workspaceId !== workspaceId) {
+    if (!isReactFlowReady || !instance || !viewportRestoreRequest || viewportRestoreRequest.workspaceId !== workspaceId) {
       return
     }
 
+    let nestedFrame: number | null = null
     const frame = window.requestAnimationFrame(() => {
-      void instance.setCenter?.(viewportRestoreRequest.center.x, viewportRestoreRequest.center.y, {
-        zoom: viewportRestoreRequest.center.zoom,
-        duration: 0,
+      nestedFrame = window.requestAnimationFrame(() => {
+        void instance.setCenter?.(viewportRestoreRequest.center.x, viewportRestoreRequest.center.y, {
+          zoom: viewportRestoreRequest.center.zoom,
+          duration: 0,
+        })
+        publishViewportCenter()
+        onViewportRestoreApplied?.()
       })
-      publishViewportCenter()
-      onViewportRestoreApplied?.()
     })
 
-    return () => window.cancelAnimationFrame(frame)
-  }, [onViewportRestoreApplied, publishViewportCenter, viewportRestoreRequest, workspaceId])
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (nestedFrame !== null) {
+        window.cancelAnimationFrame(nestedFrame)
+      }
+    }
+  }, [isReactFlowReady, onViewportRestoreApplied, publishViewportCenter, viewportRestoreRequest, workspaceId])
 
   const selectedRegularActivityIds = useMemo(
     () =>
@@ -1515,7 +1532,7 @@ export function WorkflowCanvas({
         onToolbarDrop({ kind, position })
       }}
       data-canvas-mode={activeConnectionSource ? 'connect' : isPanKeyPressed ? 'pan' : 'select'}
-      className={`relative h-full min-h-0 w-full overflow-hidden bg-[radial-gradient(circle_at_top,rgba(58,127,163,0.14),transparent_35%),linear-gradient(180deg,#08121b_0%,#060d14_100%)] ${
+      className={`wow-workflow-canvas-surface relative h-full min-h-0 w-full overflow-hidden ${
         activeConnectionSource ? 'wow-canvas wow-canvas--connect-mode' : isPanKeyPressed ? 'wow-canvas wow-canvas--pan-mode' : 'wow-canvas wow-canvas--select-mode'
       }`}
     >
@@ -1531,7 +1548,7 @@ export function WorkflowCanvas({
                 height: `${ROLE_LANE_HEIGHT}px`,
               }}
             >
-              <div className="absolute left-6 top-4 rounded-full border border-cyan-300/15 bg-slate-950/75 px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-cyan-100/80">
+              <div className="wow-role-lane-chip absolute left-6 top-4 rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.22em]">
                 {lane.role}
               </div>
             </div>
@@ -1774,6 +1791,7 @@ export function WorkflowCanvas({
         deleteKeyCode={['Backspace', 'Delete']}
         onInit={(instance) => {
           reactFlowRef.current = instance
+          setIsReactFlowReady(true)
           lastFitWorkspaceRef.current = null
           publishViewportCenter()
         }}
@@ -1891,7 +1909,7 @@ export function WorkflowCanvas({
           onDeleteEdges(deletedEdges.map((edge) => edge.id))
         }}
       >
-        <Background color="rgba(88, 115, 137, 0.22)" gap={28} size={1.2} />
+        <Background color="var(--wow-canvas-grid-color)" gap={28} size={1.2} />
         <Controls position="bottom-left" />
       </ReactFlow>
     </div>

@@ -77,7 +77,15 @@ Hinweis:
   - uses the shared custom choice list for transport mode selection
 - `frontend/src/components/settings/SettingsDialog.tsx`
   - central settings surface for company settings, UI preferences, and company master data
-  - manages organization rename, default grouping mode, snap-to-grid, optional view visibility, transport modes, IT tools, and organization roles
+  - manages organization rename, default grouping mode, snap-to-grid, optional view visibility, theme mode, transport modes, IT tools, and organization roles
+- `frontend/src/api/userPreferences.ts`
+  - TanStack Query hooks for the user-scoped key/value store behind `/user-preferences/:key`
+- `frontend/src/lib/uiPreferences.ts`
+  - central normalization and defaults for persisted UI preferences
+  - `theme_mode` defaults to `system`
+- `frontend/src/hooks/useDocumentTheme.ts`
+  - resolves `system` via `matchMedia('(prefers-color-scheme: dark)')`
+  - applies the effective theme through `document.documentElement.dataset.theme`
 - `frontend/src/components/layout/AppHeader.tsx`
   - renders only the currently wanted high-signal controls
   - hides table/swimlane toggles when their UI preferences are disabled
@@ -150,6 +158,10 @@ Hinweis:
 - `frontend/e2e/view-preferences.spec.ts`
   - focused business E2E for optional view visibility and header cleanup
   - verifies default-hidden view toggles, enable/disable behavior, and that search/export stay absent from the header
+  - persists through `/user-preferences/ui_preferences`
+- `frontend/e2e/theme-preferences.spec.ts`
+  - focused business E2E for persisted theme switching
+  - verifies `System`, `Hell`, `Dunkel` plus reload persistence through `/user-preferences/ui_preferences`
 - `frontend/e2e/activity-type-quick-change.spec.ts`
   - focused business E2E for changing the activity type directly on the node
   - verifies tooltip, icon popover, immediate save, and persistence after fresh login
@@ -224,6 +236,7 @@ Current important entities:
 - `object_fields`
 - `canvas_edges`
 - `canvas_groups`
+- `user_preferences`
 - `it_tools`
 - `activity_it_tools`
 - `activity_check_sources`
@@ -304,6 +317,9 @@ Current edge fields:
   - adds `collapsed` to `canvas_groups`
 - `018_canvas_object_z_index.sql`
   - adds `z_index` to `canvas_objects`
+- `019_user_preferences.sql`
+  - adds `user_preferences`
+  - stores user-scoped preference values as `jsonb` under `(user_id, preference_key)`
 
 ## Operational SQL Scripts
 
@@ -332,6 +348,8 @@ Stable:
 - current-workflow details from dedicated header button
 - workspace update flow for name, purpose, expected inputs, and expected outputs
 - optional header view toggles controlled through persisted UI preferences
+- persisted UI preferences now live in the backend `user_preferences` key/value store
+- theme switching with `system` / `light` / `dark` and runtime system-theme following
 - direct-manipulation base for lasso, quick align and persistent groups
 - editable group labels and persistent collapse state on canvas groups
 - first persisted z-layer controls for groups and datenspeicher
@@ -413,6 +431,10 @@ Latest known good local verification:
   - `workflow-details.spec.ts`: `1 passed`
 - dedicated view-preferences verification: green
   - `view-preferences.spec.ts`: `1 passed`
+- dedicated theme-preferences verification: green
+  - `theme-preferences.spec.ts`: `1 passed`
+- focused backend verification for user preferences: green
+  - `backend/src/user-preferences/user-preferences.service.spec.ts`: `2 passed`
 - focused workspace-update backend verification: green
   - `backend/src/workspaces/workspaces.service.spec.ts`: `2 passed`
 - local fallback-safe role/assignee persistence without applied migration `013`: green

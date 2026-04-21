@@ -12,6 +12,14 @@ export type CanvasObjectType = 'quelle' | 'datenobjekt'
 export type EdgeNodeType = 'activity' | 'canvas_object'
 export type FieldType = 'text' | 'integer' | 'decimal' | 'date' | 'boolean'
 export type OrganizationRole = 'owner' | 'admin' | 'member'
+export type UiThemeMode = 'system' | 'light' | 'dark'
+export type CanvasOpenBehavior = 'fit_view' | 'remember_last_view'
+
+export interface ViewportCenter {
+  x: number
+  y: number
+  zoom: number
+}
 
 export interface CatalogRole {
   id: string
@@ -47,13 +55,17 @@ export interface Organization {
 
 export interface UiPreferences {
   default_grouping_mode: CanvasGroupingMode
+  canvas_open_behavior: CanvasOpenBehavior
   snap_to_grid: boolean
   enable_table_view: boolean
   enable_swimlane_view: boolean
   enable_node_collision_avoidance: boolean
   enable_alignment_guides: boolean
   enable_magnetic_connection_targets: boolean
+  theme_mode: UiThemeMode
 }
+
+export type WorkspaceViewMemory = Record<string, ViewportCenter>
 
 export interface OrganizationMember {
   user_id: string

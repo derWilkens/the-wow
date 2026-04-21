@@ -10,6 +10,7 @@ import { DatabaseModule } from './database/database.module'
 import { OrganizationsModule } from './organizations/organizations.module'
 import { OrganizationRolesModule } from './organization-roles/organization-roles.module'
 import { TransportModesModule } from './transport-modes/transport-modes.module'
+import { UserPreferencesModule } from './user-preferences/user-preferences.module'
 import { WorkflowTemplatesModule } from './workflow-templates/workflow-templates.module'
 import { WorkspacesModule } from './workspaces/workspaces.module'
 import { HealthController } from './health.controller'
@@ -22,6 +23,7 @@ import { HealthController } from './health.controller'
     OrganizationsModule,
     OrganizationRolesModule,
     TransportModesModule,
+    UserPreferencesModule,
     WorkflowTemplatesModule,
     WorkspacesModule,
     ActivitiesModule,
