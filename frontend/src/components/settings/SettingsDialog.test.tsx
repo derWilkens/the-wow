@@ -196,14 +196,14 @@ describe('SettingsDialog', () => {
 
     fireEvent.click(screen.getByTestId('settings-nav-ui'))
 
-    expect(screen.getByTestId('settings-ui-theme-system')).toHaveClass('bg-cyan-400')
-    expect(screen.getByTestId('settings-ui-canvas-open-fit-view')).toHaveClass('bg-cyan-400')
-    expect(screen.getByTestId('settings-ui-snap-on')).toHaveClass('bg-cyan-400')
-    expect(screen.getByTestId('settings-ui-table-view-off')).toHaveClass('bg-cyan-400')
-    expect(screen.getByTestId('settings-ui-swimlane-off')).toHaveClass('bg-cyan-400')
-    expect(screen.getByTestId('settings-ui-collision-on')).toHaveClass('bg-cyan-400')
-    expect(screen.getByTestId('settings-ui-alignment-guides-on')).toHaveClass('bg-cyan-400')
-    expect(screen.getByTestId('settings-ui-magnetic-targets-on')).toHaveClass('bg-cyan-400')
+    expect(screen.getByTestId('settings-ui-theme-system')).toHaveClass('bg-[var(--wow-primary)]')
+    expect(screen.getByTestId('settings-ui-canvas-open-fit-view')).toHaveClass('bg-[var(--wow-primary)]')
+    expect(screen.getByTestId('settings-ui-snap-on')).toHaveClass('bg-[var(--wow-primary)]')
+    expect(screen.getByTestId('settings-ui-table-view-off')).toHaveClass('bg-[var(--wow-primary)]')
+    expect(screen.getByTestId('settings-ui-swimlane-off')).toHaveClass('bg-[var(--wow-primary)]')
+    expect(screen.getByTestId('settings-ui-collision-on')).toHaveClass('bg-[var(--wow-primary)]')
+    expect(screen.getByTestId('settings-ui-alignment-guides-on')).toHaveClass('bg-[var(--wow-primary)]')
+    expect(screen.getByTestId('settings-ui-magnetic-targets-on')).toHaveClass('bg-[var(--wow-primary)]')
   })
 
   it('resets grouping to free when swimlane view is disabled before saving', async () => {

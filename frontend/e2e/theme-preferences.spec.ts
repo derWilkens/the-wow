@@ -62,7 +62,7 @@ test.describe('theme preferences', () => {
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
       await expect
         .poll(async () => page.locator('.wow-workflow-canvas-surface').evaluate((element) => window.getComputedStyle(element).backgroundImage))
-        .toContain('255')
+        .toContain('248, 249, 251')
       await expect
         .poll(async () => page.locator('.wow-node--activity').first().evaluate((element) => window.getComputedStyle(element).backgroundColor))
         .toContain('255')
@@ -75,7 +75,7 @@ test.describe('theme preferences', () => {
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
       await page.getByTestId('toolbar-settings').click()
       await page.getByTestId('settings-nav-ui').click()
-      await expect(page.getByTestId('settings-ui-theme-light')).toHaveClass(/bg-cyan-400/)
+      await expect(page.getByTestId('settings-ui-theme-light')).toHaveClass(/bg-\[var\(--wow-primary\)\]/)
       await page.getByTestId('settings-ui-theme-dark').click()
       await page.getByTestId('settings-ui-save').click()
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
@@ -84,7 +84,7 @@ test.describe('theme preferences', () => {
         .toContain('8, 18, 27')
       await expect
         .poll(async () => page.locator('.wow-node--activity').first().evaluate((element) => window.getComputedStyle(element).backgroundColor))
-        .toContain('15, 28, 42')
+        .toContain('10, 24, 37')
       await page.getByTestId('settings-dialog-close').click()
 
       const darkPreferences = await readUiPreferences(page)
@@ -94,7 +94,7 @@ test.describe('theme preferences', () => {
       await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
       await page.getByTestId('toolbar-settings').click()
       await page.getByTestId('settings-nav-ui').click()
-      await expect(page.getByTestId('settings-ui-theme-dark')).toHaveClass(/bg-cyan-400/)
+      await expect(page.getByTestId('settings-ui-theme-dark')).toHaveClass(/bg-\[var\(--wow-primary\)\]/)
       await page.getByTestId('settings-ui-theme-system').click()
       await page.getByTestId('settings-ui-save').click()
       await page.getByTestId('settings-dialog-close').click()
@@ -107,7 +107,7 @@ test.describe('theme preferences', () => {
       expect(['light', 'dark']).toContain(resolvedTheme)
       await page.getByTestId('toolbar-settings').click()
       await page.getByTestId('settings-nav-ui').click()
-      await expect(page.getByTestId('settings-ui-theme-system')).toHaveClass(/bg-cyan-400/)
+      await expect(page.getByTestId('settings-ui-theme-system')).toHaveClass(/bg-\[var\(--wow-primary\)\]/)
       await page.getByTestId('settings-dialog-close').click()
 
       if (originalPreferences) {

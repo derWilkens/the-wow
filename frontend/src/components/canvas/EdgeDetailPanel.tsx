@@ -206,57 +206,57 @@ export function EdgeDetailPanel({
     <div className="pointer-events-none absolute inset-0 flex items-start justify-end p-4">
       <div
         data-testid={`edge-detail-${edge.from_node_id}-${edge.to_node_id}`}
-        className="wow-surface-dialog pointer-events-auto max-h-[calc(100%-2rem)] w-full max-w-[22rem] overflow-y-auto rounded-[24px] border border-white/10 p-4 shadow-[0_24px_70px_rgba(2,8,12,0.55)]"
+        className="wow-ui-dialog pointer-events-auto max-h-[calc(100%-2rem)] w-full max-w-[22rem] overflow-y-auto p-4"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Verbindung</p>
-            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-sm text-slate-200">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
-                <ArrowRightLeft className="h-4 w-4 text-cyan-200" />
+            <p className="wow-ui-eyebrow">Verbindung</p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-sm text-[var(--text)]">
+              <span className="wow-ui-chip px-3 py-1.5">
+                <ArrowRightLeft className="h-4 w-4 text-[var(--wow-primary)]" />
                 <span>{dataObjects.length} Datenobjekt{dataObjects.length === 1 ? '' : 'e'}</span>
               </span>
               <span
                 data-testid="edge-transport-status-chip"
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
+                className={`wow-ui-chip px-3 py-1.5 text-xs ${
                   selectedTransportMode
-                    ? 'border-cyan-300/25 bg-cyan-400/10 text-cyan-100'
-                    : 'border-white/10 bg-white/[0.04] text-slate-300'
+                    ? 'border-[var(--wow-primary)] bg-[var(--wow-primary-soft)] text-[var(--wow-primary)]'
+                    : ''
                 }`}
               >
                 {statusChipLabel}
               </span>
             </div>
           </div>
-          <button data-testid="edge-close" onClick={onClose} className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300">
+          <button data-testid="edge-close" onClick={onClose} className="wow-ui-icon-button">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="space-y-4">
-          <section data-testid="edge-section-transport" className="rounded-[20px] border border-cyan-300/10 bg-cyan-400/[0.04] p-3.5">
+          <section data-testid="edge-section-transport" className="wow-ui-section p-3.5">
             <div className="mb-3">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-200/80">Transport</p>
-              <p className="mt-1.5 text-sm leading-6 text-slate-300">
+              <p className="wow-ui-label">Transport</p>
+              <p className="mt-1.5 text-sm leading-6 text-[var(--muted)]">
                 Beschreibe hier, wie die Uebergabe in der Praxis ablaeuft. Die Verbindung selbst bleibt davon unberuehrt.
               </p>
             </div>
             {allowPathLabel ? (
               <>
-                <label className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Pfad / Bedingung</label>
+                <label className="wow-ui-label">Pfad / Bedingung</label>
                 <input
                   data-testid="edge-path-label"
                   value={pathLabel}
                   onChange={(event) => setPathLabel(event.target.value)}
                   placeholder="z. B. Ja, Nein oder > 1000 EUR"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-white outline-none placeholder:text-slate-500"
+                  className="wow-ui-input mt-2"
                 />
-                <p className="mt-2 text-xs leading-5 text-slate-400">
+                <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
                   Dieser Text erscheint direkt auf dem Pfad der Entscheidung.
                 </p>
               </>
             ) : null}
-            <label className={`${allowPathLabel ? 'mt-4 block' : ''} text-[11px] uppercase tracking-[0.24em] text-slate-500`}>Transportmodus</label>
+            <label className={`${allowPathLabel ? 'mt-4 block' : ''} wow-ui-label`}>Transportmodus</label>
             <div className="mt-2">
               <CustomChoiceList
                 testId="edge-transport-mode"
@@ -280,27 +280,27 @@ export function EdgeDetailPanel({
             </div>
             <p
               data-testid="edge-transport-description"
-              className="mt-2 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-slate-400"
+              className="mt-2 rounded-[var(--wow-control-radius)] border border-[var(--wow-panel-border)] bg-[var(--panel-strong)] px-3 py-2 text-xs leading-5 text-[var(--muted)]"
             >
               {transportDescription}
             </p>
 
-            <label className="mt-4 block text-[11px] uppercase tracking-[0.24em] text-slate-500">Kontextnotiz</label>
+            <label className="mt-4 block wow-ui-label">Kontextnotiz</label>
             <textarea
               data-testid="edge-notes"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               rows={3}
               placeholder="Optional: kurze Besonderheit zur Uebergabe, zum Takt oder zur Ablage."
-              className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-white outline-none placeholder:text-slate-500"
+              className="wow-ui-textarea mt-2"
             />
           </section>
 
-          <section data-testid="edge-section-data-objects" className="rounded-[20px] border border-amber-300/10 bg-amber-400/[0.04] p-3.5">
+          <section data-testid="edge-section-data-objects" className="wow-ui-section p-3.5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-amber-100/80">Datenobjekte</p>
-                <p className="mt-1.5 text-sm leading-6 text-slate-300">
+                <p className="wow-ui-label">Datenobjekte</p>
+                <p className="mt-1.5 text-sm leading-6 text-[var(--muted)]">
                   Verwalte hier, welche Informationen auf dieser Verbindung transportiert werden.
                 </p>
               </div>
@@ -309,7 +309,7 @@ export function EdgeDetailPanel({
                 data-testid="edge-add-new-data-object"
                 onClick={() => void handleCreateQuickObject()}
                 disabled={isCreatingInline}
-                className="inline-flex items-center gap-2 rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1.5 text-xs text-amber-100 disabled:opacity-50"
+                className="wow-ui-button-secondary min-h-0 px-3 py-1.5 text-xs disabled:opacity-50"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Neues Datenobjekt
@@ -325,10 +325,10 @@ export function EdgeDetailPanel({
                     <div
                       key={canvasObject.id}
                       data-testid={`edge-data-object-row-${canvasObject.id}`}
-                      className="group rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 transition hover:border-white/20 hover:bg-white/[0.06]"
+                      className="group wow-ui-card px-3 py-3 transition"
                     >
                       <div className="flex items-start gap-3">
-                        <span className="mt-1 rounded-full border border-amber-300/20 bg-amber-400/10 p-2 text-amber-100">
+                        <span className="mt-1 rounded-full border border-[var(--wow-panel-border)] bg-[var(--wow-primary-soft)] p-2 text-[var(--wow-primary)]">
                           <Database className="h-4 w-4" />
                         </span>
                         <div className="min-w-0 flex-1">
@@ -357,14 +357,14 @@ export function EdgeDetailPanel({
                                     setInlineEditingId(null)
                                   }
                                 }}
-                                className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 text-white outline-none"
+                                className="wow-ui-input"
                               />
                               <div className="flex gap-2">
                                 <button
                                   type="button"
                                   data-testid={`edge-inline-save-${canvasObject.id}`}
                                   onClick={() => void handleConfirmInlineName(canvasObject.id)}
-                                  className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1.5 text-xs text-cyan-100"
+                                  className="wow-ui-button-primary min-h-0 px-3 py-1.5 text-xs"
                                 >
                                   <Check className="h-3.5 w-3.5" />
                                   Name uebernehmen
@@ -378,7 +378,7 @@ export function EdgeDetailPanel({
                                     }))
                                     setInlineEditingId(null)
                                   }}
-                                  className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-200"
+                                  className="wow-ui-button-secondary min-h-0 px-3 py-1.5 text-xs"
                                 >
                                   Abbrechen
                                 </button>
@@ -387,9 +387,9 @@ export function EdgeDetailPanel({
                           ) : (
                             <>
                               <div className="flex items-center justify-between gap-3">
-                                <p className="truncate font-medium text-white">{visibleName}</p>
+                                <p className="truncate font-medium text-[var(--text)]">{visibleName}</p>
                                 <div className="flex min-w-[150px] justify-end">
-                                  <div className="flex items-center text-right text-xs text-slate-500 transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0">
+                                  <div className="flex items-center text-right text-xs text-[var(--muted)] transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0">
                                     <span className="truncate">{getFieldSummary(canvasObject)} · Details verfuegbar</span>
                                   </div>
                                   <div className="absolute flex gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
@@ -397,7 +397,7 @@ export function EdgeDetailPanel({
                                       type="button"
                                       data-testid={`edge-edit-data-object-${canvasObject.id}`}
                                       onClick={() => setInlineEditingId(canvasObject.id)}
-                                      className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-slate-200"
+                                      className="wow-ui-icon-button p-2"
                                       aria-label={`${visibleName} umbenennen`}
                                     >
                                       <Pencil className="h-3.5 w-3.5" />
@@ -406,7 +406,7 @@ export function EdgeDetailPanel({
                                       type="button"
                                       data-testid={`edge-open-data-object-${canvasObject.id}`}
                                       onClick={() => onOpenDataObject(canvasObject)}
-                                      className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100"
+                                      className="wow-ui-button-secondary min-h-0 px-3 py-2 text-xs"
                                     >
                                       Bearbeiten
                                     </button>
@@ -414,7 +414,7 @@ export function EdgeDetailPanel({
                                       type="button"
                                       data-testid={`edge-delete-data-object-${canvasObject.id}`}
                                       onClick={() => onDeleteDataObject(canvasObject.id)}
-                                      className="rounded-full border border-rose-400/25 bg-rose-500/10 p-2 text-rose-100"
+                                      className="wow-ui-icon-button border-[rgba(186,26,26,0.18)] bg-[rgba(186,26,26,0.08)] text-[var(--danger)]"
                                       aria-label={`${visibleName} entfernen`}
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
@@ -422,7 +422,7 @@ export function EdgeDetailPanel({
                                   </div>
                                 </div>
                               </div>
-                              <p className="mt-2 text-xs text-slate-400">{getFieldSummary(canvasObject)}</p>
+                              <p className="mt-2 text-xs text-[var(--muted)]">{getFieldSummary(canvasObject)}</p>
                             </>
                           )}
                         </div>
@@ -431,24 +431,24 @@ export function EdgeDetailPanel({
                   )
                 })
               ) : (
-                <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-slate-400">
+                <p className="rounded-[var(--wow-panel-radius)] border border-dashed border-[var(--wow-panel-border)] bg-[var(--panel-strong)] px-4 py-4 text-sm text-[var(--muted)]">
                   Auf dieser Verbindung liegt noch kein Datenobjekt.
                 </p>
               )}
             </div>
 
-            <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-              <label className="text-[11px] uppercase tracking-[0.24em] text-slate-500">
+            <div className="wow-ui-card mt-4 p-3">
+              <label className="wow-ui-label">
                 Bestehendes Datenobjekt hinzufuegen
               </label>
               <div className="relative mt-2">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
                 <input
                   data-testid="edge-existing-data-object-search"
                   value={existingSearch}
                   onChange={(event) => setExistingSearch(event.target.value)}
                   placeholder="Nach Name suchen"
-                  className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 pl-10 pr-4 text-white outline-none placeholder:text-slate-500"
+                  className="wow-ui-input py-3 pl-10 pr-4"
                 />
               </div>
               <div className="mt-3 max-h-36 space-y-2 overflow-auto">
@@ -462,18 +462,18 @@ export function EdgeDetailPanel({
                         setSelectedExistingId(canvasObject.id)
                         onAddExistingDataObject(canvasObject.id)
                       }}
-                      className={`flex w-full items-center justify-between rounded-2xl border px-3 py-2 text-left text-sm ${
+                      className={`flex w-full items-center justify-between rounded-[var(--wow-panel-radius)] border px-3 py-2 text-left text-sm ${
                         selectedExistingId === canvasObject.id
-                          ? 'border-amber-300/35 bg-amber-400/10 text-amber-100'
-                          : 'border-white/10 bg-white/[0.04] text-slate-200'
+                          ? 'border-[var(--wow-primary)] bg-[var(--wow-primary-soft)] text-[var(--wow-primary)]'
+                          : 'border-[var(--wow-panel-border)] bg-[var(--panel-strong)] text-[var(--text)]'
                       }`}
                     >
                       <span>{canvasObject.name}</span>
-                      <span className="text-xs text-slate-400">{getFieldSummary(canvasObject)}</span>
+                      <span className="text-xs text-[var(--muted)]">{getFieldSummary(canvasObject)}</span>
                     </button>
                   ))
                 ) : (
-                  <p className="rounded-2xl border border-dashed border-white/10 px-3 py-3 text-sm text-slate-500">
+                  <p className="rounded-[var(--wow-panel-radius)] border border-dashed border-[var(--wow-panel-border)] px-3 py-3 text-sm text-[var(--muted)]">
                     Keine weiteren passenden Datenobjekte verfuegbar.
                   </p>
                 )}
@@ -494,7 +494,7 @@ export function EdgeDetailPanel({
                 notes: notes.trim() || null,
               })
             }
-            className="inline-flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-40"
+            className="wow-ui-button-primary disabled:opacity-40"
           >
             <Save className="h-4 w-4" />
             Speichern

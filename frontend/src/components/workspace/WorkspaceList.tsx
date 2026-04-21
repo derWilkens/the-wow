@@ -1,4 +1,4 @@
-ï»¿import { BookmarkPlus, ChevronDown, ChevronRight, FolderKanban, Pencil, Plus, RefreshCcw, Search, Sparkles, Trash2, X } from 'lucide-react'
+import { BookmarkPlus, ChevronDown, ChevronRight, FolderKanban, Pencil, Plus, RefreshCcw, Search, Sparkles, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useCreateWorkflowTemplate, useCreateWorkspaceFromTemplate, useDeleteWorkflowTemplate, useUpdateWorkflowTemplate, useWorkflowTemplates } from '../../api/workflowTemplates'
 import { useOrganizations } from '../../api/organizations'
@@ -95,7 +95,7 @@ export function WorkspaceList() {
 
   async function handleDelete(workspaceId: string, workspaceName: string) {
     setDeleteError(null)
-    const confirmed = window.confirm(`Arbeitsablauf "${workspaceName}" inklusive aller Modelle lÃ¶schen?`)
+    const confirmed = window.confirm(`Arbeitsablauf "${workspaceName}" inklusive aller Modelle löschen?`)
     if (!confirmed) {
       return
     }
@@ -103,7 +103,7 @@ export function WorkspaceList() {
     try {
       await deleteWorkspace.mutateAsync(workspaceId)
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : 'Arbeitsablauf konnte nicht gelÃ¶scht werden.')
+      setDeleteError(error instanceof Error ? error.message : 'Arbeitsablauf konnte nicht gelöscht werden.')
     }
   }
 
@@ -170,12 +170,12 @@ export function WorkspaceList() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-10">
+    <div className="mx-auto flex min-h-screen max-w-[1280px] flex-col px-4 py-6">
       <div className="flex items-center justify-between gap-6">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.32em] text-cyan-300/70">Arbeitsablaeufe</p>
-          <h1 className="mt-2 font-display text-4xl text-white">Arbeitsablauf auswaehlen</h1>
-          {organizationName ? <p className="mt-2 text-sm text-slate-400">Aktive Firma: {organizationName}</p> : null}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Project Workspace</p>
+          <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.02em] text-slate-900">Arbeitsablauf auswaehlen</h1>
+          {organizationName ? <p className="mt-1 text-sm text-slate-500">Aktive Firma: {organizationName}</p> : null}
         </div>
         <div className="flex items-center gap-3">
           {organizations.length > 1 ? (
@@ -187,7 +187,7 @@ export function WorkspaceList() {
                   selectOrganization(selectedOrganization.id, selectedOrganization.name, selectedOrganization.membership_role)
                 }
               }}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none"
+              className="wow-engineering-select px-3 py-2 text-sm outline-none"
             >
               {organizations.map((organization: Organization) => (
                 <option key={organization.id} value={organization.id}>
@@ -196,19 +196,19 @@ export function WorkspaceList() {
               ))}
             </select>
           ) : null}
-          <button onClick={() => void refetch()} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-slate-200">
+          <button onClick={() => void refetch()} className="wow-engineering-button-secondary inline-flex items-center gap-2 px-3 py-2 text-sm">
             <RefreshCcw className="h-4 w-4" /> Aktualisieren
           </button>
         </div>
       </div>
 
-      <div className="mt-8 rounded-[28px] border border-white/10 bg-slate-950/70 p-5">
-        <div className="mb-4 inline-flex rounded-full border border-white/10 bg-white/[0.03] p-1">
+      <div className="wow-engineering-panel mt-6 rounded-lg p-4">
+        <div className="mb-4 inline-flex rounded border border-slate-200 bg-white p-1">
           <button
             type="button"
             data-testid="workspace-create-mode-blank"
             onClick={() => setCreateMode('blank')}
-            className={`rounded-full px-4 py-2 text-sm ${createMode === 'blank' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+            className={`rounded px-3 py-1.5 text-sm ${createMode === 'blank' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
           >
             Leerer Arbeitsablauf
           </button>
@@ -216,24 +216,24 @@ export function WorkspaceList() {
             type="button"
             data-testid="workspace-create-mode-template"
             onClick={() => setCreateMode('template')}
-            className={`rounded-full px-4 py-2 text-sm ${createMode === 'template' ? 'bg-cyan-400 text-slate-950' : 'text-slate-300'}`}
+            className={`rounded px-3 py-1.5 text-sm ${createMode === 'template' ? 'bg-blue-600 text-white' : 'text-slate-500'}`}
           >
             Aus Vorlage
           </button>
         </div>
         <div className="flex gap-3">
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name des Arbeitsablaufs" className="flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none" />
+          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name des Arbeitsablaufs" className="wow-engineering-input flex-1 px-3 py-2.5 outline-none" />
           <button
             onClick={() => void handleCreate()}
             disabled={createWorkspace.isPending || createWorkspaceFromTemplate.isPending || (createMode === 'template' && !selectedTemplateId)}
-            className="inline-flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 disabled:opacity-60"
+            className="wow-engineering-button-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
           >
             <Plus className="h-4 w-4" />
             {createMode === 'template' ? 'Aus Vorlage starten' : 'Anlegen'}
           </button>
         </div>
         {createMode === 'template' ? (
-          <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
             <div className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input
@@ -241,17 +241,17 @@ export function WorkspaceList() {
                 value={templateSearch}
                 onChange={(event) => setTemplateSearch(event.target.value)}
                 placeholder="Vorlage suchen"
-                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 pl-11 pr-4 text-white outline-none"
+                className="wow-engineering-input w-full py-2.5 pl-10 pr-4 outline-none"
               />
             </div>
             <div className="mt-3 grid gap-2">
               {filteredTemplates.map((template) => (
                 <div
                   key={template.id}
-                  className={`rounded-2xl border px-4 py-3 ${
+                  className={`rounded-md border px-4 py-3 ${
                     selectedTemplateId === template.id
-                      ? 'border-cyan-300/35 bg-cyan-400/10'
-                      : 'border-white/10 bg-white/[0.04]'
+                      ? 'border-blue-200 bg-blue-50'
+                      : 'border-slate-200 bg-white'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -259,13 +259,13 @@ export function WorkspaceList() {
                       type="button"
                       data-testid={`workspace-template-option-${template.id}`}
                       onClick={() => setSelectedTemplateId(template.id)}
-                      className="flex-1 text-left"
+                      className="flex-1 text-left text-[var(--text)]"
                     >
-                      <div className="font-medium text-white">{template.name}</div>
-                      <div className="mt-1 text-sm text-slate-400">{template.description ?? 'Ohne Beschreibung'}</div>
+                      <div className="font-medium text-slate-900">{template.name}</div>
+                      <div className="mt-1 text-sm text-slate-500">{template.description ?? 'Ohne Beschreibung'}</div>
                     </button>
                     <div className="flex items-center gap-2">
-                      <span className={`rounded-full px-3 py-1 text-xs ${template.is_system ? 'bg-amber-400/10 text-amber-100' : 'bg-white/[0.06] text-slate-300'}`}>
+                      <span className={`rounded-full px-3 py-1 text-xs ${template.is_system ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
                         {template.is_system ? 'Standard' : 'Eigene Vorlage'}
                       </span>
                       {!template.is_system ? (
@@ -278,7 +278,7 @@ export function WorkspaceList() {
                               setTemplateEditName(template.name)
                               setTemplateEditDescription(template.description ?? '')
                             }}
-                            className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-slate-300"
+                            className="wow-engineering-button-secondary rounded p-2"
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -286,7 +286,7 @@ export function WorkspaceList() {
                             type="button"
                             data-testid={`workspace-template-delete-${template.id}`}
                             onClick={() => void handleDeleteTemplate(template)}
-                            className="rounded-full border border-rose-400/25 bg-rose-500/10 p-2 text-rose-100"
+                            className="rounded border border-rose-200 bg-rose-50 p-2 text-rose-700"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -310,31 +310,31 @@ export function WorkspaceList() {
         <section>
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">HauptablÃ¤ufe</p>
+              <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Hauptabläufe</p>
               <p className="mt-1 text-sm text-slate-400">Die oberste Ebene bleibt als Kartenansicht sichtbar.</p>
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {rootWorkspaces.map((workspace) => (
-              <div data-testid={`workspace-card-${workspace.id}`} key={workspace.id} className="rounded-[24px] border border-white/10 bg-slate-950/60 p-5 transition hover:border-cyan-300/30 hover:bg-slate-900/80">
+              <div data-testid={`workspace-card-${workspace.id}`} key={workspace.id} className="wow-engineering-card rounded-lg p-5 transition hover:border-slate-300">
                 <div className="flex items-start justify-between gap-3">
-                  <button data-testid={`workspace-open-${workspace.id}`} onClick={() => openWorkspace(workspace.id, workspace.name)} className="flex-1 text-left">
-                    <div className="inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 p-2 text-cyan-100">
+                  <button data-testid={`workspace-open-${workspace.id}`} onClick={() => openWorkspace(workspace.id, workspace.name)} className="flex-1 text-left text-[var(--text)]">
+                    <div className="inline-flex rounded-md border border-blue-200 bg-blue-50 p-2 text-blue-700">
                       <FolderKanban className="h-5 w-5" />
                     </div>
-                    <h2 className="mt-4 font-display text-xl text-white">{workspace.name}</h2>
-                    <p className="mt-2 text-sm text-slate-400">Erstellt {new Date(workspace.created_at).toLocaleString()}</p>
-                    <p className="mt-3 text-xs uppercase tracking-[0.22em] text-slate-500">
-                      {descendantCounts.get(workspace.id) ?? 0} DetailablÃ¤ufe in der Hierarchie
+                    <h2 className="mt-4 text-xl font-semibold text-slate-900">{workspace.name}</h2>
+                    <p className="mt-2 text-sm text-slate-500">Erstellt {new Date(workspace.created_at).toLocaleString()}</p>
+                    <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">
+                      {descendantCounts.get(workspace.id) ?? 0} Detailabläufe in der Hierarchie
                     </p>
                   </button>
                   <button
                     data-testid={`workspace-delete-${workspace.id}`}
                     onClick={() => void handleDelete(workspace.id, workspace.name)}
                     disabled={deleteWorkspace.isPending}
-                    className="inline-flex items-center gap-2 rounded-full border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-xs text-rose-100 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 disabled:opacity-50"
                   >
-                    <Trash2 className="h-4 w-4" /> LÃ¶schen
+                    <Trash2 className="h-4 w-4" /> Löschen
                   </button>
                 </div>
                 <div className="mt-4 flex justify-end">
@@ -346,7 +346,7 @@ export function WorkspaceList() {
                       setTemplateName(`${workspace.name} Vorlage`)
                       setTemplateDescription('')
                     }}
-                    className="inline-flex items-center gap-2 rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-xs text-amber-100"
+                    className="inline-flex items-center gap-2 rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
                   >
                     <BookmarkPlus className="h-4 w-4" /> Als Vorlage speichern
                   </button>
@@ -356,7 +356,7 @@ export function WorkspaceList() {
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-white/10 bg-slate-950/70 p-5">
+        <section className="wow-engineering-panel rounded-lg p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Ablaufhierarchie</p>
@@ -369,7 +369,7 @@ export function WorkspaceList() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Arbeitsablauf suchen"
-              className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 pl-11 pr-4 text-white outline-none"
+              className="wow-engineering-input w-full py-2.5 pl-10 pr-4 outline-none"
             />
           </div>
 
@@ -390,25 +390,25 @@ export function WorkspaceList() {
               </div>
             ) : null}
 
-            {!isLoading && workspaces.length === 0 ? <p className="mt-2 text-sm text-slate-400">Noch keine Arbeitsablaeufe. Lege den ersten Ablauf an, um das Canvas zu starten.</p> : null}
+            {!isLoading && workspaces.length === 0 ? <p className="wow-ui-subtitle mt-2">Noch keine Arbeitsablaeufe. Lege den ersten Ablauf an, um das Canvas zu starten.</p> : null}
           </div>
         </section>
       </div>
 
       {templateDialog ? (
         <div className="wow-overlay-scrim fixed inset-0 z-40 flex items-center justify-center px-4">
-          <div className="wow-surface-dialog w-full max-w-lg rounded-[28px] border border-white/10 p-6 shadow-[0_30px_100px_rgba(2,8,12,0.72)]">
+          <div className="wow-ui-dialog w-full max-w-lg p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.28em] text-amber-300/80">Vorlage</p>
-                <h2 className="mt-2 font-display text-2xl text-white">Arbeitsablauf als Vorlage speichern</h2>
-                <p className="mt-2 text-sm text-slate-400">{templateDialog.workspaceName} wird als wiederverwendbare Vorlage gesichert.</p>
+                <p className="wow-ui-eyebrow">Vorlage</p>
+                <h2 className="wow-ui-title mt-2">Arbeitsablauf als Vorlage speichern</h2>
+                <p className="wow-ui-subtitle mt-2">{templateDialog.workspaceName} wird als wiederverwendbare Vorlage gesichert.</p>
               </div>
               <button
                 type="button"
                 data-testid="workspace-template-dialog-close"
                 onClick={() => setTemplateDialog(null)}
-                className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-slate-300"
+                className="wow-ui-icon-button p-2"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -419,7 +419,7 @@ export function WorkspaceList() {
                 value={templateName}
                 onChange={(event) => setTemplateName(event.target.value)}
                 placeholder="Name der Vorlage"
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none"
+                className="wow-ui-input"
               />
               <textarea
                 data-testid="workspace-template-description"
@@ -427,7 +427,7 @@ export function WorkspaceList() {
                 onChange={(event) => setTemplateDescription(event.target.value)}
                 rows={3}
                 placeholder="Beschreibung"
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none"
+                className="wow-ui-input"
               />
             </div>
             {templateError ? <p className="mt-3 text-sm text-rose-200">{templateError}</p> : null}
@@ -435,7 +435,7 @@ export function WorkspaceList() {
               <button
                 type="button"
                 onClick={() => setTemplateDialog(null)}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                className="wow-ui-button-secondary"
               >
                 Abbrechen
               </button>
@@ -444,7 +444,7 @@ export function WorkspaceList() {
                 data-testid="workspace-template-save"
                 onClick={() => void handleSaveTemplate()}
                 disabled={!templateName.trim() || createWorkflowTemplate.isPending}
-                className="inline-flex items-center gap-2 rounded-2xl bg-amber-300 px-4 py-3 font-semibold text-slate-950 disabled:opacity-50"
+                className="wow-ui-button-primary disabled:opacity-50"
               >
                 <Sparkles className="h-4 w-4" />
                 Vorlage speichern
@@ -456,18 +456,18 @@ export function WorkspaceList() {
 
       {templateEditDialog ? (
         <div className="wow-overlay-scrim fixed inset-0 z-40 flex items-center justify-center px-4">
-          <div className="wow-surface-dialog w-full max-w-lg rounded-[28px] border border-white/10 p-6 shadow-[0_30px_100px_rgba(2,8,12,0.72)]">
+          <div className="wow-ui-dialog w-full max-w-lg p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">Vorlage bearbeiten</p>
-                <h2 className="mt-2 font-display text-2xl text-white">Vorlage aktualisieren</h2>
-                <p className="mt-2 text-sm text-slate-400">Passe Name und Beschreibung der Vorlage an.</p>
+                <p className="wow-ui-eyebrow">Vorlage bearbeiten</p>
+                <h2 className="wow-ui-title mt-2">Vorlage aktualisieren</h2>
+                <p className="wow-ui-subtitle mt-2">Passe Name und Beschreibung der Vorlage an.</p>
               </div>
               <button
                 type="button"
                 data-testid="workspace-template-edit-close"
                 onClick={() => setTemplateEditDialog(null)}
-                className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-slate-300"
+                className="wow-ui-icon-button p-2"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -478,7 +478,7 @@ export function WorkspaceList() {
                 value={templateEditName}
                 onChange={(event) => setTemplateEditName(event.target.value)}
                 placeholder="Name der Vorlage"
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none"
+                className="wow-ui-input"
               />
               <textarea
                 data-testid="workspace-template-edit-description"
@@ -486,7 +486,7 @@ export function WorkspaceList() {
                 onChange={(event) => setTemplateEditDescription(event.target.value)}
                 rows={3}
                 placeholder="Beschreibung"
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none"
+                className="wow-ui-input"
               />
             </div>
             {templateError ? <p className="mt-3 text-sm text-rose-200">{templateError}</p> : null}
@@ -494,7 +494,7 @@ export function WorkspaceList() {
               <button
                 type="button"
                 onClick={() => setTemplateEditDialog(null)}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                className="wow-ui-button-secondary"
               >
                 Abbrechen
               </button>
@@ -503,7 +503,7 @@ export function WorkspaceList() {
                 data-testid="workspace-template-edit-save"
                 onClick={() => void handleUpdateTemplate()}
                 disabled={!templateEditName.trim() || updateWorkflowTemplate.isPending}
-                className="inline-flex items-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 disabled:opacity-50"
+                className="wow-ui-button-primary disabled:opacity-50"
               >
                 <Pencil className="h-4 w-4" />
                 Vorlage aktualisieren
@@ -544,7 +544,7 @@ function WorkspaceTreeItem({
   return (
     <div data-testid={`workspace-tree-item-${node.workspace.id}`}>
       <div
-        className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2"
+        className="wow-ui-card flex items-center gap-2 px-3 py-2"
         style={{ marginLeft: `${level * 18}px` }}
       >
         <button
@@ -552,20 +552,20 @@ function WorkspaceTreeItem({
           onClick={() => hasChildren && onToggle(node.workspace.id)}
           className="inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 hover:bg-white/10 disabled:opacity-30"
           disabled={!hasChildren}
-          aria-label={hasChildren ? `${isExpanded ? 'Zuklappen' : 'Aufklappen'} ${node.workspace.name}` : `${node.workspace.name} hat keine UnterablÃ¤ufe`}
+          aria-label={hasChildren ? `${isExpanded ? 'Zuklappen' : 'Aufklappen'} ${node.workspace.name}` : `${node.workspace.name} hat keine Unterabläufe`}
         >
-          {hasChildren ? (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : <span className="text-xs">â€¢</span>}
+          {hasChildren ? (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : <span className="text-xs">•</span>}
         </button>
         <button
           type="button"
           data-testid={`workspace-tree-open-${node.workspace.id}`}
           onClick={() => onOpen(node.workspace)}
-          className="flex-1 text-left"
+          className="flex-1 text-left text-[var(--text)]"
         >
-          <div className="font-medium text-white">{node.workspace.name}</div>
-          <div className="mt-1 text-xs text-slate-500">
-            {childCount} DetailablÃ¤ufe darunter
-            {node.workspace.parent_workspace_id ? ' Â· Detailablauf' : ' Â· Hauptablauf'}
+          <div className="font-medium text-[var(--text)]">{node.workspace.name}</div>
+          <div className="mt-1 text-xs text-[var(--muted)]">
+            {childCount} Detailabläufe darunter
+            {node.workspace.parent_workspace_id ? ' · Detailablauf' : ' · Hauptablauf'}
           </div>
         </button>
       </div>
@@ -589,5 +589,8 @@ function WorkspaceTreeItem({
     </div>
   )
 }
+
+
+
 
 

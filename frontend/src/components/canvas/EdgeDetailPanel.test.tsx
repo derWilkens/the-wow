@@ -221,14 +221,14 @@ describe('EdgeDetailPanel', () => {
     renderPanel()
 
     expect(screen.getByTestId('edge-transport-mode-trigger')).toHaveClass(
-      'rounded-2xl',
-      'bg-slate-950/70',
-      'shadow-[0_12px_30px_rgba(2,8,12,0.22)]',
+      'wow-ui-input',
+      'bg-[var(--panel-strong)]',
+      'shadow-none',
     )
     expect(screen.getByTestId('edge-transport-description')).toHaveClass(
-      'rounded-2xl',
+      'rounded-[var(--wow-control-radius)]',
       'border',
-      'bg-white/[0.03]',
+      'bg-[var(--panel-strong)]',
     )
   })
 

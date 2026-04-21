@@ -191,28 +191,28 @@ export function CustomChoiceList({
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={() => setIsOpen((current) => !current)}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-left shadow-[0_12px_30px_rgba(2,8,12,0.22)] outline-none transition hover:border-white/20 hover:bg-white/[0.06] focus:border-cyan-300/35 focus:bg-cyan-400/[0.06]"
+        className="wow-ui-input flex items-center justify-between gap-3 border-[var(--wow-panel-border)] bg-[var(--panel-strong)] px-4 py-3 text-left shadow-none transition hover:bg-[var(--wow-secondary-soft)] focus:border-[var(--wow-primary)]"
       >
         <span className="min-w-0">
-          <span className={`block truncate text-sm font-medium ${selectedOption ? 'text-white' : 'text-slate-400'}`}>
+          <span className={`block truncate text-sm font-medium ${selectedOption ? 'text-[var(--text)]' : 'text-[var(--muted)]'}`}>
             {selectedOption?.label ?? placeholder}
           </span>
           {selectedOption?.description ? (
-            <span className="mt-1 block truncate text-xs text-slate-400">{selectedOption.description}</span>
+            <span className="mt-1 block truncate text-xs text-[var(--muted)]">{selectedOption.description}</span>
           ) : null}
         </span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 shrink-0 text-[var(--muted)] transition ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen ? (
         <div
           id={panelId}
           data-testid={`${testId}-panel`}
-          className="wow-surface-popover absolute left-0 right-0 top-[calc(100%+0.5rem)] z-40 overflow-hidden rounded-[24px] border border-white/10 shadow-[0_28px_80px_rgba(2,8,12,0.58)]"
+          className="wow-surface-popover absolute left-0 right-0 top-[calc(100%+0.5rem)] z-40 overflow-hidden rounded-[var(--wow-panel-radius)] border border-[var(--wow-panel-border)] shadow-[var(--wow-panel-shadow)]"
         >
           <div className="space-y-3 p-3">
             {searchable ? (
-              <label className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-slate-300">
+              <label className="wow-ui-section flex items-center gap-2 px-3 py-2 text-[var(--text)]">
                 <Search className="h-4 w-4 text-slate-500" />
                 <input
                   ref={searchInputRef}
@@ -220,7 +220,7 @@ export function CustomChoiceList({
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={searchPlaceholder}
-                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                  className="w-full bg-transparent text-sm text-[var(--text)] outline-none placeholder:text-[var(--muted)]"
                 />
               </label>
             ) : null}
@@ -233,15 +233,15 @@ export function CustomChoiceList({
                   onClick={() => handleSelect('')}
                   className={`flex w-full items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition ${
                     value === ''
-                      ? 'border-cyan-300/30 bg-cyan-400/10 text-cyan-50'
-                      : 'border-white/10 bg-white/[0.03] text-slate-200 hover:border-white/20 hover:bg-white/[0.06]'
+                      ? 'border-[var(--wow-primary)] bg-[var(--wow-primary-soft)] text-[var(--wow-primary)]'
+                      : 'border-[var(--wow-panel-border)] bg-[var(--panel-strong)] text-[var(--text)] hover:bg-[var(--wow-secondary-soft)]'
                   }`}
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-medium">{clearLabel}</div>
-                    <div className="mt-1 text-xs text-slate-400">{clearDescription}</div>
+                    <div className="mt-1 text-xs text-[var(--muted)]">{clearDescription}</div>
                   </div>
-                  {value === '' ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" /> : null}
+                  {value === '' ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--wow-primary)]" /> : null}
                 </button>
               ) : null}
 
@@ -257,8 +257,8 @@ export function CustomChoiceList({
                       onClick={() => handleSelect(option.id)}
                       className={`flex w-full items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition ${
                         isSelected
-                          ? 'border-cyan-300/30 bg-cyan-400/10 text-cyan-50'
-                          : 'border-white/10 bg-white/[0.03] text-slate-200 hover:border-white/20 hover:bg-white/[0.06]'
+                          ? 'border-[var(--wow-primary)] bg-[var(--wow-primary-soft)] text-[var(--wow-primary)]'
+                          : 'border-[var(--wow-panel-border)] bg-[var(--panel-strong)] text-[var(--text)] hover:bg-[var(--wow-secondary-soft)]'
                       } ${option.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
                     >
                       <div className="min-w-0">
@@ -267,7 +267,7 @@ export function CustomChoiceList({
                           {(option.badges ?? []).map((badge) => (
                             <span
                               key={`${option.id}-${badge}`}
-                              className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-slate-300"
+                              className="wow-ui-chip px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]"
                             >
                               {badge}
                             </span>
@@ -277,14 +277,14 @@ export function CustomChoiceList({
                           <div className="mt-1 text-xs leading-5 text-slate-400">{option.description}</div>
                         ) : null}
                       </div>
-                      {isSelected ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" /> : null}
+                      {isSelected ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--wow-primary)]" /> : null}
                     </button>
                   )
                 })
               ) : (
                 <div
                   data-testid={`${testId}-empty`}
-                  className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-3 py-4 text-sm text-slate-500"
+                  className="rounded-[var(--wow-panel-radius)] border border-dashed border-[var(--wow-panel-border)] bg-[var(--panel-strong)] px-3 py-4 text-sm text-[var(--muted)]"
                 >
                   {emptyState}
                 </div>
@@ -292,13 +292,13 @@ export function CustomChoiceList({
             </div>
 
             {creatable && onCreate ? (
-              <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-3">
+              <div className="wow-ui-card p-3">
                 {!isCreateOpen ? (
                   <button
                     type="button"
                     data-testid={`${testId}-create-toggle`}
                     onClick={() => setIsCreateOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1.5 text-xs text-cyan-100"
+                    className="wow-ui-button-secondary min-h-0 px-3 py-1.5 text-xs"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     {createLabel}
@@ -306,7 +306,7 @@ export function CustomChoiceList({
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{createLabel}</p>
+                      <p className="wow-ui-label">{createLabel}</p>
                       <button
                         type="button"
                         data-testid={`${testId}-create-cancel`}
@@ -317,7 +317,7 @@ export function CustomChoiceList({
                           setCreateFlagValue(false)
                           setCreateTertiaryValue('')
                         }}
-                        className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-slate-300"
+                        className="wow-ui-icon-button p-2"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -354,7 +354,7 @@ export function CustomChoiceList({
                               value={createLabelValue}
                               onChange={(event) => setCreateLabelValue(event.target.value)}
                               placeholder={createPrimaryPlaceholder}
-                              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500"
+                              className="wow-ui-input"
                             />
                           </label>
                           <label className="grid gap-1">
@@ -365,17 +365,17 @@ export function CustomChoiceList({
                               onChange={(event) => setCreateDescriptionValue(event.target.value)}
                               rows={2}
                               placeholder={createSecondaryPlaceholder}
-                              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500"
+                              className="wow-ui-input"
                             />
                           </label>
                           {createFlagLabel ? (
-                            <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-slate-200">
+                            <label className="wow-ui-section flex items-center gap-3 px-3 py-2.5 text-sm text-[var(--text)]">
                               <input
                                 data-testid={`${testId}-create-flag`}
                                 type="checkbox"
                                 checked={createFlagValue}
                                 onChange={(event) => setCreateFlagValue(event.target.checked)}
-                                className="h-4 w-4 rounded border-white/20 bg-slate-950/60"
+                                className="h-4 w-4 rounded border-[var(--wow-panel-border)] bg-[var(--panel-strong)]"
                               />
                               <span>{createFlagLabel}</span>
                             </label>
@@ -387,7 +387,7 @@ export function CustomChoiceList({
                             data-testid={`${testId}-create-submit`}
                             disabled={!createLabelValue.trim() || isCreating}
                             onClick={() => void handleCreate()}
-                            className="rounded-2xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 disabled:opacity-40"
+                            className="wow-ui-button-primary disabled:opacity-40"
                           >
                             {createLabel}
                           </button>
@@ -404,3 +404,4 @@ export function CustomChoiceList({
     </div>
   )
 }
+

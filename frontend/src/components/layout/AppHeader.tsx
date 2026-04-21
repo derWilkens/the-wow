@@ -40,20 +40,20 @@ export function AppHeader({
   onToggleGroupingMode,
 }: AppHeaderProps) {
   return (
-    <header className="flex min-h-14 flex-col gap-3 border-b border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-300 print:hidden">
+    <header className="wow-engineering-header flex min-h-12 flex-col gap-2 px-4 py-2 text-sm print:hidden">
       <div className="relative z-10 flex min-w-0 items-center gap-3 overflow-hidden">
         <button
           data-testid="toolbar-back-to-workspaces"
           onClick={onLeaveWorkspace}
-          className="shrink-0 text-[11px] uppercase tracking-[0.36em] text-slate-500"
+          className="shrink-0 text-[11px] uppercase tracking-[0.28em] text-slate-500"
         >
           Arbeitsablaeufe
         </button>
-        <span className="shrink-0 text-slate-700">|</span>
+        <span className="shrink-0 text-slate-300">/</span>
         <div className="min-w-0 flex-1 overflow-x-auto">
           <div className="flex min-w-max items-center gap-2 pr-2">
         {workspaceTrail.length === 0 ? (
-          <button onClick={onResetRoot} className="inline-flex min-w-0 items-center gap-2 font-medium text-cyan-300">
+          <button onClick={onResetRoot} className="inline-flex min-w-0 items-center gap-2 font-medium text-slate-900">
             <FolderKanban className="h-4 w-4 shrink-0" />
             <span className="truncate">{workspaceName}</span>
           </button>
@@ -65,28 +65,28 @@ export function AppHeader({
                 type="button"
                 data-testid={`workspace-trail-${item.workspaceId}`}
                 onClick={() => onNavigateWorkspaceTrail(item.workspaceId)}
-                className={`inline-flex min-w-0 items-center gap-2 rounded-full px-2 py-1 ${
-                  index === workspaceTrail.length - 1 ? 'bg-cyan-400/10 text-cyan-300' : 'text-slate-400 hover:text-slate-200'
+                className={`inline-flex min-w-0 items-center gap-2 rounded px-2 py-1 ${
+                  index === workspaceTrail.length - 1 ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 <FolderKanban className="h-4 w-4 shrink-0" />
                 <span className="truncate">{item.workspaceName}</span>
               </button>
-              {item.viaActivityLabel ? <span className="max-w-[180px] truncate text-xs text-slate-500">{item.viaActivityLabel}</span> : null}
+              {item.viaActivityLabel ? <span className="max-w-[180px] truncate text-xs text-slate-400">{item.viaActivityLabel}</span> : null}
             </div>
           ))
         )}
           </div>
         </div>
       </div>
-      <div className="relative z-0 flex flex-wrap items-center justify-end gap-2">
+      <div className="relative z-0 flex flex-wrap items-center justify-end gap-1.5">
         {showTableViewToggle ? (
-          <div className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-1">
+          <div className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-1 py-1">
             <button
               data-testid="toolbar-view-canvas"
               onClick={() => onWorkflowViewModeChange('canvas')}
-              className={`rounded-full px-3 py-1.5 text-xs transition ${
-                workflowViewMode === 'canvas' ? 'bg-cyan-400 text-slate-950' : 'text-slate-200 hover:bg-white/10'
+              className={`rounded px-3 py-1.5 text-xs transition ${
+                workflowViewMode === 'canvas' ? 'wow-engineering-tab-active text-blue-700' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Zeichenmodus
@@ -94,8 +94,8 @@ export function AppHeader({
             <button
               data-testid="toolbar-view-sipoc"
               onClick={() => onWorkflowViewModeChange('sipoc_table')}
-              className={`rounded-full px-3 py-1.5 text-xs transition ${
-                workflowViewMode === 'sipoc_table' ? 'bg-cyan-400 text-slate-950' : 'text-slate-200 hover:bg-white/10'
+              className={`rounded px-3 py-1.5 text-xs transition ${
+                workflowViewMode === 'sipoc_table' ? 'wow-engineering-tab-active text-blue-700' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Tabellarische View
@@ -106,10 +106,10 @@ export function AppHeader({
           <button
             data-testid="toolbar-grouping-toggle"
             onClick={onToggleGroupingMode}
-            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
+            className={`inline-flex items-center gap-2 rounded border px-3 py-1.5 transition ${
               groupingMode === 'role_lanes'
-                ? 'border-cyan-300/25 bg-cyan-400/10 text-cyan-100'
-                : 'border-white/10 bg-white/5 text-slate-200 hover:border-white/20 hover:bg-white/10'
+                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
             }`}
           >
             <Users className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function AppHeader({
           <button
             data-testid="toolbar-workflow-details"
             onClick={onOpenWorkflowDetails}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-200 transition hover:border-white/20 hover:bg-white/10"
+            className="wow-engineering-button-secondary inline-flex items-center gap-2 px-3 py-1.5 text-slate-700 transition"
           >
             <Info className="h-4 w-4" /> Ablaufdetails
           </button>
@@ -129,14 +129,14 @@ export function AppHeader({
           <button
             data-testid="toolbar-settings"
             onClick={onOpenSettings}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-200 transition hover:border-white/20 hover:bg-white/10"
+            className="wow-engineering-button-secondary inline-flex items-center gap-2 px-3 py-1.5 text-slate-700 transition"
           >
             <Settings2 className="h-4 w-4" /> Einstellungen
           </button>
         ) : null}
         <button
           onClick={onSignOut}
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300 transition hover:border-white/20 hover:bg-white/10"
+          className="wow-engineering-button-ghost inline-flex items-center gap-2 px-3 py-1.5 transition"
         >
           <LogOut className="h-4 w-4" /> Abmelden
         </button>

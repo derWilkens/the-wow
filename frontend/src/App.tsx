@@ -3132,8 +3132,8 @@ function WorkspaceCanvasApp({
   }, [clearHierarchyFocus, hierarchyFocusSession, hierarchyFocusState, openSubprocessWorkspace, setHierarchyFocusState])
 
   return (
-    <div className="h-screen w-full overflow-hidden px-4 py-4 md:px-6 print:h-auto print:px-0 print:py-0">
-      <div className="wow-app-shell flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-white/10 shadow-[0_40px_120px_rgba(3,8,12,0.55)] backdrop-blur-xl print:min-h-0 print:max-w-none print:rounded-none print:border-0 print:bg-white print:shadow-none">
+    <div className="h-screen w-full overflow-hidden px-3 py-3 md:px-4 print:h-auto print:px-0 print:py-0">
+      <div className="wow-app-shell flex h-full w-full flex-col overflow-hidden border border-[var(--wow-shell-border)] shadow-[var(--wow-panel-shadow)] backdrop-blur-xl print:min-h-0 print:max-w-none print:rounded-none print:border-0 print:bg-white print:shadow-none">
         <AppHeader
           workspaceName={activeWorkspaceName}
           workspaceTrail={workspaceTrail}
@@ -3163,7 +3163,7 @@ function WorkspaceCanvasApp({
         <main className="grid min-h-0 flex-1 gap-4 p-4 print:block print:p-0">
           <section
             ref={canvasSectionRef}
-            className="wow-canvas-shell relative min-h-0 overflow-hidden rounded-[26px] border border-white/10 print:rounded-none print:border-0 print:bg-white"
+            className="wow-canvas-shell relative min-h-0 overflow-hidden rounded-lg border border-[var(--wow-shell-border)] print:rounded-none print:border-0 print:bg-white"
           >
             {workflowViewMode === 'canvas' ? (
               <FloatingCanvasToolbar

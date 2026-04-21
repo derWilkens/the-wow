@@ -39,10 +39,10 @@ export function FloatingCanvasToolbar({
   return (
     <aside
       data-testid="floating-canvas-toolbar"
-      className="pointer-events-none absolute left-4 top-6 z-20 flex max-h-[calc(100%-12rem)] max-w-[calc(100%-2rem)] flex-col gap-2 md:left-6"
+      className="pointer-events-none absolute left-4 top-4 z-20 flex max-h-[calc(100%-10rem)] max-w-[calc(100%-2rem)] flex-col gap-2 md:left-4"
       aria-label="Canvas-Werkzeuge"
     >
-      <div className="wow-toolbar-shell pointer-events-none overflow-x-visible overflow-y-auto rounded-[28px] border border-white/10 p-2 shadow-[0_24px_80px_rgba(2,8,12,0.45)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="wow-toolbar-shell wow-engineering-canvas-tools pointer-events-none overflow-x-visible overflow-y-auto rounded-lg border border-[var(--wow-panel-border)] p-1.5 backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="pointer-events-none flex flex-col gap-2">
           <FloatingToolbarButton
             testId="toolbar-undo"
@@ -185,7 +185,7 @@ function FloatingToolbarButton({
         onMouseLeave={() => setIsTooltipVisible(false)}
         onFocus={() => setIsTooltipVisible(true)}
         onBlur={() => setIsTooltipVisible(false)}
-        className={`flex h-14 w-14 items-center justify-center rounded-full border px-4 py-3 text-sm font-medium shadow-[0_8px_20px_rgba(2,8,12,0.18)] transition-[transform,background-color,opacity] duration-200 ease-out hover:translate-x-1 focus-visible:translate-x-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 ${palettes[color]}`}
+        className={`flex h-10 w-10 items-center justify-center rounded border px-2 py-2 text-sm font-medium shadow-sm transition-[background-color,opacity,border-color] duration-150 ease-out focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 ${palettes[color]}`}
       >
         <span className="flex w-6 shrink-0 justify-center">{icon}</span>
       </button>
@@ -193,7 +193,7 @@ function FloatingToolbarButton({
         <div
           role="tooltip"
           data-testid={`${testId}-tooltip`}
-          className="wow-surface-popover pointer-events-none absolute left-[calc(100%+0.75rem)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/10 px-3 py-2 text-xs font-medium text-slate-100 shadow-[0_14px_34px_rgba(2,8,12,0.32)]"
+          className="wow-surface-popover pointer-events-none absolute left-[calc(100%+0.5rem)] top-1/2 z-20 -translate-y-1/2 whitespace-nowrap rounded border border-white/10 px-2.5 py-1.5 text-[11px] font-medium text-slate-100 shadow-[0_8px_24px_rgba(2,8,12,0.14)]"
         >
           {label}
         </div>

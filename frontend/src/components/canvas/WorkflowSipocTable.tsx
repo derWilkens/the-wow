@@ -43,8 +43,8 @@ function SipocRoleEditor({
   onCreateRole: (input: { label: string; description: string; acronym?: string | null }) => Promise<CatalogRole | void> | CatalogRole | void
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-      <div className="mb-2 text-xs text-slate-500">{formatRelatedActivity(roleRef)}</div>
+    <div className="wow-ui-card p-3">
+      <div className="mb-2 text-xs text-[var(--muted)]">{formatRelatedActivity(roleRef)}</div>
       <CustomChoiceList
         testId={testId}
         value={roleRef.roleId ?? ''}
@@ -97,7 +97,7 @@ function SipocObjectEditor({
   }, [items])
 
   if (byEdge.length === 0) {
-    return <span className="text-slate-500">—</span>
+    return <span className="text-[var(--muted)]">—</span>
   }
 
   return (
@@ -114,13 +114,13 @@ function SipocObjectEditor({
           }))
 
         return (
-          <div key={edgeId} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <div key={edgeId} className="wow-ui-card p-3">
             <div className="mb-3">
               <div className="flex flex-wrap gap-2">
                 {edgeItems.map((item) => (
                   <span
                     key={item.id}
-                    className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-100"
+                    className="wow-ui-chip px-2.5 py-1 text-[11px]"
                   >
                     {item.objectName}
                   </span>
@@ -129,7 +129,7 @@ function SipocObjectEditor({
             </div>
             <div className="grid gap-3">
               <div>
-                <div className="mb-2 text-xs uppercase tracking-[0.18em] text-slate-500">{title} Transport</div>
+                <div className="wow-ui-label mb-2">{title} Transport</div>
                 <CustomChoiceList
                   testId={`${testId}-transport-${edgeId}`}
                   value={edgeItems[0]?.transportModeId ?? ''}
@@ -143,7 +143,7 @@ function SipocObjectEditor({
                 />
               </div>
               <div>
-                <div className="mb-2 text-xs uppercase tracking-[0.18em] text-slate-500">{title} Datenobjekte</div>
+                <div className="wow-ui-label mb-2">{title} Datenobjekte</div>
                 <CustomChoiceList
                   testId={`${testId}-data-object-${edgeId}`}
                   value=""
@@ -263,19 +263,19 @@ export function WorkflowSipocTable({
   return (
     <div
       data-testid="workflow-sipoc-table"
-      className="h-full overflow-auto rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(9,20,31,0.92),rgba(6,14,22,0.96))] p-4"
+      className="h-full overflow-auto rounded-[var(--wow-panel-radius)] border border-[var(--wow-panel-border)] bg-[var(--panel)] p-4"
     >
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-300/80">SIPOC</p>
-          <h2 className="mt-2 font-display text-xl text-white">Tabellarische View</h2>
+          <p className="wow-ui-eyebrow">SIPOC</p>
+          <h2 className="wow-ui-title mt-2 text-xl">Tabellarische View</h2>
         </div>
-        <p className="text-sm text-slate-400">Eine Zeile pro Aktivitaet, bearbeitbar ohne neue SIPOC-Zeilen anzulegen.</p>
+        <p className="text-sm text-[var(--muted)]">Eine Zeile pro Aktivitaet, bearbeitbar ohne neue SIPOC-Zeilen anzulegen.</p>
       </div>
 
       <table className="min-w-full border-separate border-spacing-0 overflow-hidden rounded-[22px]">
         <thead>
-          <tr className="bg-white/[0.04] text-left text-[11px] uppercase tracking-[0.22em] text-slate-400">
+          <tr className="bg-[var(--panel-strong)] text-left text-[11px] uppercase tracking-[0.22em] text-[var(--muted)]">
             <th className="px-4 py-3">Supplier</th>
             <th className="px-4 py-3">Input</th>
             <th className="px-4 py-3">Prozess</th>
@@ -288,9 +288,9 @@ export function WorkflowSipocTable({
             <tr
               key={row.activityId}
               data-testid={`sipoc-row-${row.activityId}`}
-              className="align-top text-sm text-slate-200 transition hover:bg-white/[0.03]"
+              className="align-top text-sm text-[var(--text)] transition hover:bg-[var(--wow-secondary-soft)]"
             >
-              <td className="border-t border-white/10 px-4 py-4">
+              <td className="border-t border-[var(--wow-panel-border)] px-4 py-4">
                 {row.supplierRoles.length > 0 ? (
                   <div className="space-y-3">
                     {row.supplierRoles.map((roleRef) => (
@@ -305,10 +305,10 @@ export function WorkflowSipocTable({
                     ))}
                   </div>
                 ) : (
-                  <span className="text-slate-500">Nicht zugeordnet</span>
+                  <span className="text-[var(--muted)]">Nicht zugeordnet</span>
                 )}
               </td>
-              <td className="border-t border-white/10 px-4 py-4">
+              <td className="border-t border-[var(--wow-panel-border)] px-4 py-4">
                 <SipocObjectEditor
                   title="Input"
                   testId="sipoc-input"
@@ -320,9 +320,9 @@ export function WorkflowSipocTable({
                   onCreateDataObject={onCreateDataObjectOnEdge}
                 />
               </td>
-              <td className="border-t border-white/10 px-4 py-4">
+              <td className="border-t border-[var(--wow-panel-border)] px-4 py-4">
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                  <div className="wow-ui-card p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <input
@@ -337,7 +337,7 @@ export function WorkflowSipocTable({
                           }
                           onBlur={() => void commitProcessLabel(row.activityId)}
                           onKeyDown={(event) => handleProcessKeyDown(row.activityId, event)}
-                          className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-3 py-2 font-medium text-cyan-200 outline-none"
+                          className="wow-ui-input font-medium text-[var(--wow-primary)]"
                         />
                       </div>
                       {onSelectActivity ? (
@@ -345,7 +345,7 @@ export function WorkflowSipocTable({
                           type="button"
                           data-testid={`sipoc-process-${row.activityId}`}
                           onClick={() => onSelectActivity(row.activityId)}
-                          className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-slate-200"
+                          className="wow-ui-icon-button p-2 text-[var(--text)]"
                           aria-label="Im Zeichenmodus fokussieren"
                         >
                           {editingProcessId === row.activityId ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
@@ -353,7 +353,7 @@ export function WorkflowSipocTable({
                       ) : null}
                     </div>
                     <div className="mt-3">
-                      <div className="mb-2 text-xs uppercase tracking-[0.18em] text-slate-500">Prozessrolle</div>
+                      <div className="wow-ui-label mb-2">Prozessrolle</div>
                       <CustomChoiceList
                         testId={`sipoc-process-role-${row.activityId}`}
                         value={row.processRoleId ?? ''}
@@ -376,7 +376,7 @@ export function WorkflowSipocTable({
                   </div>
                 </div>
               </td>
-              <td className="border-t border-white/10 px-4 py-4">
+              <td className="border-t border-[var(--wow-panel-border)] px-4 py-4">
                 <SipocObjectEditor
                   title="Output"
                   testId="sipoc-output"
@@ -388,7 +388,7 @@ export function WorkflowSipocTable({
                   onCreateDataObject={onCreateDataObjectOnEdge}
                 />
               </td>
-              <td className="border-t border-white/10 px-4 py-4">
+              <td className="border-t border-[var(--wow-panel-border)] px-4 py-4">
                 {row.consumerRoles.length > 0 ? (
                   <div className="space-y-3">
                     {row.consumerRoles.map((roleRef) => (
@@ -403,7 +403,7 @@ export function WorkflowSipocTable({
                     ))}
                   </div>
                 ) : (
-                  <span className="text-slate-500">Nicht zugeordnet</span>
+                  <span className="text-[var(--muted)]">Nicht zugeordnet</span>
                 )}
               </td>
             </tr>
@@ -413,3 +413,4 @@ export function WorkflowSipocTable({
     </div>
   )
 }
+

@@ -251,38 +251,42 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
     <div className="pointer-events-none absolute inset-0 flex items-start justify-end p-4">
       <div
         data-testid={`activity-detail-${activity.id}`}
-        className="wow-surface-dialog pointer-events-auto max-h-[calc(100%-2rem)] w-full max-w-2xl overflow-auto rounded-[28px] border border-white/10 p-6 shadow-[0_35px_120px_rgba(2,8,12,0.72)]"
+        className="wow-ui-dialog pointer-events-auto max-h-[calc(100%-2rem)] w-full max-w-2xl overflow-auto p-6"
       >
-        <div className="flex items-start justify-between border-b border-white/10 pb-4">
+        <div className="flex items-start justify-between border-b border-[var(--wow-panel-border)] pb-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.3em] text-cyan-300/80">Aktivitaet</p>
+            <p className="wow-ui-eyebrow">Aktivitaet</p>
             <input
               data-testid="activity-detail-label"
               value={label}
               onChange={(event) => setLabel(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 font-display text-2xl text-white outline-none"
+              className="wow-ui-input mt-2 text-2xl font-semibold"
             />
           </div>
-          <button type="button" onClick={() => void handleClose()} className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-300">
+          <button type="button" onClick={() => void handleClose()} className="wow-ui-icon-button">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="mt-5 grid gap-5 text-sm text-slate-300">
+        <div className="mt-5 grid gap-5 text-sm text-[var(--text)]">
           {saveError ? (
-            <div className="rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            <div className="rounded-[var(--wow-panel-radius)] border border-[rgba(186,26,26,0.18)] bg-[rgba(186,26,26,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
               {saveError}
             </div>
           ) : null}
           <section>
-            <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Aktivitaetstyp</p>
+            <p className="wow-ui-label">Aktivitaetstyp</p>
             <div className="mt-3 grid gap-2">
               {activityTypeOptions.map((type) => {
                 const Icon = type.icon
                 return (
                   <label
                     key={type.value}
-                    className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3 ${activityType === type.value ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-slate-300'}`}
+                    className={`flex cursor-pointer items-start gap-3 rounded-[var(--wow-panel-radius)] border px-4 py-3 ${
+                      activityType === type.value
+                        ? 'border-[var(--wow-primary)] bg-[var(--wow-primary-soft)] text-[var(--wow-primary)]'
+                        : 'border-[var(--wow-panel-border)] bg-[var(--wow-secondary-soft)] text-[var(--text)]'
+                    }`}
                   >
                     <input
                       data-testid={`activity-type-${type.value}`}
@@ -295,7 +299,7 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                     <Icon className="mt-0.5 h-4 w-4 shrink-0" />
                     <div>
                       <div className="font-medium">{type.label}</div>
-                      <div className="mt-1 text-xs text-slate-400">{type.description}</div>
+                      <div className="mt-1 text-xs text-[var(--muted)]">{type.description}</div>
                     </div>
                   </label>
                 )
@@ -305,17 +309,17 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
 
           <section className="grid gap-3 md:grid-cols-2">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Ausfuehrende(r)</p>
+              <p className="wow-ui-label">Ausfuehrende(r)</p>
               <input
                 data-testid="activity-assignee-input"
                 value={assigneeLabel}
                 onChange={(event) => setAssigneeLabel(event.target.value)}
                 placeholder="z. B. AG BIM-Koordinator"
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none"
+                className="wow-ui-input mt-2"
               />
             </div>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Rolle</p>
+              <p className="wow-ui-label">Rolle</p>
               <div className="mt-2">
                 <CustomChoiceList
                   testId="activity-role-select"
@@ -359,41 +363,41 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
           </section>
 
           <section>
-            <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Beschreibung</p>
-            <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none" />
+            <p className="wow-ui-label">Beschreibung</p>
+            <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} className="wow-ui-textarea mt-2" />
           </section>
 
           <section>
-            <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Notizen</p>
-            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none" />
+            <p className="wow-ui-label">Notizen</p>
+            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="wow-ui-textarea mt-2" />
           </section>
 
           <section className="grid grid-cols-2 gap-4">
-            <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Eingaben</p>
+            <div className="wow-ui-section p-4">
+              <p className="wow-ui-label">Eingaben</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {dataObjects.incoming.length > 0 ? (
                   dataObjects.incoming.map((canvasObject) => (
-                    <span key={canvasObject.id} className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-100">
+                    <span key={canvasObject.id} className="wow-ui-chip border-[rgba(12,86,208,0.18)] bg-[var(--wow-primary-soft)] text-[var(--wow-primary)]">
                       {canvasObject.name}
                     </span>
                   ))
                 ) : (
-                  <span className="text-sm text-slate-500">Keine eingehenden Datenobjekte</span>
+                  <span className="text-sm text-[var(--muted)]">Keine eingehenden Datenobjekte</span>
                 )}
               </div>
             </div>
-            <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Ergebnisse</p>
+            <div className="wow-ui-section p-4">
+              <p className="wow-ui-label">Ergebnisse</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {dataObjects.outgoing.length > 0 ? (
                   dataObjects.outgoing.map((canvasObject) => (
-                    <span key={canvasObject.id} className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-xs text-amber-100">
+                    <span key={canvasObject.id} className="wow-ui-chip border-[rgba(76,97,108,0.18)] bg-[rgba(76,97,108,0.08)] text-[var(--text)]">
                       {canvasObject.name}
                     </span>
                   ))
                 ) : (
-                  <span className="text-sm text-slate-500">Keine ausgehenden Datenobjekte</span>
+                  <span className="text-sm text-[var(--muted)]">Keine ausgehenden Datenobjekte</span>
                 )}
               </div>
             </div>
@@ -401,7 +405,7 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
 
           <section>
             <div className="flex items-center justify-between">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">IT-Tools</p>
+              <p className="wow-ui-label">IT-Tools</p>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {visibleLinkedTools.length > 0 ? (
@@ -414,13 +418,13 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                       setOptimisticLinkedTools((current) => current.filter((entry) => entry.id !== tool.id))
                       void unlinkTool.mutateAsync(tool.id)
                     }}
-                    className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-slate-200"
+                    className="wow-ui-chip"
                   >
                     {tool.name} x
                   </button>
                 ))
               ) : (
-                <span className="text-sm text-slate-500">Noch kein IT-Tool verlinkt</span>
+                <span className="text-sm text-[var(--muted)]">Noch kein IT-Tool verlinkt</span>
               )}
             </div>
             <div className="mt-3 flex gap-3">
@@ -448,17 +452,17 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                 data-testid="activity-tool-link-submit"
                 onClick={() => void handleLinkTool()}
                 disabled={!selectedToolId}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white disabled:opacity-40"
+                className="wow-ui-button-secondary disabled:opacity-40"
               >
                 Verlinken
               </button>
             </div>
           </section>
 
-          <section className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
+          <section className="wow-ui-section p-4">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] uppercase tracking-[0.26em] text-slate-500">Kommentare</p>
-              <MessageSquare className="h-4 w-4 text-slate-500" />
+              <p className="wow-ui-label">Kommentare</p>
+              <MessageSquare className="h-4 w-4 text-[var(--muted)]" />
             </div>
             <div className="mt-3 space-y-3">
               {comments.length > 0 ? (
@@ -467,14 +471,14 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                   const isOwnComment = comment.author_user_id === currentUserId
                   const author = organizationMembers.find((member) => member.user_id === comment.author_user_id)
                   return (
-                    <div key={comment.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                    <div key={comment.id} className="wow-ui-card p-3">
                       {isEditing ? (
                         <div className="space-y-2">
                           <textarea
                             value={editingCommentBody}
                             onChange={(event) => setEditingCommentBody(event.target.value)}
                             rows={2}
-                            className="w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none"
+                            className="wow-ui-textarea"
                           />
                           <div className="flex justify-end gap-2">
                             <button
@@ -483,7 +487,7 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                                 setEditingCommentId(null)
                                 setEditingCommentBody('')
                               }}
-                              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white"
+                              className="wow-ui-button-secondary min-h-0 px-3 py-1.5 text-xs"
                             >
                               Abbrechen
                             </button>
@@ -491,7 +495,7 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                               type="button"
                               data-testid={`activity-comment-save-${comment.id}`}
                               onClick={() => void handleSaveComment()}
-                              className="rounded-full bg-cyan-400 px-3 py-1.5 text-xs font-semibold text-slate-950"
+                              className="wow-ui-button-primary min-h-0 px-3 py-1.5 text-xs"
                             >
                               Speichern
                             </button>
@@ -500,8 +504,8 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                       ) : (
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="text-sm text-white">{comment.body}</div>
-                            <div className="mt-1 text-xs text-slate-500">
+                            <div className="text-sm text-[var(--text)]">{comment.body}</div>
+                            <div className="mt-1 text-xs text-[var(--muted)]">
                               {author?.display_name ?? author?.email ?? 'Unbekannt'} | {new Date(comment.created_at).toLocaleString()}
                             </div>
                           </div>
@@ -514,7 +518,7 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                                   setEditingCommentId(comment.id)
                                   setEditingCommentBody(comment.body)
                                 }}
-                                className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-slate-200"
+                                className="wow-ui-icon-button p-2"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -522,7 +526,7 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                                 type="button"
                                 data-testid={`activity-comment-delete-${comment.id}`}
                                 onClick={() => void deleteComment.mutateAsync(comment.id)}
-                                className="rounded-full border border-rose-400/25 bg-rose-500/10 p-2 text-rose-100"
+                                className="wow-ui-icon-button border-[rgba(186,26,26,0.18)] bg-[rgba(186,26,26,0.08)] text-[var(--danger)]"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -534,7 +538,7 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                   )
                 })
               ) : (
-                <p className="text-sm text-slate-500">Noch keine Kommentare.</p>
+                <p className="text-sm text-[var(--muted)]">Noch keine Kommentare.</p>
               )}
             </div>
             <div className="mt-3 flex gap-3">
@@ -544,14 +548,14 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
                 onChange={(event) => setCommentDraft(event.target.value)}
                 rows={2}
                 placeholder="Kommentar verfassen"
-                className="flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none"
+                className="wow-ui-textarea flex-1"
               />
               <button
                 type="button"
                 data-testid="activity-comment-submit"
                 onClick={() => void handleCreateComment()}
                 disabled={!commentDraft.trim()}
-                className="self-end rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 disabled:opacity-40"
+                className="wow-ui-button-primary self-end disabled:opacity-40"
               >
                 Hinzufuegen
               </button>
@@ -560,12 +564,12 @@ export const ActivityDetailPopup = forwardRef<ActivityDetailPopupHandle, {
         </div>
 
         <div className="mt-6 flex justify-between gap-3">
-          <button data-testid="activity-detail-delete" onClick={() => void handleDelete()} className="inline-flex items-center gap-2 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-rose-100">
+          <button data-testid="activity-detail-delete" onClick={() => void handleDelete()} className="wow-ui-button-danger">
             <Trash2 className="h-4 w-4" /> Loeschen
           </button>
           <div className="flex gap-3">
-            <button onClick={() => void handleClose()} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white">Abbrechen</button>
-            <button data-testid="activity-detail-save" onClick={() => void handleSave()} className="rounded-2xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 disabled:opacity-40">Speichern</button>
+            <button onClick={() => void handleClose()} className="wow-ui-button-secondary">Abbrechen</button>
+            <button data-testid="activity-detail-save" onClick={() => void handleSave()} className="wow-ui-button-primary disabled:opacity-40">Speichern</button>
           </div>
         </div>
       </div>

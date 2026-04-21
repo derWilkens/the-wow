@@ -540,12 +540,12 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
                         </button>
                       ))}
                     </div>
-                    <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-3">
+                    <div className="wow-ui-card p-3">
                       <button
                         type="button"
                         data-testid={`activity-role-create-toggle-${activity.id}`}
                         onClick={() => setIsRoleCreateOpen(true)}
-                        className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1.5 text-xs text-cyan-100"
+                        className="wow-ui-button-secondary min-h-0 px-3 py-1.5 text-xs"
                       >
                         <Plus className="h-3.5 w-3.5" />
                         Neue Rolle anlegen
@@ -636,7 +636,7 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
           {showResponsibilityMeta && assigneeLabel ? (
             <span
               data-testid={`activity-assignee-${activity.id}`}
-              className="inline-flex max-w-[11rem] items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] tracking-[0.04em] text-slate-200"
+              className="wow-ui-chip max-w-[11rem] gap-1 px-2.5 py-1 text-[10px] tracking-[0.04em]"
               title={assigneeLabel}
             >
               <span className="truncate">{assigneeLabel}</span>
@@ -783,12 +783,12 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
               onMouseDown={(event) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
             >
-              <p className="text-sm text-slate-100">Verlinkten Unterablauf loeschen?</p>
+              <p className="text-sm text-[var(--text)]">Verlinkten Unterablauf loeschen?</p>
               <div className="mt-3 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   data-testid={`subprocess-delete-cancel-${activity.id}`}
-                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-200"
+                  className="wow-ui-button-secondary min-h-0 px-3 py-1.5 text-xs"
                   onClick={() => setIsSubprocessDeleteConfirmOpen(false)}
                 >
                   Abbrechen
@@ -796,7 +796,7 @@ export const ActivityNode = memo(function ActivityNode({ data, selected }: NodeP
                 <button
                   type="button"
                   data-testid={`subprocess-delete-confirm-button-${activity.id}`}
-                  className="rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1.5 text-xs text-rose-100"
+                  className="wow-ui-button-danger min-h-0 px-3 py-1.5 text-xs"
                   onClick={() => {
                     void data.onDeleteLinkedSubprocess?.(activity.id)
                     setIsSubprocessDeleteConfirmOpen(false)
